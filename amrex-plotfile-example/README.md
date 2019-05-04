@@ -26,6 +26,31 @@ Then compile this example as:
 make AMREX_LIBRARY_HOME=[AMReX library prefix]
 ```
 
+## Setting C++ and Library Paths manually (optional)
+
+The makefile should automatically find and use the correct C++ and
+library flags corresponding to the ones AMReX was built with.
+
+If you need for some reason to change this, or if the flags cannot be
+automatically found, then set `CFLAGS` and `LFLAGS` appropriately in
+the GNUmakefile.
+
+These flags are automatically extracted from the following file:
+
+```
+[AMReX library prefix]/lib/pkgconfig/amrex.pc
+```
+
+This file lists entries for `Cflags: ...` and `Libs: ...` something
+like the following, but for your system:
+
+```
+...
+Cflags: -I${includedir}  -Werror=return-type -g -O3 -std=c++14
+Libs: -L${libdir} -lamrex -L/usr/lib/gcc/x86_64-linux-gnu/5/ -Wl,-Bsymbolic-functions -Wl,-z,relro -I/usr/include/mpich -I/usr/include/mpich -L/usr/lib/x86_64-linux-gnu -lmpichfort -lmpich -lgfortran -lquadmath
+...
+```
+
 ## Running
 
 If compilation is successful you should have a `main.exe` executable.

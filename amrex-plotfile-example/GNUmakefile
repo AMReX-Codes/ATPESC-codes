@@ -3,8 +3,11 @@ AMREX_LIBRARY_HOME ?= /home/dewillcox/dev-astro/amrex/libamrex
 LIBDIR := $(AMREX_LIBRARY_HOME)/lib
 INCDIR := $(AMREX_LIBRARY_HOME)/include
 
-CFLAGS := -I$(INCDIR) -Werror=return-type -g -O3 -std=c++14
-LFLAGS := -L$(LIBDIR) -lamrex -L/usr/lib/gcc/x86_64-linux-gnu/5/ -Wl,-Bsymbolic-functions -Wl,-z,relro -I/usr/include/mpich -I/usr/include/mpich -L/usr/lib/x86_64-linux-gnu -lmpichfort -lmpich -lgfortran -lquadmath
+COMPILE_CPP_FLAGS ?= $(shell awk '/Cflags:/ {$$1=$$2=""; print $$0}' $(LIBDIR)/pkgconfig/amrex.pc)
+COMPILE_LIB_FLAGS ?= $(shell awk '/Libs:/ {$$1=$$2=""; print $$0}' $(LIBDIR)/pkgconfig/amrex.pc)
+
+CFLAGS := -I$(INCDIR) $(COMPILE_CPP_FLAGS)
+LFLAGS := -L$(LIBDIR) $(COMPILE_LIB_FLAGS)
 
 all:
 	g++ -o main.exe main.cpp $(CFLAGS) $(LFLAGS)
