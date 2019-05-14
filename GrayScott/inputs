@@ -1,0 +1,8 @@
+nsteps = 1000
+plot_int = 1000
+n_cell = 256
+max_grid_size = 64
+diffCoeffU = 2.0e-5
+diffCoeffV = 1.0e-5
+A = 0.04
+B = 0.06
