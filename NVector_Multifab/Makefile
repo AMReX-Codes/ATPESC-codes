@@ -1,6 +1,10 @@
 # ------------------------------------------------------------------------------
 # Makefile to create static library for MultiFAB NVector wrapper
 # ------------------------------------------------------------------------------
+# Note the following environment variables need to be set to in order to build:
+# AMREX_INSTALL_DIR = path to AMReX installation
+# SUNDIALS_INSTALL_DIR = path to SUNDIALS installation
+# ------------------------------------------------------------------------------
 
 CXX = mpicxx
 FC = gfortran
