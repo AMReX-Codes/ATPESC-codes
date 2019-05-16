@@ -32,9 +32,9 @@ void DoProblem()
 
 
    // --- Problem setup ---
-   int n_cell, max_grid_size, nsteps, plot_int;
+   int n_cell, max_grid_size, stepper, nsteps, plot_int;
    GrayScottProblem problem;
-   ParseInputs(n_cell, max_grid_size, nsteps, plot_int, problem);
+   ParseInputs(n_cell, max_grid_size, stepper, nsteps, plot_int, problem);
 
    // make BoxArray and Geometry
    BoxArray ba;
@@ -75,8 +75,18 @@ void DoProblem()
 
 
    // --- Time advance to end ---
-   //ComputeSolutionMRI(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
-   ComputeSolutionAO(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
+   switch (stepper)
+   {
+   case 0:
+      ComputeSolutionARK(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
+      break;
+   case 1:
+      ComputeSolutionMRI(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
+      break;
+   default:
+      amrex::Print() << "Invalid stepper option" << std::endl;
+      return;
+   }
 
 
    // --- Print time and exit ---
@@ -184,9 +194,8 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
    }
 }
 
-void ParseInputs(int& n_cell, int& max_grid_size,
-                 int& nsteps, int& plot_int,
-                 GrayScottProblem& problem)
+void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, int& nsteps,
+                 int& plot_int, GrayScottProblem& problem)
 {
    Real diffCoeffU, diffCoeffV, A, B;
 
@@ -205,6 +214,12 @@ void ParseInputs(int& n_cell, int& max_grid_size,
    // file. If plot_int < 0 then no plot files will be written
    plot_int = -1;
    pp.query("plot_int", plot_int);
+
+   // Specify which integration method to use (defaults to 0)
+   // 0 = ARKStep
+   // 1 = MRIStep
+   stepper = 0;
+   pp.query("stepper", stepper);
 
    // Default nsteps to 10, allow us to set it to something else in the inputs
    // file
@@ -313,10 +328,10 @@ void ComputeSolutionMRI(N_Vector sol_old,
    }
 }
 
-void ComputeSolutionAO(N_Vector sol_old,
-                       N_Vector sol_new,
-                       GrayScottProblem* problem,
-                       int nsteps, int plot_int)
+void ComputeSolutionARK(N_Vector sol_old,
+                        N_Vector sol_new,
+                        GrayScottProblem* problem,
+                        int nsteps, int plot_int)
 {
    Geometry* geom = problem->geom;
 
