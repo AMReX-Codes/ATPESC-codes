@@ -32,7 +32,6 @@ void DoProblem()
 
 
    // --- Problem setup ---
-   // AMREX_SPACEDIM: number of dimensions
    int n_cell, max_grid_size, nsteps, plot_int;
    GrayScottProblem problem;
    ParseInputs(n_cell, max_grid_size, nsteps, plot_int, problem);
@@ -66,10 +65,12 @@ void DoProblem()
    }
    problem.flux = &flux;
 
+   // create N_Vectors wrappers for MultiFabs
    sunindextype length = nComp * n_cell * n_cell;
    N_Vector nv_sol_old = N_VMake_Multifab(length, &sol_old);
    N_Vector nv_sol_new = N_VMake_Multifab(length, &sol_new);
 
+   // set the initial condition
    FillInitConds2D(sol_new, geom);
 
 
@@ -237,6 +238,7 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
 
    // Initialize the boxarray "ba" from the single box "domain"
    ba.define(domain);
+
    // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a
    // direction
    ba.maxSize(max_grid_size);
@@ -277,12 +279,17 @@ void ComputeSolutionMRI(N_Vector sol_old,
    // Copy new to old
    N_VScale(1.0, sol_new, sol_old);
 
-   realtype tret;
+   // Create the MRI stepper
    void* arkode_mem = MRIStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
                                     time, sol_old);
+
+   // Set MRIStep options
    MRIStepSetFixedStep(arkode_mem, 0.5, 0.5);
    MRIStepSetMaxNumSteps(arkode_mem, 500000);
    MRIStepSetUserData(arkode_mem, problem);
+
+   // Advance the solution in time
+   realtype tret;
    ier = MRIStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
    if (ier < 0)
    {
@@ -290,11 +297,13 @@ void ComputeSolutionMRI(N_Vector sol_old,
       return;
    }
 
+   // Get integration stats
    long nfs_evals, nff_evals;
    MRIStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
    amrex::Print() << nfs_evals << " slow evals "
                   << nff_evals << " fast evals" << std::endl;
 
+   // Write output
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
@@ -329,15 +338,18 @@ void ComputeSolutionAO(N_Vector sol_old,
    // Copy new to old
    N_VScale(1.0, sol_new, sol_old);
 
-   realtype tret;
+   // Create the ARK stepper
    //void* arkode_mem = ARKStepCreate(ComputeDiffusionNV, ComputeReactionsNV, time, sol_old);
    void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV,
                                     time, sol_old);
+
+   // Set MRIStep options   
    //ARKStepSStolerances(arkode_mem, 1.0, 1.0);
    ARKStepSetFixedStep(arkode_mem, 1.0);
    ARKStepSetMaxNumSteps(arkode_mem, 5000);
    ARKStepSetUserData(arkode_mem, problem);
 
+   // Create and attach GMRES linear solver (without preconditioning)
    SUNLinearSolver LS = SUNLinSol_SPGMR(sol_new, PREC_NONE, 100);
    ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
    if (ier != ARKLS_SUCCESS)
@@ -346,6 +358,8 @@ void ComputeSolutionAO(N_Vector sol_old,
       return;
    }
 
+   // Advance the solution in time
+   realtype tret;
    ier = ARKStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
    if (ier < 0)
    {
@@ -354,11 +368,13 @@ void ComputeSolutionAO(N_Vector sol_old,
    }
    //ARKStepEvolve(arkode_mem, 1e-6, sol_new, &tret, ARK_NORMAL);
 
+   // Get integration stats
    long nfe_evals, nfi_evals;
    ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
    amrex::Print() << nfe_evals << " explicit evals "
                   << nfi_evals << " implicit evals" << std::endl;
 
+   // Write output
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
