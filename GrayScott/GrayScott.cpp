@@ -74,8 +74,6 @@ void DoProblem()
 
 
    // --- Time advance to end ---
-   //ComputeSolution(sol_old, sol_new, problem, nsteps, plot_int);
-   //ComputeSolutionNV(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
    //ComputeSolutionMRI(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
    ComputeSolutionAO(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
 
@@ -252,115 +250,6 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
    geom.define(domain, &real_box, CoordSys::cartesian, is_periodic.data());
 
    problem.geom = &geom;
-}
-
-void ComputeSolution(MultiFab& sol_old, MultiFab& sol_new,
-                     GrayScottProblem& problem,
-                     int nsteps, int plot_int)
-{
-   Geometry* geom = problem.geom;
-
-   // time = starting time in the simulation
-   Real time = 0.0;
-
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
-   // in the inputs file)
-   if (plot_int > 0)
-   {
-      int n = 0;
-      const std::string& pltfile = amrex::Concatenate("plt", n, 5);
-      WriteSingleLevelPlotfile(pltfile, sol_new, {"u", "v"}, *geom, time, 0);
-   }
-
-   // allocate the RHS multifabs
-   const BoxArray& ba = sol_old.boxArray();
-   const DistributionMapping& dm = sol_old.DistributionMap();
-   int nComp = sol_old.nComp();
-   int nGhost = sol_old.nGrow();
-   MultiFab RHS(ba, dm, nComp, 0);
-   MultiFab diffusion(ba, dm, nComp, 0);
-
-   // compute the time steps
-   Real dt = 1.0;
-   for (int n = 1; n <= nsteps; ++n)
-   {
-      MultiFab::Copy(sol_old, sol_new, 0, 0, nComp, 0);
-
-      ComputeDiffusion(sol_old, diffusion, problem);
-      ComputeReactions2D(sol_old, RHS, problem);
-
-      // Euler time step
-      MultiFab::Add(RHS, diffusion, 0, 0, nComp, 0);
-      RHS.mult(dt, 0, nComp, 0);
-      MultiFab::Add(sol_new, RHS, 0, 0, nComp, 0);
-      time = time + dt;
-
-      // Tell the I/O Processor to write out which step we're doing
-      amrex::Print() << "Advanced step " << n << "\n";
-
-      // Write a plotfile of the current data (plot_int was defined in the
-      // inputs file)
-      if (plot_int > 0 && n%plot_int == 0)
-      {
-         const std::string& pltfile = amrex::Concatenate("plt", n, 5);
-         WriteSingleLevelPlotfile(pltfile, sol_new, {"u", "v"}, *geom, time, n);
-      }
-   }
-}
-
-void ComputeSolutionNV(N_Vector sol_old,
-                       N_Vector sol_new,
-                       GrayScottProblem* problem,
-                       int nsteps, int plot_int)
-{
-   Geometry* geom = problem->geom;
-
-   // time = starting time in the simulation
-   Real time = 0.0;
-
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
-   // in the inputs file)
-   if (plot_int > 0)
-   {
-      int n = 0;
-      const std::string& pltfile = amrex::Concatenate("plt", n, 5);
-      MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
-                               *geom, time, 0);
-   }
-
-   // allocate the RHS multifabs
-   N_Vector RHS = N_VClone_Multifab(sol_old);
-   N_Vector diffusion = N_VClone_Multifab(sol_old);
-
-   // compute the time steps
-   Real dt = 1.0;
-   for (int n = 1; n <= nsteps; ++n)
-   {
-      N_VScale(1.0, sol_new, sol_old);
-      //MultiFab::Copy(sol_old, sol_new, 0, 0, nComp, 0);
-
-      ComputeDiffusionNV(time, sol_old, diffusion, problem);
-      ComputeReactionsNV(time, sol_old, RHS, problem);
-
-      // Euler time step
-      N_VLinearSum(1.0, RHS, 1.0, diffusion, RHS);
-      N_VLinearSum(1.0, sol_new, dt, RHS, sol_new);
-      time = time + dt;
-
-      // Tell the I/O Processor to write out which step we're doing
-      amrex::Print() << "Advanced step " << n << "\n";
-
-      // Write a plotfile of the current data (plot_int was defined in the
-      // inputs file)
-      if (plot_int > 0 && n%plot_int == 0)
-      {
-         const std::string& pltfile = amrex::Concatenate("plt", n, 5);
-         MultiFab* sol_new_mf = NV_MFAB(sol_new);
-         WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
-                                  *geom, time, n);
-      }
-   }
 }
 
 void ComputeSolutionMRI(N_Vector sol_old,

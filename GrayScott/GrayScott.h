@@ -47,16 +47,6 @@ void SetUpGeometry(amrex::BoxArray& ba,
                    GrayScottProblem& problem,
                    int n_cell, int max_grid_size);
 
-void ComputeSolution(amrex::MultiFab& sol_old,
-                     amrex::MultiFab& sol_new,
-                     GrayScottProblem& problem,
-                     int nsteps, int plot_int);
-
-void ComputeSolutionNV(N_Vector sol_old,
-                       N_Vector sol_new,
-                       GrayScottProblem* problem,
-                       int nsteps, int plot_int);
-
 void ComputeSolutionMRI(N_Vector sol_old,
                         N_Vector sol_new,
                         GrayScottProblem* problem,
