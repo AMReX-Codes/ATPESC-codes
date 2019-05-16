@@ -70,11 +70,7 @@ void DoProblem()
    N_Vector nv_sol_old = N_VMake_Multifab(length, &sol_old);
    N_Vector nv_sol_new = N_VMake_Multifab(length, &sol_new);
 
-#if (AMREX_SPACEDIM == 3)
-   FillInitConds3D(sol_new, geom);
-#else
    FillInitConds2D(sol_new, geom);
-#endif
 
 
    // --- Time advance to end ---
@@ -148,32 +144,6 @@ void ComputeReactions2D(MultiFab& sol, MultiFab& reactions,
    }
 }
 
-void ComputeReactions3D(MultiFab& sol, MultiFab& reactions,
-                        GrayScottProblem& problem)
-{
-   Real A = problem.A;
-   Real B = problem.B;
-
-   for (MFIter mfi(sol); mfi.isValid(); ++mfi)
-   {
-      const Box& bx = mfi.validbox();
-      Array4<Real> const& sol_fab = sol.array(mfi);
-      Array4<Real> const& reactions_fab = reactions.array(mfi);
-      const auto lo = lbound(bx);
-      const auto hi = ubound(bx);
-
-      for (int k = lo.z; k <= hi.z; ++k) {
-         for (int j = lo.y; j <= hi.y; ++j) {
-            for (int i = lo.x; i <= hi.x; ++i) {
-               Real temp = sol_fab(i,j,0,0) * sol_fab(i,j,0,1) * sol_fab(i,j,0,1);
-               reactions_fab(i,j,k,0) = A * (1.0 - sol_fab(i,j,k,0)) - temp;
-               reactions_fab(i,j,k,1) = temp - (A + B) * sol_fab(i,j,k,1);
-            }
-         }
-      }
-   }
-}
-
 int ComputeReactionsNV(realtype t, N_Vector sol, N_Vector reactions,
                        void* problem)
 {
@@ -181,11 +151,7 @@ int ComputeReactionsNV(realtype t, N_Vector sol, N_Vector reactions,
    MultiFab* reactions_mf = NV_MFAB(reactions);
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
 
-#if (AMREX_SPACEDIM == 3)
-   ComputeReactions3D(*sol_mf, *reactions_mf, *gs_problem);
-#else
    ComputeReactions2D(*sol_mf, *reactions_mf, *gs_problem);
-#endif
 
    return 0;
 }
@@ -213,39 +179,6 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
             {
                fab(i,j,0,0) = 0.5;
                fab(i,j,0,1) = 0.25;
-            }
-         }
-      }
-   }
-}
-
-void FillInitConds3D(MultiFab& sol, const Geometry& geom)
-{
-   const auto dx = geom.CellSize();
-   const auto prob_lo = geom.ProbLo();
-   const auto prob_hi = geom.ProbHi();
-   for (MFIter mfi(sol); mfi.isValid(); ++mfi)
-   {
-      const Box& bx = mfi.validbox();
-      Array4<Real> const& fab = sol.array(mfi);
-      const auto lo = lbound(bx);
-      const auto hi = ubound(bx);
-      for (int k = lo.z; k <= hi.z; ++k) {
-         Real z = prob_lo[2] + (((Real) k) + 0.5) * dx[2];
-
-         for (int j = lo.y; j <= hi.y; ++j) {
-            Real y = prob_lo[1] + (((Real) j) + 0.5) * dx[1];
-
-            for (int i = lo.x; i <= hi.x; ++i) {
-               fab(i,j,k,0) = 0.;
-               fab(i,j,k,1) = 0.;
-
-               Real x = prob_lo[0] + (((Real) i) + 0.5) * dx[0];
-               if (x>=1.14 && x<=1.33 && y>=1.14 && y<=1.33 && z>=1.14 && z<=1.33)
-               {
-                  fab(i,j,k,0) = 0.5;
-                  fab(i,j,k,1) = 0.25;
-               }
             }
          }
       }

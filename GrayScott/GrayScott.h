@@ -21,10 +21,6 @@ void ComputeReactions2D(amrex::MultiFab& sol,
                         amrex::MultiFab& reactions,
                         GrayScottProblem& problem);
 
-void ComputeReactions3D(amrex::MultiFab& sol,
-                        amrex::MultiFab& reactions,
-                        GrayScottProblem& problem);
-
 int ComputeReactionsNV(realtype t,
                        N_Vector sol,
                        N_Vector reactions,
@@ -40,9 +36,6 @@ int ComputeLaplacianNV(realtype t,
                        void* problem);
 
 void FillInitConds2D(amrex::MultiFab& sol,
-                     const amrex::Geometry& geom);
-
-void FillInitConds3D(amrex::MultiFab& sol,
                      const amrex::Geometry& geom);
 
 void ParseInputs(int& n_cell, int& max_grid_size,
