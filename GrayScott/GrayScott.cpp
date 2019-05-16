@@ -2,13 +2,11 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Print.H>
 
-//#include <cvode/cvode.h>
 #include <arkode/arkode_mristep.h>
 #include <arkode/arkode_arkstep.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
 
 #include "GrayScott.h"
-//#include "GrayScott_F.h"
 #include "DiffOp.h"
 
 #include "NVector_Multifab.h"
@@ -18,7 +16,8 @@ using namespace amrex;
 int main(int argc, char* argv[])
 {
    amrex::Initialize(argc,argv);
-   amrex::Print() << "Hello world from AMReX version " << amrex::Version() << "\n";
+   amrex::Print() << "Hello world from AMReX version "
+                  << amrex::Version() << "\n";
 
    DoProblem();
 
@@ -48,7 +47,8 @@ void DoProblem()
    // How Boxes are distrubuted among MPI processes
    DistributionMapping dm(ba);
 
-   // we allocate two soln multifabs; one will store the old state, the other the new
+   // we allocate two soln multifabs; one will store the old state, the other
+   // the new
    int nGhost = 1;  // number of ghost cells for each array
    int nComp  = 2;  // number of components for each array
    MultiFab sol_old(ba, dm, nComp, nGhost);
@@ -58,7 +58,8 @@ void DoProblem()
    Array<MultiFab, AMREX_SPACEDIM> flux;
    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
    {
-      // flux(dir) has one component, zero ghost cells, and is nodal in direction dir
+      // flux(dir) has one component, zero ghost cells, and is nodal in
+      // direction dir
       BoxArray edge_ba = ba;
       edge_ba.surroundingNodes(dir);
       flux[dir].define(edge_ba, dm, 1, 0);
@@ -69,7 +70,7 @@ void DoProblem()
    N_Vector nv_sol_old = N_VMake_Multifab(length, &sol_old);
    N_Vector nv_sol_new = N_VMake_Multifab(length, &sol_new);
 
-#if (AMREX_SPACEDIM == 3)   
+#if (AMREX_SPACEDIM == 3)
    FillInitConds3D(sol_new, geom);
 #else
    FillInitConds2D(sol_new, geom);
@@ -84,8 +85,8 @@ void DoProblem()
 
 
    // --- Print time and exit ---
-   // Call the timer again and compute the maximum difference between the start time and stop time
-   //   over all processors
+   // Call the timer again and compute the maximum difference between the start
+   // time and stop time over all processors
    Real stop_time = amrex::second() - strt_time;
    const int IOProc = ParallelDescriptor::IOProcessorNumber();
    ParallelDescriptor::ReduceRealMax(stop_time, IOProc);
@@ -112,7 +113,7 @@ void ComputeDiffusion(MultiFab& sol, MultiFab& diffusion,
 }
 
 int ComputeDiffusionNV(realtype t, N_Vector sol, N_Vector diffusion,
-                        void* problem)
+                       void* problem)
 {
    MultiFab* sol_mf = NV_MFAB(sol);
    MultiFab* diffusion_mf = NV_MFAB(diffusion);
@@ -174,13 +175,13 @@ void ComputeReactions3D(MultiFab& sol, MultiFab& reactions,
 }
 
 int ComputeReactionsNV(realtype t, N_Vector sol, N_Vector reactions,
-                        void* problem)
+                       void* problem)
 {
    MultiFab* sol_mf = NV_MFAB(sol);
    MultiFab* reactions_mf = NV_MFAB(reactions);
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
 
-#if (AMREX_SPACEDIM == 3)   
+#if (AMREX_SPACEDIM == 3)
    ComputeReactions3D(*sol_mf, *reactions_mf, *gs_problem);
 #else
    ComputeReactions2D(*sol_mf, *reactions_mf, *gs_problem);
@@ -260,19 +261,21 @@ void ParseInputs(int& n_cell, int& max_grid_size,
    // ParmParse is way of reading inputs from the inputs file
    ParmParse pp;
 
-   // We need to get n_cell from the inputs file - this is the number of cells on each side of 
+   // We need to get n_cell from the inputs file - this is the number of cells
+   // on each side of
    //   a square (or cubic) domain.
    pp.get("n_cell", n_cell);
 
    // The domain is broken into boxes of size max_grid_size
    pp.get("max_grid_size", max_grid_size);
 
-   // Default plot_int to -1, allow us to set it to something else in the inputs file
-   //  If plot_int < 0 then no plot files will be writtenq
+   // Default plot_int to -1, allow us to set it to something else in the inputs
+   // file. If plot_int < 0 then no plot files will be written
    plot_int = -1;
    pp.query("plot_int", plot_int);
 
-   // Default nsteps to 10, allow us to set it to something else in the inputs file
+   // Default nsteps to 10, allow us to set it to something else in the inputs
+   // file
    nsteps = 10;
    pp.query("nsteps", nsteps);
 
@@ -303,7 +306,8 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
 
    // Initialize the boxarray "ba" from the single box "domain"
    ba.define(domain);
-   // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+   // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a
+   // direction
    ba.maxSize(max_grid_size);
 
    // This defines the physical box, [-1,1] in each direction.
@@ -326,7 +330,8 @@ void ComputeSolution(MultiFab& sol_old, MultiFab& sol_new,
    // time = starting time in the simulation
    Real time = 0.0;
 
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
+   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
+   // in the inputs file)
    if (plot_int > 0)
    {
       int n = 0;
@@ -360,7 +365,8 @@ void ComputeSolution(MultiFab& sol_old, MultiFab& sol_new,
       // Tell the I/O Processor to write out which step we're doing
       amrex::Print() << "Advanced step " << n << "\n";
 
-      // Write a plotfile of the current data (plot_int was defined in the inputs file)
+      // Write a plotfile of the current data (plot_int was defined in the
+      // inputs file)
       if (plot_int > 0 && n%plot_int == 0)
       {
          const std::string& pltfile = amrex::Concatenate("plt", n, 5);
@@ -379,13 +385,15 @@ void ComputeSolutionNV(N_Vector sol_old,
    // time = starting time in the simulation
    Real time = 0.0;
 
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
+   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
+   // in the inputs file)
    if (plot_int > 0)
    {
       int n = 0;
       const std::string& pltfile = amrex::Concatenate("plt", n, 5);
       MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"}, *geom, time, 0);
+      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+                               *geom, time, 0);
    }
 
    // allocate the RHS multifabs
@@ -410,12 +418,14 @@ void ComputeSolutionNV(N_Vector sol_old,
       // Tell the I/O Processor to write out which step we're doing
       amrex::Print() << "Advanced step " << n << "\n";
 
-      // Write a plotfile of the current data (plot_int was defined in the inputs file)
+      // Write a plotfile of the current data (plot_int was defined in the
+      // inputs file)
       if (plot_int > 0 && n%plot_int == 0)
       {
          const std::string& pltfile = amrex::Concatenate("plt", n, 5);
          MultiFab* sol_new_mf = NV_MFAB(sol_new);
-         WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"}, *geom, time, n);
+         WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+                                  *geom, time, n);
       }
    }
 }
@@ -427,38 +437,48 @@ void ComputeSolutionMRI(N_Vector sol_old,
 {
    Geometry* geom = problem->geom;
 
-   // time = starting time in the simulation
-   Real time = 0.0;
+   Real time   = 0.0;          // time = starting time in the simulation
    Real tFinal = nsteps * 1.0;
+   int  ier    = 0;            // error flag
 
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
+   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
+   // in the inputs file)
    if (plot_int > 0)
    {
       int n = 0;
       const std::string& pltfile = amrex::Concatenate("plt", n, 5);
       MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"}, *geom, time, 0);
+      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+                               *geom, time, 0);
    }
 
    // Copy new to old
    N_VScale(1.0, sol_new, sol_old);
 
    realtype tret;
-   void* arkode_mem = MRIStepCreate(ComputeDiffusionNV, ComputeReactionsNV, time, sol_old);
+   void* arkode_mem = MRIStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
+                                    time, sol_old);
    MRIStepSetFixedStep(arkode_mem, 0.5, 0.5);
    MRIStepSetMaxNumSteps(arkode_mem, 500000);
    MRIStepSetUserData(arkode_mem, problem);
-   int ier = MRIStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
+   ier = MRIStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
+   if (ier < 0)
+   {
+      amrex::Print() << "Error in MRIStepEvolve" << std::endl;
+      return;
+   }
 
    long nfs_evals, nff_evals;
    MRIStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
-   amrex::Print() << nfs_evals << " slow evals " << nff_evals << " fast evals" << std::endl;
+   amrex::Print() << nfs_evals << " slow evals "
+                  << nff_evals << " fast evals" << std::endl;
 
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
       MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"}, *geom, nsteps, nsteps);
+      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+                               *geom, nsteps, nsteps);
    }
 }
 
@@ -469,17 +489,19 @@ void ComputeSolutionAO(N_Vector sol_old,
 {
    Geometry* geom = problem->geom;
 
-   // time = starting time in the simulation
-   Real time = 0.0;
+   Real time   = 0.0;          // time = starting time in the simulation
    Real tFinal = nsteps * 1.0;
+   int  ier    = 0;            // error flag
 
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
+   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
+   // in the inputs file)
    if (plot_int > 0)
    {
       int n = 0;
       const std::string& pltfile = amrex::Concatenate("plt", n, 5);
       MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"}, *geom, time, 0);
+      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+                               *geom, time, 0);
    }
 
    // Copy new to old
@@ -487,31 +509,39 @@ void ComputeSolutionAO(N_Vector sol_old,
 
    realtype tret;
    //void* arkode_mem = ARKStepCreate(ComputeDiffusionNV, ComputeReactionsNV, time, sol_old);
-   void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV, time, sol_old);
+   void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV,
+                                    time, sol_old);
    //ARKStepSStolerances(arkode_mem, 1.0, 1.0);
    ARKStepSetFixedStep(arkode_mem, 1.0);
    ARKStepSetMaxNumSteps(arkode_mem, 5000);
    ARKStepSetUserData(arkode_mem, problem);
 
    SUNLinearSolver LS = SUNLinSol_SPGMR(sol_new, PREC_NONE, 100);
-   int ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
+   ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
    if (ier != ARKLS_SUCCESS)
    {
       amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
       return;
    }
 
-   ARKStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
+   ier = ARKStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
+   if (ier < 0)
+   {
+      amrex::Print() << "Error in MRIStepEvolve" << std::endl;
+      return;
+   }
    //ARKStepEvolve(arkode_mem, 1e-6, sol_new, &tret, ARK_NORMAL);
 
-   long nfs_evals, nff_evals;
-   ARKStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
-   amrex::Print() << nfs_evals << " slow evals " << nff_evals << " fast evals" << std::endl;
+   long nfe_evals, nfi_evals;
+   ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
+   amrex::Print() << nfe_evals << " explicit evals "
+                  << nfi_evals << " implicit evals" << std::endl;
 
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
       MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"}, *geom, nsteps, nsteps);
+      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+                               *geom, nsteps, nsteps);
    }
 }
