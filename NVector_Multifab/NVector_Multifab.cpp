@@ -34,7 +34,7 @@ N_Vector N_VNewEmpty_Multifab(sunindextype length)
 
    /* Create vector operation structure */
    ops = NULL;
-   ops = (N_Vector_Ops) malloc(sizeof(struct _generic_N_Vector_Ops));
+   ops = (N_Vector_Ops) malloc(sizeof *ops);
    if (ops == NULL) { free(v); return(NULL); }
 
    ops->nvgetvectorid     = NULL;
@@ -82,12 +82,12 @@ N_Vector N_VNewEmpty_Multifab(sunindextype length)
 
    /* Create content */
    content = NULL;
-   content = (N_VectorContent_Multifab) malloc(sizeof(struct _N_VectorContent_Multifab));
+   content = (N_VectorContent_Multifab) malloc(sizeof *content);
    if (content == NULL) { free(ops); free(v); return(NULL); }
 
-   content->length   = length;
+   content->length = length;
    content->own_mf = SUNFALSE;
-   content->mf       = NULL;
+   content->mf     = NULL;
 
    /* Attach content and ops */
    v->content = content;
@@ -117,7 +117,7 @@ N_Vector N_VNew_Multifab(sunindextype length,
    {
       amrex::MultiFab *mf_v = new amrex::MultiFab(ba, dm, nComp, nGhost);
       NV_OWN_MF_M(v) = SUNTRUE;
-      NV_MFAB(v)       = mf_v;
+      NV_MFAB(v)     = mf_v;
    }
 
    return(v);
@@ -139,7 +139,7 @@ N_Vector N_VMake_Multifab(sunindextype length, amrex::MultiFab *v_mf)
    {
       // Attach MultiFab
       NV_OWN_MF_M(v) = SUNFALSE;
-      NV_MFAB(v)       = v_mf;
+      NV_MFAB(v)     = v_mf;
    }
 
    return(v);
@@ -174,7 +174,7 @@ N_Vector N_VCloneEmpty_Multifab(N_Vector w)
 
    /* Create vector operation structure */
    ops = NULL;
-   ops = (N_Vector_Ops) malloc(sizeof(struct _generic_N_Vector_Ops));
+   ops = (N_Vector_Ops) malloc(sizeof *ops);
    if (ops == NULL) { free(v); return(NULL); }
 
    ops->nvgetvectorid     = w->ops->nvgetvectorid;
@@ -222,12 +222,12 @@ N_Vector N_VCloneEmpty_Multifab(N_Vector w)
 
    /* Create content */
    content = NULL;
-   content = (N_VectorContent_Multifab) malloc(sizeof(struct _N_VectorContent_Multifab));
+   content = (N_VectorContent_Multifab) malloc(sizeof *content);
    if (content == NULL) { free(ops); free(v); return(NULL); }
 
-   content->length   = NV_LENGTH_M(w);
+   content->length = NV_LENGTH_M(w);
    content->own_mf = SUNFALSE;
-   content->mf       = NULL;
+   content->mf     = NULL;
 
    /* Attach content and ops */
    v->content = content;
@@ -259,7 +259,7 @@ N_Vector N_VClone_Multifab(N_Vector w)
 
       // Attach multifab
       NV_OWN_MF_M(v) = SUNTRUE;
-      NV_MFAB(v)       = mf_v;
+      NV_MFAB(v)     = mf_v;
    }
 
    return(v);
@@ -287,7 +287,8 @@ void N_VSpace_Multifab(N_Vector v, sunindextype *lrw, sunindextype *liw)
    return;
 }
 
-void N_VLinearSum_Multifab(realtype a, N_Vector x, realtype b, N_Vector y, N_Vector z)
+void N_VLinearSum_Multifab(realtype a, N_Vector x, realtype b, N_Vector y,
+                           N_Vector z)
 {
    amrex::MultiFab *mf_x = NV_MFAB(x);
    amrex::MultiFab *mf_y = NV_MFAB(y);
@@ -298,7 +299,7 @@ void N_VLinearSum_Multifab(realtype a, N_Vector x, realtype b, N_Vector y, N_Vec
    sunindextype nghost = 0;  // do not include ghost cells
 
    amrex::MultiFab::LinComb(*mf_z, a, *mf_x, 0, b, *mf_y, 0, 0, ncomp, nghost);
-}   
+}
 
 void N_VConst_Multifab(realtype c, N_Vector z)
 {
@@ -356,6 +357,7 @@ void N_VAbs_Multifab(N_Vector x, N_Vector z)
    MultiFab *mf_z = NV_MFAB(z);
    sunindextype ncomp = mf_x->nComp();
 
+   // ghost cells not included
    for (MFIter mfi(*mf_x); mfi.isValid(); ++mfi)
    {
       const amrex::Box& bx = mfi.validbox();

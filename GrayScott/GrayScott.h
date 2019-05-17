@@ -15,41 +15,46 @@ struct GrayScottProblem
    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>* flux;
 };
 
+// Run problem
 void DoProblem();
 
+// Compute the diffusion term in the ODE RHS
+void ComputeDiffusion(amrex::MultiFab& sol, amrex::MultiFab& diffusion,
+                      GrayScottProblem& problem);
+
+// ODE RHS wrapper function called by SUNDIALS
+int ComputeDiffusionNV(realtype t, N_Vector nv_sol, N_Vector nv_diffusion,
+                       void* problem);
+
+// Compute the reaction term in the ODE RHS
 void ComputeReactions2D(amrex::MultiFab& sol,
                         amrex::MultiFab& reactions,
                         GrayScottProblem& problem);
 
-int ComputeReactionsNV(realtype t,
-                       N_Vector sol,
-                       N_Vector reactions,
+// ODE RHS wrapper function called by SUNDIALS
+int ComputeReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_reactions,
                        void* problem);
 
-void ComputeLaplacian(amrex::MultiFab& sol,
-                      amrex::MultiFab& laplacian,
-                      GrayScottProblem& problem);
-
-int ComputeLaplacianNV(realtype t,
-                       N_Vector sol,
-                       N_Vector laplacian,
-                       void* problem);
-
+// Set the problem initial condition
 void FillInitConds2D(amrex::MultiFab& sol,
                      const amrex::Geometry& geom);
 
+// Parse the problem input file
 void ParseInputs(int& n_cell, int& max_grid_size, int& stepper,
                  amrex::Real& tfinal, int& nsteps, int& plot_int,
                  GrayScottProblem& problem);
 
+// Set the problem decomposition
 void SetUpGeometry(amrex::BoxArray& ba,
                    amrex::Geometry& geom,
                    GrayScottProblem& problem,
                    int n_cell, int max_grid_size);
 
+// Advance the solution in time with MRIStep
 void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
                         amrex::Real tfinal, int nsteps, int plot_int);
 
+// Advance the solution in time with ARKStep
 void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
                         amrex::Real tfinal, int nsteps, int plot_int);
 
