@@ -48,14 +48,12 @@ void DoProblem()
    // How Boxes are distrubuted among MPI processes
    DistributionMapping dm(ba);
 
-   // we allocate two soln multifabs; one will store the old state, the other
-   // the new
+   // allocate the solution MultiFab
    int nGhost = 1;  // number of ghost cells for each array
    int nComp  = 2;  // number of components for each array
-   MultiFab sol_old(ba, dm, nComp, nGhost);
-   MultiFab sol_new(ba, dm, nComp, nGhost);
+   MultiFab sol(ba, dm, nComp, nGhost);
 
-   // build the flux multifabs
+   // build the flux MultiFabs
    Array<MultiFab, AMREX_SPACEDIM> flux;
    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
    {
@@ -67,25 +65,22 @@ void DoProblem()
    }
    problem.flux = &flux;
 
-   // create N_Vectors wrappers for MultiFabs
+   // create an N_Vector wrapper for the solution MultiFab
    sunindextype length = nComp * n_cell * n_cell;
-   N_Vector nv_sol_old = N_VMake_Multifab(length, &sol_old);
-   N_Vector nv_sol_new = N_VMake_Multifab(length, &sol_new);
+   N_Vector nv_sol     = N_VMake_Multifab(length, &sol);
 
    // set the initial condition
-   FillInitConds2D(sol_new, geom);
+   FillInitConds2D(sol, geom);
 
 
    // --- Time advance to end ---
    switch (stepper)
    {
    case 0:
-      ComputeSolutionARK(nv_sol_old, nv_sol_new, &problem, tfinal, nsteps,
-                         plot_int);
+      ComputeSolutionARK(nv_sol, &problem, tfinal, nsteps, plot_int);
       break;
    case 1:
-      ComputeSolutionMRI(nv_sol_old, nv_sol_new, &problem, tfinal, nsteps,
-                         plot_int);
+      ComputeSolutionMRI(nv_sol, &problem, tfinal, nsteps, plot_int);
       break;
    default:
       amrex::Print() << "Invalid stepper option" << std::endl;
@@ -121,14 +116,14 @@ void ComputeDiffusion(MultiFab& sol, MultiFab& diffusion,
    ComputeDivergence(diffusion, flux[0], flux[1], *geom, 1);
 }
 
-int ComputeDiffusionNV(realtype t, N_Vector sol, N_Vector diffusion,
+int ComputeDiffusionNV(realtype t, N_Vector nv_sol, N_Vector nv_diffusion,
                        void* problem)
 {
-   MultiFab* sol_mf = NV_MFAB(sol);
-   MultiFab* diffusion_mf = NV_MFAB(diffusion);
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* diffusion = NV_MFAB(nv_diffusion);
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
 
-   ComputeDiffusion(*sol_mf, *diffusion_mf, *gs_problem);
+   ComputeDiffusion(*sol, *diffusion, *gs_problem);
 
    return 0;
 }
@@ -157,14 +152,14 @@ void ComputeReactions2D(MultiFab& sol, MultiFab& reactions,
    }
 }
 
-int ComputeReactionsNV(realtype t, N_Vector sol, N_Vector reactions,
+int ComputeReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_reactions,
                        void* problem)
 {
-   MultiFab* sol_mf = NV_MFAB(sol);
-   MultiFab* reactions_mf = NV_MFAB(reactions);
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* reactions = NV_MFAB(nv_reactions);
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
 
-   ComputeReactions2D(*sol_mf, *reactions_mf, *gs_problem);
+   ComputeReactions2D(*sol, *reactions, *gs_problem);
 
    return 0;
 }
@@ -277,8 +272,7 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
    problem.geom = &geom;
 }
 
-void ComputeSolutionMRI(N_Vector sol_old, N_Vector sol_new,
-                        GrayScottProblem* problem,
+void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
                         Real tfinal, int nsteps, int plot_int)
 {
    Geometry* geom = problem->geom;
@@ -292,17 +286,14 @@ void ComputeSolutionMRI(N_Vector sol_old, N_Vector sol_new,
    {
       int n = 0;
       const std::string& pltfile = amrex::Concatenate("plt", n, 5);
-      MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+      MultiFab* sol = NV_MFAB(nv_sol);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
                                *geom, time, 0);
    }
 
-   // Copy new to old
-   N_VScale(1.0, sol_new, sol_old);
-
    // Create the MRI stepper
    void* arkode_mem = MRIStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
-                                    time, sol_old);
+                                    time, nv_sol);
 
    // Set MRIStep options
    MRIStepSetFixedStep(arkode_mem, 0.5, 0.5);
@@ -311,7 +302,7 @@ void ComputeSolutionMRI(N_Vector sol_old, N_Vector sol_new,
 
    // Advance the solution in time
    realtype tret;
-   ier = MRIStepEvolve(arkode_mem, tfinal, sol_new, &tret, ARK_NORMAL);
+   ier = MRIStepEvolve(arkode_mem, tfinal, nv_sol, &tret, ARK_NORMAL);
    if (ier < 0)
    {
       amrex::Print() << "Error in MRIStepEvolve" << std::endl;
@@ -328,14 +319,13 @@ void ComputeSolutionMRI(N_Vector sol_old, N_Vector sol_new,
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
-      MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+      MultiFab* sol = NV_MFAB(nv_sol);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
                                *geom, nsteps, nsteps);
    }
 }
 
-void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
-                        GrayScottProblem* problem,
+void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
                         Real tfinal, int nsteps, int plot_int)
 {
    Geometry* geom = problem->geom;
@@ -349,23 +339,20 @@ void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
    {
       int n = 0;
       const std::string& pltfile = amrex::Concatenate("plt", n, 5);
-      MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+      MultiFab* sol = NV_MFAB(nv_sol);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
                                *geom, time, 0);
    }
-
-   // Copy new to old
-   N_VScale(1.0, sol_new, sol_old);
 
    // Create the ARK stepper
 
    // explicit diffusion, implicit reactions
    // void* arkode_mem = ARKStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
-   //                                  time, sol_old);
+   //                                  time, nv_sol);
 
    // explicit reactions, implicit diffusion
    void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV,
-                                    time, sol_old);
+                                    time, nv_sol);
 
    // Set MRIStep options   
    //ARKStepSStolerances(arkode_mem, 1.0, 1.0);
@@ -374,7 +361,7 @@ void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
    ARKStepSetUserData(arkode_mem, problem);
 
    // Create and attach GMRES linear solver (without preconditioning)
-   SUNLinearSolver LS = SUNLinSol_SPGMR(sol_new, PREC_NONE, 100);
+   SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
    ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
    if (ier != ARKLS_SUCCESS)
    {
@@ -384,13 +371,12 @@ void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
 
    // Advance the solution in time
    realtype tret;
-   ier = ARKStepEvolve(arkode_mem, tfinal, sol_new, &tret, ARK_NORMAL);
+   ier = ARKStepEvolve(arkode_mem, tfinal, nv_sol, &tret, ARK_NORMAL);
    if (ier < 0)
    {
       amrex::Print() << "Error in MRIStepEvolve" << std::endl;
       return;
    }
-   //ARKStepEvolve(arkode_mem, 1e-6, sol_new, &tret, ARK_NORMAL);
 
    // Get integration stats
    long nfe_evals, nfi_evals;
@@ -402,8 +388,8 @@ void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
-      MultiFab* sol_new_mf = NV_MFAB(sol_new);
-      WriteSingleLevelPlotfile(pltfile, *sol_new_mf, {"u", "v"},
+      MultiFab* sol = NV_MFAB(nv_sol);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
                                *geom, nsteps, nsteps);
    }
 }
