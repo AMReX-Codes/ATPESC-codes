@@ -13,7 +13,7 @@
 #        V -> P
 #
 # ------------------------------------------------------------------------------
-# stepper       : 0 = ARKStep, 1 = MRIStep
+# stepper       : 0 = CVODE, 1 = ARKStep, 2 = MRIStep
 # tfinal        : final simulation time
 # plot_int      : enable or disable solution output
 # dtout         : output time step

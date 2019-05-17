@@ -35,6 +35,14 @@ void ComputeReactions2D(amrex::MultiFab& sol,
 int ComputeReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_reactions,
                        void* problem);
 
+// Compute both the diffusion and recation term in the ODE RHS
+void ComputeDiffusionReactions2D(amrex::MultiFab& sol, amrex::MultiFab& rhs,
+                                 GrayScottProblem& problem);
+
+// ODE RHS wrapper function called by SUNDIALS
+int ComputeDiffusionReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                                void* problem);
+
 // Set the problem initial condition
 void FillInitConds2D(amrex::MultiFab& sol,
                      const amrex::Geometry& geom);
@@ -50,12 +58,16 @@ void SetUpGeometry(amrex::BoxArray& ba,
                    GrayScottProblem& problem,
                    int n_cell, int max_grid_size);
 
-// Advance the solution in time with MRIStep
-void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
+// Advance the solution in time with CVODE
+void ComputeSolutionCV(N_Vector nv_sol, GrayScottProblem* problem,
+                       amrex::Real tfinal, amrex::Real dtout, int plot_int);
+
+// Advance the solution in time with ARKode ARKStep
+void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
                         amrex::Real tfinal, amrex::Real dtout, int plot_int);
 
-// Advance the solution in time with ARKStep
-void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
+// Advance the solution in time with ARKode MRIStep
+void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
                         amrex::Real tfinal, amrex::Real dtout, int plot_int);
 
 #endif

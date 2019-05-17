@@ -14,7 +14,7 @@ CXXFLAGS = -O2 -std=c++11
 FFLAGS = -O2
 LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(SUNDIALS_INSTALL_DIR)/lib64 -L../NVector_Multifab
 
-LIBRARIES = -lamrex -lsundials_arkode -lnvector_multifab
+LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode -lnvector_multifab
 
 LIBRARIES += -lgfortran
 
