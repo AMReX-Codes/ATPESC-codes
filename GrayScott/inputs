@@ -1,8 +1,8 @@
 # ------------------------------------------------------------------------------
 # Input parameters for the Gray-Scott (reaction-diffusion) example:
 #
-#   du/dt = Du \nabla^2 u - u v^2 + A (1-u)
-#   dv/dt = Dv \nabla^2 v + u v^2 - (A + B) v
+#   du/dt = Au div(u) - Du divgrad(u) - u v^2 + A (1-u)
+#   dv/dt = Av div(v) - Dv divgrad(v) + u v^2 - (A + B) v
 #
 #   u = concentration of species U
 #   v = concentration of species V
@@ -19,17 +19,21 @@
 # dtout         : output time step
 # n_cell        : number of cells on each edge of the square
 # max_grid_size : max cell size
+# advCoeffU     : advection coefficient for U
+# advCoeffV     : advection coefficient for V
 # diffCoeffU    : diffusion coefficient for U
 # diffCoeffV    : diffusion coefficient for V
 # A             : rate that feeds U and drains U, V, and P
 # B             : rate for converting V to P
 # ------------------------------------------------------------------------------
 stepper = 0
-tfinal = 1.0e3
+tfinal = 1.0e4
 plot_int = 1
 dtout = 300.0
 n_cell = 256
 max_grid_size = 64
+advCoeffU = 5.0e-4
+advCoeffV = 5.0e-4
 diffCoeffU = 2.0e-5
 diffCoeffV = 1.0e-5
 A = 0.04

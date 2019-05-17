@@ -20,13 +20,16 @@ LIBRARIES += -lgfortran
 
 default: GrayScott.exe
 
-GrayScott.exe: GrayScott.o DiffOp2D.o
+GrayScott.exe: GrayScott.o DiffOp2D.o Reactions.o
 	$(CXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
 GrayScott.o: GrayScott.cpp GrayScott.h
 	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 DiffOp2D.o: DiffOp2D.cpp DiffOp.h
+	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+
+Reactions.o: Reactions.cpp Reactions.h
 	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 .PHONY: movie clean realclean pltclean

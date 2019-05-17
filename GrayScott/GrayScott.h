@@ -9,6 +9,8 @@
 struct GrayScottProblem
 {
    amrex::Geometry* geom;
+   amrex::Real advCoeffU;
+   amrex::Real advCoeffV;
    amrex::Real diffCoeffU;
    amrex::Real diffCoeffV;
    amrex::Real A;
@@ -19,32 +21,25 @@ struct GrayScottProblem
 // Run problem
 void DoProblem();
 
-// Compute the diffusion term in the ODE RHS
-void ComputeDiffusion(amrex::MultiFab& sol, amrex::MultiFab& diffusion,
-                      GrayScottProblem& problem);
+// ODE RHS functions called by SUNDIALS
+int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                   void* problem);
+int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                  void* problem);
+int ComputeRhsReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                    void* problem);
 
-// ODE RHS wrapper function called by SUNDIALS
-int ComputeDiffusionNV(realtype t, N_Vector nv_sol, N_Vector nv_diffusion,
+int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                      void* problem);
+int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
                        void* problem);
+int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                        void* problem);
 
-// Compute the reaction term in the ODE RHS
-void ComputeReactions2D(amrex::MultiFab& sol,
-                        amrex::MultiFab& reactions,
-                        GrayScottProblem& problem);
+int ComputeRhsAdvDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                           void* problem);
 
-// ODE RHS wrapper function called by SUNDIALS
-int ComputeReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_reactions,
-                       void* problem);
-
-// Compute both the diffusion and recation term in the ODE RHS
-void ComputeDiffusionReactions2D(amrex::MultiFab& sol, amrex::MultiFab& rhs,
-                                 GrayScottProblem& problem);
-
-// ODE RHS wrapper function called by SUNDIALS
-int ComputeDiffusionReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                                void* problem);
-
-// Set the problem initial condition
+// Set the ODE initial condition
 void FillInitConds2D(amrex::MultiFab& sol,
                      const amrex::Geometry& geom);
 
@@ -53,7 +48,7 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper,
                  amrex::Real& tfinal, amrex::Real& dtout,
                  int& plot_int, GrayScottProblem& problem);
 
-// Set the problem decomposition
+// Decompose the problem in space
 void SetUpGeometry(amrex::BoxArray& ba,
                    amrex::Geometry& geom,
                    GrayScottProblem& problem,

@@ -9,6 +9,7 @@
 
 #include "GrayScott.h"
 #include "DiffOp.h"
+#include "Reactions.h"
 
 #include "NVector_Multifab.h"
 
@@ -103,118 +104,206 @@ void DoProblem()
    amrex::Print() << "Run time = " << stop_time << std::endl;
 }
 
-void ComputeDiffusion(MultiFab& sol, MultiFab& diffusion,
-                      GrayScottProblem& problem)
+int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                  void* problem)
 {
-   Geometry* geom = problem.geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(problem.flux);
-   Real diffCoeffU = problem.diffCoeffU;
-   Real diffCoeffV = problem.diffCoeffV;
-
-   sol.FillBoundary(geom->periodicity());
-
-   ComputeDiffFlux(sol, flux[0], flux[1], *geom, 0, diffCoeffU);
-   ComputeDivergence(diffusion, flux[0], flux[1], *geom, 0);
-
-   ComputeDiffFlux(sol, flux[0], flux[1], *geom, 1, diffCoeffV);
-   ComputeDivergence(diffusion, flux[0], flux[1], *geom, 1);
-}
-
-int ComputeDiffusionNV(realtype t, N_Vector nv_sol, N_Vector nv_diffusion,
-                       void* problem)
-{
-   MultiFab* sol = NV_MFAB(nv_sol);
-   MultiFab* diffusion = NV_MFAB(nv_diffusion);
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-
-   ComputeDiffusion(*sol, *diffusion, *gs_problem);
-
-   return 0;
-}
-
-void ComputeReactions2D(MultiFab& sol, MultiFab& reactions,
-                        GrayScottProblem& problem)
-{
-   Real A = problem.A;
-   Real B = problem.B;
-
-   for (MFIter mfi(sol); mfi.isValid(); ++mfi)
-   {
-      const Box& bx = mfi.validbox();
-      Array4<Real> const& sol_fab = sol.array(mfi);
-      Array4<Real> const& reactions_fab = reactions.array(mfi);
-      const auto lo = lbound(bx);
-      const auto hi = ubound(bx);
-
-      for (int j = lo.y; j <= hi.y; ++j) {
-         for (int i = lo.x; i <= hi.x; ++i) {
-            Real temp = sol_fab(i,j,0,0) * sol_fab(i,j,0,1) * sol_fab(i,j,0,1);
-            reactions_fab(i,j,0,0) = A * (1.0 - sol_fab(i,j,0,0)) - temp;
-            reactions_fab(i,j,0,1) = temp - (A + B) * sol_fab(i,j,0,1);
-         }
-      }
-   }
-}
-
-int ComputeReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_reactions,
-                       void* problem)
-{
-   MultiFab* sol = NV_MFAB(nv_sol);
-   MultiFab* reactions = NV_MFAB(nv_reactions);
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-
-   ComputeReactions2D(*sol, *reactions, *gs_problem);
-
-   return 0;
-}
-
-void ComputeDiffusionReactions2D(MultiFab& sol, MultiFab& rhs,
-                                 GrayScottProblem& problem)
-{
-   Geometry* geom = problem.geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(problem.flux);
-   Real diffCoeffU = problem.diffCoeffU;
-   Real diffCoeffV = problem.diffCoeffV;
-
-   // Compute diffusion term
-   sol.FillBoundary(geom->periodicity());
-
-   ComputeDiffFlux(sol, flux[0], flux[1], *geom, 0, diffCoeffU);
-   ComputeDivergence(rhs, flux[0], flux[1], *geom, 0);
-
-   ComputeDiffFlux(sol, flux[0], flux[1], *geom, 1, diffCoeffV);
-   ComputeDivergence(rhs, flux[0], flux[1], *geom, 1);
-
-   // Compute reaction term
-   Real A = problem.A;
-   Real B = problem.B;
-
-   for (MFIter mfi(sol); mfi.isValid(); ++mfi)
-   {
-      const Box& bx = mfi.validbox();
-      Array4<Real> const& sol_fab = sol.array(mfi);
-      Array4<Real> const& rhs_fab = rhs.array(mfi);
-      const auto lo = lbound(bx);
-      const auto hi = ubound(bx);
-
-      for (int j = lo.y; j <= hi.y; ++j) {
-         for (int i = lo.x; i <= hi.x; ++i) {
-            Real temp = sol_fab(i,j,0,0) * sol_fab(i,j,0,1) * sol_fab(i,j,0,1);
-            rhs_fab(i,j,0,0) += A * (1.0 - sol_fab(i,j,0,0)) - temp;
-            rhs_fab(i,j,0,1) += temp - (A + B) * sol_fab(i,j,0,1);
-         }
-      }
-   }
-}
-
-int ComputeDiffusionReactionsNV(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                                void* problem)
-{
+   // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
 
-   ComputeDiffusionReactions2D(*sol, *rhs, *gs_problem);
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Geometry* geom = gs_problem->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
+   Real advCoeffU = gs_problem->advCoeffU;
+   Real advCoeffV = gs_problem->advCoeffV;
+
+   // clear the RHS vector
+   *rhs = 0.0;
+
+   // fill ghost cells
+   sol->FillBoundary(geom->periodicity());
+
+   // compute advection of u and v
+   ComputeAdvection(*sol, *rhs, *geom, 0, advCoeffU);
+   ComputeAdvection(*sol, *rhs, *geom, 1, advCoeffV);
+
+   return 0;
+}
+
+int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                   void* problem)
+{
+   // extract MultiFabs
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* rhs = NV_MFAB(nv_rhs);
+
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Geometry* geom = gs_problem->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
+   Real diffCoeffU = gs_problem->diffCoeffU;
+   Real diffCoeffV = gs_problem->diffCoeffV;
+
+   // fill ghost cells
+   sol->FillBoundary(geom->periodicity());
+
+   // compute diffusion of u and v
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+
+   return 0;
+}
+
+int ComputeRhsReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                    void* problem)
+{
+   // extract MultiFabs
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* rhs = NV_MFAB(nv_rhs);
+
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Real A = gs_problem->A;
+   Real B = gs_problem->B;
+
+   // compute reaction term
+   ComputeReactionsGS(*sol, *rhs, A, B);
+
+   return 0;
+}
+
+int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                      void* problem)
+{
+   // extract MultiFabs
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* rhs = NV_MFAB(nv_rhs);
+
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Geometry* geom = gs_problem->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
+   Real advCoeffU  = gs_problem->advCoeffU;
+   Real advCoeffV  = gs_problem->advCoeffV;
+   Real diffCoeffU = gs_problem->diffCoeffU;
+   Real diffCoeffV = gs_problem->diffCoeffV;
+
+   // clear the RHS vector
+   *rhs = 0.0;
+
+   // fill ghost cells
+   sol->FillBoundary(geom->periodicity());
+
+   // compute advection of u and v
+   ComputeAdvection(*sol, *rhs, *geom, 0, advCoeffU);
+   ComputeAdvection(*sol, *rhs, *geom, 1, advCoeffV);
+
+   // compute diffusion of u and v
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+
+   return 0;
+}
+
+int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                       void* problem)
+{
+   // extract MultiFabs
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* rhs = NV_MFAB(nv_rhs);
+
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Geometry* geom = gs_problem->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
+   Real advCoeffU = gs_problem->advCoeffU;
+   Real advCoeffV = gs_problem->advCoeffV;
+   Real A         = gs_problem->A;
+   Real B         = gs_problem->B;
+
+   // clear the RHS vector
+   *rhs = 0.0;
+
+   // fill ghost cells
+   sol->FillBoundary(geom->periodicity());
+
+   // compute advection of u and v
+   ComputeAdvection(*sol, *rhs, *geom, 0, advCoeffU);
+   ComputeAdvection(*sol, *rhs, *geom, 1, advCoeffV);
+
+   // compute reaction term
+   ComputeReactionsGS(*sol, *rhs, A, B);
+
+   return 0;
+}
+
+int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                        void* problem)
+{
+   // extract MultiFabs
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* rhs = NV_MFAB(nv_rhs);
+
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Geometry* geom = gs_problem->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
+   Real diffCoeffU = gs_problem->diffCoeffU;
+   Real diffCoeffV = gs_problem->diffCoeffV;
+   Real A          = gs_problem->A;
+   Real B          = gs_problem->B;
+
+   // clear the RHS vector
+   *rhs = 0.0;
+
+   // fill ghost cells
+   sol->FillBoundary(geom->periodicity());
+
+   // compute diffusion of u and v
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+
+   // compute reaction term
+   ComputeReactionsGS(*sol, *rhs, A, B);
+
+   return 0;
+}
+
+int ComputeRhsAdvDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
+                           void* problem)
+{
+   // extract MultiFabs
+   MultiFab* sol = NV_MFAB(nv_sol);
+   MultiFab* rhs = NV_MFAB(nv_rhs);
+
+   // extract problem data
+   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
+   Geometry* geom = gs_problem->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
+   Real advCoeffU  = gs_problem->advCoeffU;
+   Real advCoeffV  = gs_problem->advCoeffV;
+   Real diffCoeffU = gs_problem->diffCoeffU;
+   Real diffCoeffV = gs_problem->diffCoeffV;
+   Real A          = gs_problem->A;
+   Real B          = gs_problem->B;
+
+   // clear the RHS vector
+   *rhs = 0.0;
+
+   // fill ghost cells
+   sol->FillBoundary(geom->periodicity());
+
+   // compute advection of u and v
+   ComputeAdvection(*sol, *rhs, *geom, 0, advCoeffU);
+   ComputeAdvection(*sol, *rhs, *geom, 1, advCoeffV);
+
+   // compute diffusion of u and v
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+
+   // compute reaction term
+   ComputeReactionsGS(*sol, *rhs, A, B);
 
    return 0;
 }
@@ -251,8 +340,6 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
 void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
                  Real& dtout, int& plot_int, GrayScottProblem& problem)
 {
-   Real diffCoeffU, diffCoeffV, A, B;
-
    // ParmParse is way of reading inputs from the inputs file
    ParmParse pp;
 
@@ -275,8 +362,8 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
    stepper = 0;
    pp.query("stepper", stepper);
 
-   // Specify final time for integration (default to 1000)
-   tfinal = 1.0e3;
+   // Specify final time for integration (default to 10,000)
+   tfinal = 1.0e4;
    pp.query("tfinal", tfinal);
 
    // Specify output frequency (default to final time)
@@ -284,16 +371,32 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
    pp.query("dtout", dtout);
 
    // Get Gray-Scott problem coefficients
+   Real advCoeffU, advCoeffV, diffCoeffU, diffCoeffV, A, B;
+
+   advCoeffU = 5.0e-4;
+   advCoeffV = 5.0e-4;
+   pp.query("advCoeffU", advCoeffU);
+   pp.query("advCoeffV", advCoeffV);
+
+   diffCoeffU = 2.0e-5;
+   diffCoeffU = 1.0e-5;
    pp.query("diffCoeffU", diffCoeffU);
    pp.query("diffCoeffV", diffCoeffV);
+
+   A = 0.04;
+   B = 0.06;
    pp.query("A", A);
    pp.query("B", B);
 
-   amrex::Print() << "diffCoeffU = " << diffCoeffU;
-   amrex::Print() << "  diffCoeffV = " << diffCoeffV;
-   amrex::Print() << "  A = " << A;
-   amrex::Print() << "  B = " << B << std::endl;
+   amrex::Print() << "advCoeffU = " << advCoeffU
+                  << " advCoeffV = " << advCoeffV << std::endl
+                  << "diffCoeffU = " << diffCoeffU
+                  << " diffCoeffV = " << diffCoeffV << std::endl
+                  << "A = " << A
+                  << " B = " << B << std::endl;
 
+   problem.advCoeffU = advCoeffU;
+   problem.advCoeffV = advCoeffV;
    problem.diffCoeffU = diffCoeffU;
    problem.diffCoeffV = diffCoeffV;
    problem.A = A;
@@ -345,7 +448,7 @@ void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
    }
 
    // Create the MRI stepper
-   void* arkode_mem = MRIStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
+   void* arkode_mem = MRIStepCreate(ComputeRhsDiff, ComputeRhsReact,
                                     time, nv_sol);
 
    // Set MRIStep options
@@ -409,11 +512,11 @@ void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
    // Create the ARK stepper
 
    // explicit diffusion, implicit reactions
-   // void* arkode_mem = ARKStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
+   // void* arkode_mem = ARKStepCreate(ComputeRhsDiff, ComputeRhsReact,
    //                                  time, nv_sol);
 
    // explicit reactions, implicit diffusion
-   void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV,
+   void* arkode_mem = ARKStepCreate(ComputeRhsReact, ComputeRhsDiff,
                                     time, nv_sol);
 
    // Set ARKStep options
@@ -485,7 +588,7 @@ void ComputeSolutionCV(N_Vector nv_sol, GrayScottProblem* problem,
 
    // Create CVODE memory
    void* cvode_mem = CVodeCreate(CV_BDF);
-   CVodeInit(cvode_mem, ComputeDiffusionReactionsNV, time, nv_sol);
+   CVodeInit(cvode_mem, ComputeRhsAdvDiffReact, time, nv_sol);
 
    // Set CVODE options
    CVodeSStolerances(cvode_mem, 1.0e-4, 1.0e-9);

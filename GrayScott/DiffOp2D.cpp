@@ -1,14 +1,21 @@
-#include <AMReX_Geometry.H>
-#include <AMReX_MultiFab.H>
-#include <AMReX_Array.H>
-
 #include "DiffOp.h"
 
 using namespace amrex;
 
+// utility functions for computing diffusion
+static void ComputeDiffFlux(MultiFab& sol, MultiFab& fx, MultiFab& fy,
+                            Geometry& geom, int comp, Real diffCoeff);
+
+static void ComputeDivergence(MultiFab& div, MultiFab& fx, MultiFab& fy,
+                              Geometry& geom, int comp);
+
+/* ---------------------------------------------------------------------------
+ * Exported Functions
+ * ---------------------------------------------------------------------------*/
 
 // Assumes ghost cells already filled
-void ComputeAdvection(MultiFab& sol, MultiFab& advection,
+// Adds result to adv_mf MultiFab
+void ComputeAdvection(MultiFab& sol_mf, MultiFab& adv_mf,
                       Geometry& geom, int comp, Real advCoeff)
 {
    const auto dx = geom.CellSize();
@@ -16,11 +23,11 @@ void ComputeAdvection(MultiFab& sol, MultiFab& advection,
    Real sideCoeff = advCoeff * twoDxInv;
 
    int c = comp;  // for brevity
-   for (MFIter mfi(sol); mfi.isValid(); ++mfi)
+   for (MFIter mfi(sol_mf); mfi.isValid(); ++mfi)
    {
       const Box& bx = mfi.validbox();
-      Array4<Real> const& sol_fab = sol.array(mfi);
-      Array4<Real> const& adv_fab = advection.array(mfi);
+      Array4<Real> const& sol_fab = sol_mf.array(mfi);
+      Array4<Real> const& adv_fab = adv_mf.array(mfi);
       const auto lo = lbound(bx);
       const auto hi = ubound(bx);
 
@@ -33,9 +40,23 @@ void ComputeAdvection(MultiFab& sol, MultiFab& advection,
    }
 }
 
+// Assumes ghots cells are already filled
+// Adds result to diff_mf
+void ComputeDiffusion(MultiFab& sol, MultiFab& diff_mf, MultiFab& fx_mf,
+                      MultiFab& fy_mf, Geometry& geom, int comp, Real diffCoeff)
+{
+   ComputeDiffFlux(sol, fx_mf, fy_mf, geom, comp, diffCoeff);
+   ComputeDivergence(diff_mf, fx_mf, fy_mf, geom, comp);
+}
+
+/* ---------------------------------------------------------------------------
+ * Utility Functions
+ * ---------------------------------------------------------------------------*/
+
 // Assumes ghost cells already filled
-void ComputeDiffFlux(MultiFab& sol_mf, MultiFab& fx_mf, MultiFab& fy_mf,
-                     Geometry& geom, int comp, Real diffCoeff)
+// Overwrites fx_mf and fy_mf MultiFabs
+static void ComputeDiffFlux(MultiFab& sol_mf, MultiFab& fx_mf, MultiFab& fy_mf,
+                            Geometry& geom, int comp, Real diffCoeff)
 {
    const auto dx = geom.CellSize();
    Real dxInv = 1.0 / dx[0]; // assume same in all directions
@@ -73,8 +94,10 @@ void ComputeDiffFlux(MultiFab& sol_mf, MultiFab& fx_mf, MultiFab& fy_mf,
    }
 }
 
-void ComputeDivergence(MultiFab& div_mf, MultiFab& fx_mf, MultiFab& fy_mf,
-                       Geometry& geom, int comp)
+// Assumes ghost cells already filled
+// Adds result to div_mf MultiFab
+static void ComputeDivergence(MultiFab& div_mf, MultiFab& fx_mf,
+                              MultiFab& fy_mf, Geometry& geom, int comp)
 {
    const auto dx = geom.CellSize();
    Real dxInv = 1.0 / dx[0]; // assume same in all directions
@@ -93,8 +116,8 @@ void ComputeDivergence(MultiFab& div_mf, MultiFab& fx_mf, MultiFab& fy_mf,
       for (int j = lo.y; j <= hi.y; ++j) {
          for (int i = lo.x; i <= hi.x; ++i) {
             // always use zero component for flux
-            div(i,j,0,c) = dxInv * (fx(i+1,j,0,0) - fx(i,j,0,0)) +
-                           dyInv * (fy(i,j+1,0,0) - fy(i,j,0,0));
+            div(i,j,0,c) += dxInv * (fx(i+1,j,0,0) - fx(i,j,0,0)) +
+                            dyInv * (fy(i,j+1,0,0) - fy(i,j,0,0));
             //amrex::Print() << "div(" << i << "," << j << "," << c << ") = " << div(i,j,0,c) << std::endl;
          }
       }
