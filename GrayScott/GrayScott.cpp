@@ -33,8 +33,10 @@ void DoProblem()
 
    // --- Problem setup ---
    int n_cell, max_grid_size, stepper, nsteps, plot_int;
+   Real tfinal;
    GrayScottProblem problem;
-   ParseInputs(n_cell, max_grid_size, stepper, nsteps, plot_int, problem);
+   ParseInputs(n_cell, max_grid_size, stepper, tfinal, nsteps, plot_int,
+               problem);
 
    // make BoxArray and Geometry
    BoxArray ba;
@@ -78,10 +80,12 @@ void DoProblem()
    switch (stepper)
    {
    case 0:
-      ComputeSolutionARK(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
+      ComputeSolutionARK(nv_sol_old, nv_sol_new, &problem, tfinal, nsteps,
+                         plot_int);
       break;
    case 1:
-      ComputeSolutionMRI(nv_sol_old, nv_sol_new, &problem, nsteps, plot_int);
+      ComputeSolutionMRI(nv_sol_old, nv_sol_new, &problem, tfinal, nsteps,
+                         plot_int);
       break;
    default:
       amrex::Print() << "Invalid stepper option" << std::endl;
@@ -194,8 +198,8 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
    }
 }
 
-void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, int& nsteps,
-                 int& plot_int, GrayScottProblem& problem)
+void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
+                 int& nsteps, int& plot_int, GrayScottProblem& problem)
 {
    Real diffCoeffU, diffCoeffV, A, B;
 
@@ -220,6 +224,10 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, int& nsteps,
    // 1 = MRIStep
    stepper = 0;
    pp.query("stepper", stepper);
+
+   // Specify final time for integration
+   tfinal = 1.0e3;
+   pp.query("tfinal", tfinal);
 
    // Default nsteps to 10, allow us to set it to something else in the inputs
    // file
@@ -269,16 +277,14 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
    problem.geom = &geom;
 }
 
-void ComputeSolutionMRI(N_Vector sol_old,
-                        N_Vector sol_new,
+void ComputeSolutionMRI(N_Vector sol_old, N_Vector sol_new,
                         GrayScottProblem* problem,
-                        int nsteps, int plot_int)
+                        Real tfinal, int nsteps, int plot_int)
 {
    Geometry* geom = problem->geom;
 
-   Real time   = 0.0;          // time = starting time in the simulation
-   Real tFinal = nsteps * 1.0;
-   int  ier    = 0;            // error flag
+   Real time = 0.0; // time = starting time in the simulation
+   int  ier  = 0;   // error flag
 
    // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
    // in the inputs file)
@@ -305,7 +311,7 @@ void ComputeSolutionMRI(N_Vector sol_old,
 
    // Advance the solution in time
    realtype tret;
-   ier = MRIStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
+   ier = MRIStepEvolve(arkode_mem, tfinal, sol_new, &tret, ARK_NORMAL);
    if (ier < 0)
    {
       amrex::Print() << "Error in MRIStepEvolve" << std::endl;
@@ -328,16 +334,14 @@ void ComputeSolutionMRI(N_Vector sol_old,
    }
 }
 
-void ComputeSolutionARK(N_Vector sol_old,
-                        N_Vector sol_new,
+void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
                         GrayScottProblem* problem,
-                        int nsteps, int plot_int)
+                        Real tfinal, int nsteps, int plot_int)
 {
    Geometry* geom = problem->geom;
 
-   Real time   = 0.0;          // time = starting time in the simulation
-   Real tFinal = nsteps * 1.0;
-   int  ier    = 0;            // error flag
+   Real time = 0.0; // time = starting time in the simulation
+   int  ier  = 0;   // error flag
 
    // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
    // in the inputs file)
@@ -354,7 +358,12 @@ void ComputeSolutionARK(N_Vector sol_old,
    N_VScale(1.0, sol_new, sol_old);
 
    // Create the ARK stepper
-   //void* arkode_mem = ARKStepCreate(ComputeDiffusionNV, ComputeReactionsNV, time, sol_old);
+
+   // explicit diffusion, implicit reactions
+   // void* arkode_mem = ARKStepCreate(ComputeDiffusionNV, ComputeReactionsNV,
+   //                                  time, sol_old);
+
+   // explicit reactions, implicit diffusion
    void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV,
                                     time, sol_old);
 
@@ -375,7 +384,7 @@ void ComputeSolutionARK(N_Vector sol_old,
 
    // Advance the solution in time
    realtype tret;
-   ier = ARKStepEvolve(arkode_mem, 1000.0, sol_new, &tret, ARK_NORMAL);
+   ier = ARKStepEvolve(arkode_mem, tfinal, sol_new, &tret, ARK_NORMAL);
    if (ier < 0)
    {
       amrex::Print() << "Error in MRIStepEvolve" << std::endl;

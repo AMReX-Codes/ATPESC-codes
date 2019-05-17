@@ -38,22 +38,21 @@ int ComputeLaplacianNV(realtype t,
 void FillInitConds2D(amrex::MultiFab& sol,
                      const amrex::Geometry& geom);
 
-void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, int& nsteps,
-                 int& plot_int, GrayScottProblem& problem);
+void ParseInputs(int& n_cell, int& max_grid_size, int& stepper,
+                 amrex::Real& tfinal, int& nsteps, int& plot_int,
+                 GrayScottProblem& problem);
 
 void SetUpGeometry(amrex::BoxArray& ba,
                    amrex::Geometry& geom,
                    GrayScottProblem& problem,
                    int n_cell, int max_grid_size);
 
-void ComputeSolutionMRI(N_Vector sol_old,
-                        N_Vector sol_new,
+void ComputeSolutionMRI(N_Vector sol_old, N_Vector sol_new,
                         GrayScottProblem* problem,
-                        int nsteps, int plot_int);
+                        amrex::Real tfinal, int nsteps, int plot_int);
 
-void ComputeSolutionARK(N_Vector sol_old,
-                        N_Vector sol_new,
+void ComputeSolutionARK(N_Vector sol_old, N_Vector sol_new,
                         GrayScottProblem* problem,
-                        int nsteps, int plot_int);
+                        amrex::Real tfinal, int nsteps, int plot_int);
 
 #endif

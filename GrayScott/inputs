@@ -1,4 +1,5 @@
 stepper = 0
+tfinal = 1.0e3
 nsteps = 1000
 plot_int = 1000
 n_cell = 256
