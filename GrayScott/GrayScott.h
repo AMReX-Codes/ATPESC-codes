@@ -5,6 +5,7 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Array.H>
 
+// user-data structure passed through SUNDIALS to RHS functions
 struct GrayScottProblem
 {
    amrex::Geometry* geom;
