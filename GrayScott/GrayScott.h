@@ -41,8 +41,8 @@ void FillInitConds2D(amrex::MultiFab& sol,
 
 // Parse the problem input file
 void ParseInputs(int& n_cell, int& max_grid_size, int& stepper,
-                 amrex::Real& tfinal, int& nsteps, int& plot_int,
-                 GrayScottProblem& problem);
+                 amrex::Real& tfinal, amrex::Real& dtout,
+                 int& plot_int, GrayScottProblem& problem);
 
 // Set the problem decomposition
 void SetUpGeometry(amrex::BoxArray& ba,
@@ -52,10 +52,10 @@ void SetUpGeometry(amrex::BoxArray& ba,
 
 // Advance the solution in time with MRIStep
 void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
-                        amrex::Real tfinal, int nsteps, int plot_int);
+                        amrex::Real tfinal, amrex::Real dtout, int plot_int);
 
 // Advance the solution in time with ARKStep
 void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
-                        amrex::Real tfinal, int nsteps, int plot_int);
+                        amrex::Real tfinal, amrex::Real dtout, int plot_int);
 
 #endif

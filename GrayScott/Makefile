@@ -29,10 +29,16 @@ GrayScott.o: GrayScott.cpp GrayScott.h
 DiffOp2D.o: DiffOp2D.cpp DiffOp.h
 	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
-.PHONY: clean realclean
+.PHONY: movie clean realclean pltclean
+
+movie:
+	ls -1 plt*/Header | tee movie.visit
 
 clean:
 	$(RM) *.o
 
 realclean: clean
 	$(RM) *.exe
+
+plotclean:
+	$(RM) -rf plt*/

@@ -1,7 +1,33 @@
+# ------------------------------------------------------------------------------
+# Input parameters for the Gray-Scott (reaction-diffusion) example:
+#
+#   du/dt = Du \nabla^2 u - u v^2 + A (1-u)
+#   dv/dt = Dv \nabla^2 v + u v^2 - (A + B) v
+#
+#   u = concentration of species U
+#   v = concentration of species V
+#
+# Chemical Reaction:
+#
+#   U + 2V -> 3V
+#        V -> P
+#
+# ------------------------------------------------------------------------------
+# stepper       : 0 = ARKStep, 1 = MRIStep
+# tfinal        : final simulation time
+# plot_int      : enable or disable solution output
+# dtout         : output time step
+# n_cell        : number of cells on each edge of the square
+# max_grid_size : max cell size
+# diffCoeffU    : diffusion coefficient for U
+# diffCoeffV    : diffusion coefficient for V
+# A             : rate that feeds U and drains U, V, and P
+# B             : rate for converting V to P
+# ------------------------------------------------------------------------------
 stepper = 0
 tfinal = 1.0e3
-nsteps = 1000
-plot_int = 1000
+plot_int = 1
+dtout = 300.0
 n_cell = 256
 max_grid_size = 64
 diffCoeffU = 2.0e-5

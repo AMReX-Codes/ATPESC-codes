@@ -32,10 +32,10 @@ void DoProblem()
 
 
    // --- Problem setup ---
-   int n_cell, max_grid_size, stepper, nsteps, plot_int;
-   Real tfinal;
+   int n_cell, max_grid_size, stepper, plot_int;
+   Real tfinal, dtout;
    GrayScottProblem problem;
-   ParseInputs(n_cell, max_grid_size, stepper, tfinal, nsteps, plot_int,
+   ParseInputs(n_cell, max_grid_size, stepper, tfinal, dtout, plot_int,
                problem);
 
    // make BoxArray and Geometry
@@ -77,10 +77,10 @@ void DoProblem()
    switch (stepper)
    {
    case 0:
-      ComputeSolutionARK(nv_sol, &problem, tfinal, nsteps, plot_int);
+      ComputeSolutionARK(nv_sol, &problem, tfinal, dtout, plot_int);
       break;
    case 1:
-      ComputeSolutionMRI(nv_sol, &problem, tfinal, nsteps, plot_int);
+      ComputeSolutionMRI(nv_sol, &problem, tfinal, dtout, plot_int);
       break;
    default:
       amrex::Print() << "Invalid stepper option" << std::endl;
@@ -194,7 +194,7 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
 }
 
 void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
-                 int& nsteps, int& plot_int, GrayScottProblem& problem)
+                 Real& dtout, int& plot_int, GrayScottProblem& problem)
 {
    Real diffCoeffU, diffCoeffV, A, B;
 
@@ -220,14 +220,13 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
    stepper = 0;
    pp.query("stepper", stepper);
 
-   // Specify final time for integration
+   // Specify final time for integration (default to 1000)
    tfinal = 1.0e3;
    pp.query("tfinal", tfinal);
 
-   // Default nsteps to 10, allow us to set it to something else in the inputs
-   // file
-   nsteps = 10;
-   pp.query("nsteps", nsteps);
+   // Specify output frequency (default to final time)
+   dtout = tfinal;
+   pp.query("dtout", dtout);
 
    // Get Gray-Scott problem coefficients
    pp.query("diffCoeffU", diffCoeffU);
@@ -273,19 +272,18 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
 }
 
 void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
-                        Real tfinal, int nsteps, int plot_int)
+                        Real tfinal, Real dtout, int plot_int)
 {
    Geometry* geom = problem->geom;
 
-   Real time = 0.0; // time = starting time in the simulation
-   int  ier  = 0;   // error flag
+   Real time = 0.0;                // time = starting time in the simulation
+   int  ier  = 0;                  // error flag
+   int  nout = ceil(tfinal/dtout); // number of outputs
 
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
-   // in the inputs file)
+   // Write a plotfile of the initial data
    if (plot_int > 0)
    {
-      int n = 0;
-      const std::string& pltfile = amrex::Concatenate("plt", n, 5);
+      const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
       MultiFab* sol = NV_MFAB(nv_sol);
       WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
                                *geom, time, 0);
@@ -301,44 +299,53 @@ void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
    MRIStepSetUserData(arkode_mem, problem);
 
    // Advance the solution in time
-   realtype tret;
-   ier = MRIStepEvolve(arkode_mem, tfinal, nv_sol, &tret, ARK_NORMAL);
-   if (ier < 0)
+   realtype tout = time + dtout; // first output time
+   realtype tret;                // return time
+   for (int iout=0; iout < nout; iout++)
    {
-      amrex::Print() << "Error in MRIStepEvolve" << std::endl;
-      return;
-   }
+      ier = MRIStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
+      if (ier < 0)
+      {
+         amrex::Print() << "Error in MRIStepEvolve" << std::endl;
+         return;
+      }
 
-   // Get integration stats
-   long nfs_evals, nff_evals;
-   MRIStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
-   amrex::Print() << nfs_evals << " slow evals "
-                  << nff_evals << " fast evals" << std::endl;
+      // Get integration stats
+      long nfs_evals, nff_evals;
+      MRIStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
+      amrex::Print() << "t = " << std::setw(5) << tret
+                     << "  slow evals " << std::setw(7) << nfs_evals
+                     << "  fast evals " << std::setw(7) << nff_evals
+                     << std::endl;
 
-   // Write output
-   if (plot_int > 0)
-   {
-      const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
-      MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                               *geom, nsteps, nsteps);
+      // Write output
+      if (plot_int > 0)
+      {
+         const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
+         MultiFab* sol = NV_MFAB(nv_sol);
+         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
+                                  *geom, tret, iout+1);
+      }
+
+      // Update output time
+      tout += dtout;
+      if (tout > tfinal) tout = tfinal;
    }
 }
 
 void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
-                        Real tfinal, int nsteps, int plot_int)
+                        Real tfinal, Real dtout, int plot_int)
 {
    Geometry* geom = problem->geom;
 
-   Real time = 0.0; // time = starting time in the simulation
-   int  ier  = 0;   // error flag
+   Real time = 0.0;                // time = starting time in the simulation
+   int  ier  = 0;                  // error flag
+   int  nout = ceil(tfinal/dtout); // number of outputs
 
-   // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined
-   // in the inputs file)
+   // Write a plotfile of the initial data
    if (plot_int > 0)
    {
-      int n = 0;
-      const std::string& pltfile = amrex::Concatenate("plt", n, 5);
+      const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
       MultiFab* sol = NV_MFAB(nv_sol);
       WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
                                *geom, time, 0);
@@ -354,7 +361,7 @@ void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
    void* arkode_mem = ARKStepCreate(ComputeReactionsNV, ComputeDiffusionNV,
                                     time, nv_sol);
 
-   // Set MRIStep options   
+   // Set ARKStep options
    //ARKStepSStolerances(arkode_mem, 1.0, 1.0);
    ARKStepSetFixedStep(arkode_mem, 1.0);
    ARKStepSetMaxNumSteps(arkode_mem, 5000);
@@ -370,26 +377,36 @@ void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
    }
 
    // Advance the solution in time
-   realtype tret;
-   ier = ARKStepEvolve(arkode_mem, tfinal, nv_sol, &tret, ARK_NORMAL);
-   if (ier < 0)
+   realtype tout = time + dtout; // first output time
+   realtype tret;                // return time
+   for (int iout=0; iout < nout; iout++)
    {
-      amrex::Print() << "Error in MRIStepEvolve" << std::endl;
-      return;
-   }
+      ier = ARKStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
+      if (ier < 0)
+      {
+         amrex::Print() << "Error in MRIStepEvolve" << std::endl;
+         return;
+      }
 
-   // Get integration stats
-   long nfe_evals, nfi_evals;
-   ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
-   amrex::Print() << nfe_evals << " explicit evals "
-                  << nfi_evals << " implicit evals" << std::endl;
+      // Get integration stats
+      long nfe_evals, nfi_evals;
+      ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
+      amrex::Print() << "t = " << std::setw(5) << tret
+                     << "  explicit evals = " << std::setw(7) << nfe_evals
+                     << "  implicit evals = " << std::setw(7) << nfi_evals
+                     << std::endl;
 
-   // Write output
-   if (plot_int > 0)
-   {
-      const std::string& pltfile = amrex::Concatenate("plt", nsteps, 5);
-      MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                               *geom, nsteps, nsteps);
+      // Write output
+      if (plot_int > 0)
+      {
+         const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
+         MultiFab* sol = NV_MFAB(nv_sol);
+         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
+                                  *geom, tret, iout+1);
+      }
+
+      // Update output time
+      tout += dtout;
+      if (tout > tfinal) tout = tfinal;
    }
 }
