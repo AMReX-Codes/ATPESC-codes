@@ -118,7 +118,7 @@ int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    Real advCoeffU = gs_problem->advCoeffU;
    Real advCoeffV = gs_problem->advCoeffV;
 
-   // clear the RHS vector
+   // clear the RHS
    *rhs = 0.0;
 
    // fill ghost cells
@@ -148,6 +148,9 @@ int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    // fill ghost cells
    sol->FillBoundary(geom->periodicity());
 
+   // clear the RHS
+   *rhs = 0.0;
+
    // compute diffusion of u and v
    ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
    ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
@@ -166,6 +169,9 @@ int ComputeRhsReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
    Real A = gs_problem->A;
    Real B = gs_problem->B;
+
+   // clear the RHS
+   *rhs = 0.0;
 
    // compute reaction term
    ComputeReactionsGS(*sol, *rhs, A, B);
@@ -189,7 +195,7 @@ int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    Real diffCoeffU = gs_problem->diffCoeffU;
    Real diffCoeffV = gs_problem->diffCoeffV;
 
-   // clear the RHS vector
+   // clear the RHS
    *rhs = 0.0;
 
    // fill ghost cells
@@ -222,7 +228,7 @@ int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    Real A         = gs_problem->A;
    Real B         = gs_problem->B;
 
-   // clear the RHS vector
+   // clear the RHS
    *rhs = 0.0;
 
    // fill ghost cells
@@ -254,7 +260,7 @@ int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    Real A          = gs_problem->A;
    Real B          = gs_problem->B;
 
-   // clear the RHS vector
+   // clear the RHS
    *rhs = 0.0;
 
    // fill ghost cells
@@ -288,7 +294,7 @@ int ComputeRhsAdvDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    Real A          = gs_problem->A;
    Real B          = gs_problem->B;
 
-   // clear the RHS vector
+   // clear the RHS
    *rhs = 0.0;
 
    // fill ghost cells
