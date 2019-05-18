@@ -31,8 +31,9 @@
 *.out
 *.app
 
-# Plot directories
+# Plot directories and files
 plt*
+movie.visit
 
 # Build directory
 build/
