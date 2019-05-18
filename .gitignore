@@ -33,3 +33,6 @@
 
 # Plot directories
 plt*
+
+# Build directory
+build/
