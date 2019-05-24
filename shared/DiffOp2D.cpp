@@ -42,12 +42,14 @@ void ComputeAdvection(MultiFab& sol_mf, MultiFab& adv_mf,
 
 // Assumes ghost cells already filled
 // Adds result to adv_mf MultiFab
-void ComputeAdvectionUpwind1(MultiFab& sol_mf, MultiFab& adv_mf,
-                             Geometry& geom, int comp, Real advCoeff)
+void ComputeAdvectionUpwind1(MultiFab& sol_mf, MultiFab& adv_mf, Geometry& geom,
+                             int comp, Real advCoeffx, Real advCoeffy)
 {
    const auto dx = geom.CellSize();
-   Real twoDxInv = 1.0 / dx[0]; // assume same in all directions
-   Real sideCoeff = advCoeff * twoDxInv;
+   Real dxInv = 1.0 / dx[0]; // assume same in all directions
+   Real dyInv = 1.0 / dx[1]; // assume same in all directions
+   Real sideCoeffx = advCoeffx * dxInv;
+   Real sideCoeffy = advCoeffy * dyInv;
 
    int c = comp;  // for brevity
    for (MFIter mfi(sol_mf); mfi.isValid(); ++mfi)
@@ -58,18 +60,32 @@ void ComputeAdvectionUpwind1(MultiFab& sol_mf, MultiFab& adv_mf,
       const auto lo = lbound(bx);
       const auto hi = ubound(bx);
 
-      if (advCoeff > 0) {
+      // x-direction
+      if (advCoeffx > 0) {
          for (int j = lo.y; j <= hi.y; ++j) {
             for (int i = lo.x; i <= hi.x; ++i) {
-               adv_fab(i,j,0,c) -= sideCoeff * (sol_fab(i,j,0,c) - sol_fab(i-1,j,0,c));
-               adv_fab(i,j,0,c) -= sideCoeff * (sol_fab(i,j,0,c) - sol_fab(i,j-1,0,c));
+               adv_fab(i,j,0,c) -= sideCoeffx * (sol_fab(i,j,0,c) - sol_fab(i-1,j,0,c));
             }
          }
       } else {
          for (int j = lo.y; j <= hi.y; ++j) {
             for (int i = lo.x; i <= hi.x; ++i) {
-               adv_fab(i,j,0,c) -= sideCoeff * (sol_fab(i+1,j,0,c) - sol_fab(i,j,0,c));
-               adv_fab(i,j,0,c) -= sideCoeff * (sol_fab(i,j+1,0,c) - sol_fab(i,j,0,c));
+               adv_fab(i,j,0,c) -= sideCoeffx * (sol_fab(i+1,j,0,c) - sol_fab(i,j,0,c));
+            }
+         }
+      }
+
+      // y-direction
+      if (advCoeffy > 0) {
+         for (int j = lo.y; j <= hi.y; ++j) {
+            for (int i = lo.x; i <= hi.x; ++i) {
+               adv_fab(i,j,0,c) -= sideCoeffy * (sol_fab(i,j,0,c) - sol_fab(i,j-1,0,c));
+            }
+         }
+      } else {
+         for (int j = lo.y; j <= hi.y; ++j) {
+            for (int i = lo.x; i <= hi.x; ++i) {
+               adv_fab(i,j,0,c) -= sideCoeffy * (sol_fab(i,j+1,0,c) - sol_fab(i,j,0,c));
             }
          }
       }

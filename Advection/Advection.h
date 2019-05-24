@@ -9,7 +9,8 @@
 struct AdvectionProblem
 {
    amrex::Geometry* geom;
-   amrex::Real      advCoeff;
+   amrex::Real      advCoeffx;
+   amrex::Real      advCoeffy;
 };
 
 // Run problem

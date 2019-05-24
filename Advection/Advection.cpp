@@ -97,7 +97,8 @@ int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    // extract problem data
    AdvectionProblem *gs_problem = (AdvectionProblem*) problem;
    Geometry* geom = gs_problem->geom;
-   Real advCoeff  = gs_problem->advCoeff;
+   Real advCoeffx  = gs_problem->advCoeffx;
+   Real advCoeffy  = gs_problem->advCoeffy;
 
    // clear the RHS
    *rhs = 0.0;
@@ -106,7 +107,7 @@ int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    sol->FillBoundary(geom->periodicity());
 
    // compute advection
-   ComputeAdvectionUpwind1(*sol, *rhs, *geom, 0, advCoeff);
+   ComputeAdvectionUpwind1(*sol, *rhs, *geom, 0, advCoeffx, advCoeffy);
 
    return 0;
 }
@@ -175,14 +176,18 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
    pp.query("dtout", dtout);
 
    // Get advection problem coefficients
-   Real advCoeff;
+   Real advCoeffx, advCoeffy;
 
-   advCoeff = 5.0e-4;
-   pp.query("advCoeff", advCoeff);
+   advCoeffx = 5.0e-4;
+   advCoeffy = 5.0e-4;
+   pp.query("advCoeffx", advCoeffx);
+   pp.query("advCoeffy", advCoeffy);
 
-   amrex::Print() << "advCoeff = " << advCoeff << std::endl;
+   amrex::Print() << "advCoeffx = " << advCoeffx 
+                  << "advCoeffy = " << advCoeffy << std::endl;
 
-   problem.advCoeff = advCoeff;
+   problem.advCoeffx = advCoeffx;
+   problem.advCoeffy = advCoeffy;
 }
 
 void SetUpGeometry(BoxArray& ba, Geometry& geom,

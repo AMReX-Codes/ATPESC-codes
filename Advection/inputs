@@ -15,5 +15,5 @@ plot_int = 1
 dtout = 300.0
 n_cell = 256
 max_grid_size = 64
-advCoeff = 5.0e-4
-
+advCoeffx = 5.0e-4
+advCoeffy = -5.0e-4
