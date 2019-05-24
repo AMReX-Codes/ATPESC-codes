@@ -383,7 +383,7 @@ void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
    pp.query("advCoeffV", advCoeffV);
 
    diffCoeffU = 2.0e-5;
-   diffCoeffU = 1.0e-5;
+   diffCoeffV = 1.0e-5;
    pp.query("diffCoeffU", diffCoeffU);
    pp.query("diffCoeffV", diffCoeffV);
 
