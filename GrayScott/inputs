@@ -1,8 +1,8 @@
 # ------------------------------------------------------------------------------
 # Input parameters for the Gray-Scott (reaction-diffusion) example:
 #
-#   du/dt = Au div(u) - Du divgrad(u) - u v^2 + A (1-u)
-#   dv/dt = Av div(v) - Dv divgrad(v) + u v^2 - (A + B) v
+#   du/dt = Au grad(u) - Du divgrad(u) - u v^2 + A (1-u)
+#   dv/dt = Av grad(v) - Dv divgrad(v) + u v^2 - (A + B) v
 #
 #   u = concentration of species U
 #   v = concentration of species V
