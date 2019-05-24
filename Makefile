@@ -18,12 +18,18 @@ LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode
 
 LIBRARIES += -lgfortran
 
-default: Advection.exe GrayScott.exe
+default: Advection.exe Diffusion.exe GrayScott.exe
 
 Advection.exe: Advection/Advection.o shared/NVector_Multifab.o shared/DiffOp2D.o
 	$(CXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
 Advection/Advection.o: Advection/Advection.cpp Advection/Advection.h
+	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+
+Diffusion.exe: Diffusion/Diffusion.o shared/NVector_Multifab.o shared/DiffOp2D.o
+	$(CXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
+
+Diffusion/Diffusion.o: Diffusion/Diffusion.cpp Diffusion/Diffusion.h
 	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 GrayScott.exe: GrayScott/GrayScott.o shared/NVector_Multifab.o shared/DiffOp2D.o shared/Reactions.o
@@ -47,7 +53,7 @@ movie:
 	ls -1 plt*/Header | tee movie.visit
 
 clean:
-	$(RM) Advection/*.o GrayScott/*.o shared/*.o
+	$(RM) Advection/*.o Diffusion/*.o GrayScott/*.o shared/*.o
 
 realclean: clean
 	$(RM) *.exe
