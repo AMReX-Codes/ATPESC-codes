@@ -114,7 +114,6 @@ int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    // extract problem data
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
    Geometry* geom = gs_problem->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
    Real advCoeffU = gs_problem->advCoeffU;
    Real advCoeffV = gs_problem->advCoeffV;
 
@@ -222,7 +221,6 @@ int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    // extract problem data
    GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
    Geometry* geom = gs_problem->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
    Real advCoeffU = gs_problem->advCoeffU;
    Real advCoeffV = gs_problem->advCoeffV;
    Real A         = gs_problem->A;
@@ -526,7 +524,6 @@ void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
                                     time, nv_sol);
 
    // Set ARKStep options
-   ARKStepSetFixedStep(arkode_mem, 1.0);
    ARKStepSetMaxNumSteps(arkode_mem, 5000);
    ARKStepSetUserData(arkode_mem, problem);
 
