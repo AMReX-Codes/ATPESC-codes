@@ -9,6 +9,7 @@ project(ATPESC-examples CXX)
 
 # check for AMREX location
 if(NOT AMREX_DIR)
+  set(AMREX_DIR "" CACHE FILEPATH "AMReX install directory")
   message(FATAL_ERROR "AMREX_DIR is not set")
 endif()
 
@@ -26,6 +27,7 @@ endif()
 
 # check for SUNDIALS location
 if(NOT SUNDIALS_DIR)
+  set(SUNDIALS_DIR "" CACHE FILEPATH "SUNDIALS install directory")
   message(FATAL_ERROR "SUNDIALS_DIR is not set")
 endif()
 
@@ -70,4 +72,5 @@ set(EXTRA_LINK_LIBS gfortran)
 
 # add source directories
 add_subdirectory(shared)
+add_subdirectory(Advection)
 add_subdirectory(GrayScott)

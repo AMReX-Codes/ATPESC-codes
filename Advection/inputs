@@ -1,0 +1,19 @@
+# ------------------------------------------------------------------------------
+# Input parameters for the Advection example
+# ------------------------------------------------------------------------------
+# stepper       : 0 = CVODE, 1 = ARKStep
+# tfinal        : final simulation time
+# plot_int      : enable or disable solution output
+# dtout         : output time step
+# n_cell        : number of cells on each edge of the square
+# max_grid_size : max cell size
+# advCoeff      : advection coefficient
+# ------------------------------------------------------------------------------
+stepper = 1
+tfinal = 1.0e4
+plot_int = 1
+dtout = 300.0
+n_cell = 256
+max_grid_size = 64
+advCoeff = 5.0e-4
+
