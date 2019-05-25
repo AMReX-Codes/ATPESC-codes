@@ -49,7 +49,7 @@ void DoProblem()
    DistributionMapping dm(ba);
 
    // allocate the solution MultiFab
-   int nGhost = 2;  // number of ghost cells for each array
+   int nGhost = 1;  // number of ghost cells for each array
    int nComp  = 1;  // number of components for each array
    MultiFab sol(ba, dm, nComp, nGhost);
 
@@ -107,7 +107,7 @@ int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    sol->FillBoundary(geom->periodicity());
 
    // compute advection
-   ComputeAdvectionUpwind1(*sol, *rhs, *geom, 0, advCoeffx, advCoeffy);
+   ComputeAdvectionUpwind(*sol, *rhs, *geom, 0, advCoeffx, advCoeffy);
 
    return 0;
 }

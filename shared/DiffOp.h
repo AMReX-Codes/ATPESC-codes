@@ -10,18 +10,12 @@ void ComputeAdvection(amrex::MultiFab& sol,
                       amrex::Geometry& geom,
                       int comp, amrex::Real advCoeff);
 
-void ComputeAdvectionUpwind1(amrex::MultiFab& sol,
-                             amrex::MultiFab& advection,
-                             amrex::Geometry& geom,
-                             int comp,
-                             amrex::Real advCoeffx,
-                             amrex::Real advCoeffy);
-
-void ComputeAdvectionUpwind2(amrex::MultiFab& sol,
-                             amrex::MultiFab& advection,
-                             amrex::Geometry& geom,
-                             int comp,
-                             amrex::Real advCoeff);
+void ComputeAdvectionUpwind(amrex::MultiFab& sol,
+                            amrex::MultiFab& advection,
+                            amrex::Geometry& geom,
+                            int comp,
+                            amrex::Real advCoeffx,
+                            amrex::Real advCoeffy);
 
 void ComputeDiffusion(amrex::MultiFab& sol,
                       amrex::MultiFab& diff_mf,
