@@ -17,3 +17,6 @@ target_link_libraries(GrayScott
   SUNDIALS::cvode
   ${EXTRA_LINK_LIBS})
 
+# copy input file to build directory
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/inputs
+  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
