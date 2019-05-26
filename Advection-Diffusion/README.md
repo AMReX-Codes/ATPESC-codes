@@ -7,7 +7,7 @@ $$\frac{\partial u}{\partial t} + \vec{v} \cdot \nabla u -  \nabla \cdot ( D \na
 | Option          | Type   | Description                                        | Default  |
 | ----------------|--------|----------------------------------------------------|----------|
 | `n_cell`        | `int`  | number of cells on each side of the square domain  | 256      |
-| `max_grid_size` | `int`  | max size of boxs                                   | 64       |
+| `max_grid_size` | `int`  | max size of boxes in box array                     | 64       |
 | `plot_int`      | `int`  | enable (1) or disable (0) plots                    | 0        |
 | `stepper`       | `int`  | use CVODE (0) or ARKode (1)                        | 0        |
 | `cvode_method`  | `int`  | use BDF (0) or Adams (1) methods in CVODE          | 0        |
