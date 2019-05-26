@@ -5,6 +5,7 @@
 #include <cvode/cvode.h>
 #include <arkode/arkode_arkstep.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
+#include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 
 #include "Advection-Diffusion.h"
 #include "DiffOp.h"
@@ -239,6 +240,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("nls_method", nls_method);
    prob_opt.nls_method = nls_method;
 
+   // Specify the number of fixed point acceleration vectors
+   int nls_fp_acc = 0; // no acceleration
+   pp.query("nls_fp_acc", nls_fp_acc);
+   prob_opt.nls_fp_acc = nls_fp_acc;
+
    // Specify RHS functions/splitting
    int rhs_adv  = 2; // implicit advection
    int rhs_diff = 2; // implicit diffusion
@@ -347,6 +353,8 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    Geometry* geom         = prob_data->geom;
    int       plot_int     = prob_opt->plot_int;
    int       arkode_order = prob_opt->arkode_order;
+   int       nls_method   = prob_opt->nls_method;
+   int       nls_fp_acc   = prob_opt->nls_fp_acc;
    int       rhs_adv      = prob_opt->rhs_adv;
    int       rhs_diff     = prob_opt->rhs_diff;
    Real      rtol         = prob_opt->rtol;
@@ -451,17 +459,32 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    // Set ARKStep options
    ARKStepSetUserData(arkode_mem, prob_data);
    ARKStepSStolerances(arkode_mem, atol, rtol);
-   ARKStepSetOrder(arkode_mem, arkode_order);   
+   ARKStepSetOrder(arkode_mem, arkode_order);
 
-   // Create and attach GMRES linear solver (if necessary)
+   // Attach nonlinear/linear solvers as needed
    if (rhs_adv == 2 || rhs_diff == 2)
    {
-      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
-      ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
-      if (ier != ARKLS_SUCCESS)
+      if (nls_method == 0)
       {
-         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
-         return;
+         // Create and attach GMRES linear solver for Newton
+         SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
+         ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
+         if (ier != ARKLS_SUCCESS)
+         {
+            amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
+            return;
+         }
+      }
+      else
+      {
+         // Create and attach GMRES linear solver (if implicit and using Newton)
+         SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
+         ier = ARKStepSetNonlinearSolver(arkode_mem, NLS);
+         if (ier != ARK_SUCCESS)
+         {
+            amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
+            return;
+         }
       }
    }
 
@@ -506,6 +529,8 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    Geometry* geom         = prob_data->geom;
    int       plot_int     = prob_opt->plot_int;
    int       cvode_method = prob_opt->cvode_method;
+   int       nls_method   = prob_opt->nls_method;
+   int       nls_fp_acc   = prob_opt->nls_fp_acc;
    int       rhs_adv      = prob_opt->rhs_adv;
    int       rhs_diff     = prob_opt->rhs_diff;
    Real      rtol         = prob_opt->rtol;
@@ -559,13 +584,28 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    CVodeSetUserData(cvode_mem, prob_data);
    CVodeSStolerances(cvode_mem, atol, rtol);
 
-   // Create and attach GMRES linear solver
-   SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
-   ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
-   if (ier != CVLS_SUCCESS)
+   // Attach nonlinear/linear solvers as needed
+   if (nls_method == 0)
    {
-      amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
-      return;
+      // Create and attach GMRES linear solver for Newton
+      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
+      ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
+      if (ier != CVLS_SUCCESS)
+      {
+         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+   else
+   {
+      // Create and attach fixed point solver
+      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
+      ier = CVodeSetNonlinearSolver(cvode_mem, NLS);
+      if (ier != CV_SUCCESS)
+      {
+         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
+         return;
+      }
    }
 
    // Advance the solution in time

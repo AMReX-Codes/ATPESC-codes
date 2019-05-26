@@ -25,6 +25,7 @@ struct ProblemOpt
    int cvode_method;
    int arkode_order;
    int nls_method;
+   int nls_fp_acc;
    int rhs_adv;
    int rhs_diff;
    amrex::Real rtol;
