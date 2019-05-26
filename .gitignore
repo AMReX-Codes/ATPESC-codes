@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Merge files
+*.orig
+
 # Plot directories and files
 plt*
 movie.visit
