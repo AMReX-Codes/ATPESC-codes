@@ -212,22 +212,36 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("max_grid_size", max_grid_size);
    prob_opt.max_grid_size = max_grid_size;
 
-   // Default plot_int to -1, allow us to set it to something else in the inputs
-   // file. If plot_int < 0 then no plot files will be written
-   int plot_int = -1;
+   // Enable (>0) or disable (<0) writing output files
+   int plot_int = -1; // plots off
    pp.query("plot_int", plot_int);
    prob_opt.plot_int = plot_int;
 
-   // Specify which integration method to use (defaults to CVODE)
+   // Specify which integration method to use
    // 0 = CVODE
    // 1 = ARKStep
    int stepper = 0;
    pp.query("stepper", stepper);
    prob_opt.stepper = stepper;
 
-   // Specify which RHS functions to use
-   int rhs_adv  = 1;
-   int rhs_diff = 1;
+   // Specify which CVODE method to use
+   int cvode_method = 0; // BDF
+   pp.query("cvode_method", cvode_method);
+   prob_opt.cvode_method = cvode_method;
+
+   // Specify the ARKode method order
+   int arkode_order = 4; // 4th order
+   pp.query("arkode_order", arkode_order);
+   prob_opt.arkode_order = arkode_order;
+
+   // Specify the nonlinear solver
+   int nls_method = 0; // Newton
+   pp.query("nls_method", nls_method);
+   prob_opt.nls_method = nls_method;
+
+   // Specify RHS functions/splitting
+   int rhs_adv  = 2; // implicit advection
+   int rhs_diff = 2; // implicit diffusion
    pp.query("rhs_adv", rhs_adv);
    pp.query("rhs_diff", rhs_diff);
    prob_opt.rhs_adv  = rhs_adv;
@@ -241,12 +255,12 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    prob_opt.rtol = rtol;
    prob_opt.atol = atol;
 
-   // Specify final time for integration (default to 10,000)
+   // Specify final time for integration
    Real tfinal = 1.0e4;
    pp.query("tfinal", tfinal);
    prob_opt.tfinal = tfinal;
 
-   // Specify output frequency (default to final time)
+   // Specify output frequency
    Real dtout = tfinal;
    pp.query("dtout", dtout);
    prob_opt.dtout = dtout;
@@ -264,11 +278,21 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("diffCoeff", diffCoeff);
    prob_data.diffCoeff = diffCoeff;
 
+   // Ouput problem options and parameters
    amrex::Print()
       << "n_cell        = " << n_cell        << std::endl
       << "max_grid_size = " << max_grid_size << std::endl
       << "plot_int      = " << plot_int      << std::endl
-      << "stepper       = " << stepper       << std::endl
+      << "stepper       = " << stepper       << std::endl;
+
+   if (stepper == 0)
+      amrex::Print()
+         << "cvode_method  = " << cvode_method  << std::endl;
+   else
+      amrex::Print()
+         << "arkode_order  = " << arkode_order << std::endl;
+
+   amrex::Print()
       << "rhs_adv       = " << rhs_adv       << std::endl
       << "rhs_diff      = " << rhs_diff      << std::endl
       << "rtol          = " << rtol          << std::endl
@@ -320,14 +344,15 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
                         ProblemData* prob_data)
 {
    // Extract problem data and options
-   Geometry* geom     = prob_data->geom;
-   int       plot_int = prob_opt->plot_int;
-   int       rhs_adv  = prob_opt->rhs_adv;
-   int       rhs_diff = prob_opt->rhs_diff;
-   Real      rtol     = prob_opt->rtol;
-   Real      atol     = prob_opt->atol;
-   Real      tfinal   = prob_opt->tfinal;
-   Real      dtout    = prob_opt->dtout;
+   Geometry* geom         = prob_data->geom;
+   int       plot_int     = prob_opt->plot_int;
+   int       arkode_order = prob_opt->arkode_order;
+   int       rhs_adv      = prob_opt->rhs_adv;
+   int       rhs_diff     = prob_opt->rhs_diff;
+   Real      rtol         = prob_opt->rtol;
+   Real      atol         = prob_opt->atol;
+   Real      tfinal       = prob_opt->tfinal;
+   Real      dtout        = prob_opt->dtout;
 
    // initial time, number of outputs, and error flag
    Real time = 0.0;
@@ -424,8 +449,9 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    }
 
    // Set ARKStep options
-   ARKStepSStolerances(arkode_mem, atol, rtol);
    ARKStepSetUserData(arkode_mem, prob_data);
+   ARKStepSStolerances(arkode_mem, atol, rtol);
+   ARKStepSetOrder(arkode_mem, arkode_order);   
 
    // Create and attach GMRES linear solver (if necessary)
    if (rhs_adv == 2 || rhs_diff == 2)
@@ -477,14 +503,15 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
                        ProblemData* prob_data)
 {
    // Extract problem data and options
-   Geometry* geom     = prob_data->geom;
-   int       plot_int = prob_opt->plot_int;
-   int       rhs_adv  = prob_opt->rhs_adv;
-   int       rhs_diff = prob_opt->rhs_diff;
-   Real      rtol     = prob_opt->rtol;
-   Real      atol     = prob_opt->atol;
-   Real      tfinal   = prob_opt->tfinal;
-   Real      dtout    = prob_opt->dtout;
+   Geometry* geom         = prob_data->geom;
+   int       plot_int     = prob_opt->plot_int;
+   int       cvode_method = prob_opt->cvode_method;
+   int       rhs_adv      = prob_opt->rhs_adv;
+   int       rhs_diff     = prob_opt->rhs_diff;
+   Real      rtol         = prob_opt->rtol;
+   Real      atol         = prob_opt->atol;
+   Real      tfinal       = prob_opt->tfinal;
+   Real      dtout        = prob_opt->dtout;
 
    // initial time, number of outputs, and error flag
    Real time = 0.0;
@@ -500,19 +527,24 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    }
 
    // Create CVODE memory
-   void* cvode_mem = CVodeCreate(CV_BDF);
+   void* cvode_mem = NULL;
+   if (cvode_method == 0)
+      cvode_mem = CVodeCreate(CV_BDF);
+   else
+      cvode_mem = CVodeCreate(CV_ADAMS);
 
-   if (rhs_adv == 1 && rhs_diff == 1)
+   // Initialize CVODE
+   if (rhs_adv > 0 && rhs_diff > 0)
    {
       // implicit Advection and Diffusion
       CVodeInit(cvode_mem, ComputeRhsAdvDiff, time, nv_sol);
    }
-   else if (rhs_adv == 1)
+   else if (rhs_adv > 0)
    {
       // implicit Advection
       CVodeInit(cvode_mem, ComputeRhsAdv, time, nv_sol);
    }
-   else if (rhs_diff == 1)
+   else if (rhs_diff > 0)
    {
       // implicit Diffusion
       CVodeInit(cvode_mem, ComputeRhsDiff, time, nv_sol);
@@ -524,8 +556,8 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    }
 
    // Set CVODE options
-   CVodeSStolerances(cvode_mem, atol, rtol);
    CVodeSetUserData(cvode_mem, prob_data);
+   CVodeSStolerances(cvode_mem, atol, rtol);
 
    // Create and attach GMRES linear solver
    SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);

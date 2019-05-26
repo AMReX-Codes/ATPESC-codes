@@ -22,6 +22,9 @@ struct ProblemOpt
    int max_grid_size;
    int plot_int;
    int stepper;
+   int cvode_method;
+   int arkode_order;
+   int nls_method;
    int rhs_adv;
    int rhs_diff;
    amrex::Real rtol;
