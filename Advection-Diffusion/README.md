@@ -14,10 +14,10 @@ $$\frac{\partial u}{\partial t} + \vec{v} \cdot \nabla u -  \nabla \cdot ( D \na
 | `arkode_order`  | `int`  | ARKode method order                                | 4        |
 | `nls_method`    | `int`  | use Newton (0) or fixed-point (1) solver           | 0        | 
 | `nls_max_iter`  | `ìnt`  | maximum number of nonlinear iterations             | 3        | 
-| `nls_fp acc`    | `int`  | number of fixed-point acceleration vectors         | 0        | 
+| `nls_fp_acc`    | `int`  | number of fixed-point acceleration vectors         | 0        | 
 | `ls_max_iter`   | `int`  | maximum number of linear iterations                | 5        | 
-| `rhs adv`       | `int`  | advection: disable (0), implicit (1), explicit (2) | 1        | 
-| `rhs diff`      | `int`  | diffusion: disable (0), implicit (1), explicit (2) | 1        | 
+| `rhs_adv`       | `int`  | advection: disable (0), implicit (1), explicit (2) | 1        | 
+| `rhs_diff`      | `int`  | diffusion: disable (0), implicit (1), explicit (2) | 1        | 
 | `rtol`          | `Real` | relative tolerance                                 | 1e-4     | 
 | `atol`          | `Real` | absolute tolerance                                 | 1e-9     | 
 | `tfinal`        | `Real` | final integration time                             | 1e4      | 
