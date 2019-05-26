@@ -72,6 +72,4 @@ set(EXTRA_LINK_LIBS gfortran)
 
 # add source directories
 add_subdirectory(shared)
-add_subdirectory(Advection)
-add_subdirectory(Diffusion)
 add_subdirectory(GrayScott)

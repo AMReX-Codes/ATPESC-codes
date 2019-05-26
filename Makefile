@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Makefile to build 2D GrayScott (Reaction-Diffusion) example
+# Makefile to build examples
 # ------------------------------------------------------------------------------
 # Note the following environment variables need to be set to in order to build:
 # AMREX_INSTALL_DIR = path to AMReX installation
@@ -18,19 +18,7 @@ LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode
 
 LIBRARIES += -lgfortran
 
-default: Advection.exe Diffusion.exe GrayScott.exe
-
-Advection.exe: Advection/Advection.o shared/NVector_Multifab.o shared/DiffOp2D.o
-	$(CXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
-
-Advection/Advection.o: Advection/Advection.cpp Advection/Advection.h
-	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
-
-Diffusion.exe: Diffusion/Diffusion.o shared/NVector_Multifab.o shared/DiffOp2D.o
-	$(CXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
-
-Diffusion/Diffusion.o: Diffusion/Diffusion.cpp Diffusion/Diffusion.h
-	$(CXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+default: GrayScott.exe
 
 GrayScott.exe: GrayScott/GrayScott.o shared/NVector_Multifab.o shared/DiffOp2D.o shared/Reactions.o
 	$(CXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
@@ -53,7 +41,7 @@ movie:
 	ls -1 plt*/Header | tee movie.visit
 
 clean:
-	$(RM) Advection/*.o Diffusion/*.o GrayScott/*.o shared/*.o
+	$(RM) GrayScott/*.o shared/*.o
 
 realclean: clean
 	$(RM) *.exe
