@@ -34,6 +34,9 @@
 # Merge files
 *.orig
 
+# Backup Files
+*~
+
 # Plot directories and files
 plt*
 movie.visit
