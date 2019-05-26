@@ -256,8 +256,8 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    prob_opt.ls_max_iter = ls_max_iter;
 
    // Specify RHS functions/splitting
-   int rhs_adv  = 2; // implicit advection
-   int rhs_diff = 2; // implicit diffusion
+   int rhs_adv  = 1; // implicit advection
+   int rhs_diff = 1; // implicit diffusion
    pp.query("rhs_adv", rhs_adv);
    pp.query("rhs_diff", rhs_diff);
    prob_opt.rhs_adv  = rhs_adv;
@@ -392,74 +392,59 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
 
    if (rhs_adv > 0 && rhs_diff > 0)
    {
-      if (rhs_adv == 1 && rhs_diff == 1)
+      if (rhs_adv > 1 && rhs_diff > 1)
       {
          // explicit advection and diffusion
          arkode_mem = ARKStepCreate(ComputeRhsAdvDiff, NULL,
                                     time, nv_sol);
       }
-      else if (rhs_adv == 1 && rhs_diff == 2)
+      else if (rhs_adv > 1)
       {
          // explicit advection and implicit diffusion
          arkode_mem = ARKStepCreate(ComputeRhsAdv, ComputeRhsDiff,
                                     time, nv_sol);
       }
-      else if (rhs_adv == 2 && rhs_diff == 1)
+      else if (rhs_diff > 1)
       {
          // implicit advection and explicit diffusion
          arkode_mem = ARKStepCreate(ComputeRhsDiff, ComputeRhsAdv,
                                     time, nv_sol);
       }
-      else if (rhs_adv == 2 && rhs_diff == 2)
+      else
       {
          // implicit advection and diffusion
          arkode_mem = ARKStepCreate(NULL, ComputeRhsAdvDiff,
                                     time, nv_sol);
       }
-      else
-      {
-         amrex::Print() << "Invalid RHS options for ARKode" << std::endl;
-         return;
-      }
    }
    else if (rhs_adv > 0)
    {
-      if (rhs_adv == 1)
+      if (rhs_adv > 1)
       {
          // explicit advection
          arkode_mem = ARKStepCreate(ComputeRhsAdv, NULL,
                                     time, nv_sol);
       }
-      else if (rhs_adv == 2)
+      else
       {
          // implicit advection
          arkode_mem = ARKStepCreate(NULL, ComputeRhsAdv,
                                     time, nv_sol);
       }
-      else
-      {
-         amrex::Print() << "Invalid RHS options for ARKode" << std::endl;
-         return;
-      }
    }
    else if (rhs_diff > 0)
    {
-      if (rhs_diff == 1)
+      if (rhs_diff > 1)
       {
          // explicit diffusion
          arkode_mem = ARKStepCreate(ComputeRhsDiff, NULL,
                                     time, nv_sol);
       }
-      else if (rhs_diff == 2)
+      else
       {
          // implicit diffusion
          arkode_mem = ARKStepCreate(NULL, ComputeRhsDiff,
                                     time, nv_sol);
-      }
-      else
-      {
-         amrex::Print() << "Invalid RHS options for ARKode" << std::endl;
-         return;
       }
    }
    else
@@ -474,7 +459,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    ARKStepSetOrder(arkode_mem, arkode_order);
 
    // Attach nonlinear/linear solvers as needed
-   if (rhs_adv == 2 || rhs_diff == 2)
+   if (rhs_adv == 1 || rhs_diff == 1)
    {
       if (nls_method == 0)
       {
