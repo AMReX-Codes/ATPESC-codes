@@ -250,6 +250,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("nls_fp_acc", nls_fp_acc);
    prob_opt.nls_fp_acc = nls_fp_acc;
 
+   // Specify the max number of linear iterations
+   int ls_max_iter = 5;
+   pp.query("ls_max_iter", ls_max_iter);
+   prob_opt.ls_max_iter = ls_max_iter;
+
    // Specify RHS functions/splitting
    int rhs_adv  = 2; // implicit advection
    int rhs_diff = 2; // implicit diffusion
@@ -361,6 +366,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    int       nls_method   = prob_opt->nls_method;
    int       nls_max_iter = prob_opt->nls_max_iter;
    int       nls_fp_acc   = prob_opt->nls_fp_acc;
+   int       ls_max_iter  = prob_opt->ls_max_iter;
    int       rhs_adv      = prob_opt->rhs_adv;
    int       rhs_diff     = prob_opt->rhs_diff;
    Real      rtol         = prob_opt->rtol;
@@ -473,7 +479,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       if (nls_method == 0)
       {
          // Create and attach GMRES linear solver for Newton
-         SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
+         SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
          ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
          if (ier != ARKLS_SUCCESS)
          {
@@ -546,6 +552,7 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    int       nls_method   = prob_opt->nls_method;
    int       nls_max_iter = prob_opt->nls_max_iter;
    int       nls_fp_acc   = prob_opt->nls_fp_acc;
+   int       ls_max_iter  = prob_opt->ls_max_iter;
    int       rhs_adv      = prob_opt->rhs_adv;
    int       rhs_diff     = prob_opt->rhs_diff;
    Real      rtol         = prob_opt->rtol;
@@ -603,7 +610,7 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    if (nls_method == 0)
    {
       // Create and attach GMRES linear solver for Newton
-      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
+      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
       ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
       if (ier != CVLS_SUCCESS)
       {

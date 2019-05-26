@@ -27,6 +27,7 @@ struct ProblemOpt
    int nls_method;
    int nls_max_iter;
    int nls_fp_acc;
+   int ls_max_iter;
    int rhs_adv;
    int rhs_diff;
    amrex::Real rtol;
