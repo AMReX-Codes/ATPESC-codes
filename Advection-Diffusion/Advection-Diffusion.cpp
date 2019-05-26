@@ -240,6 +240,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("nls_method", nls_method);
    prob_opt.nls_method = nls_method;
 
+   // Specify the max number of nonlinear iterations
+   int nls_max_iter = 3;
+   pp.query("nls_max_iter", nls_max_iter);
+   prob_opt.nls_max_iter = nls_max_iter;
+
    // Specify the number of fixed point acceleration vectors
    int nls_fp_acc = 0; // no acceleration
    pp.query("nls_fp_acc", nls_fp_acc);
@@ -354,6 +359,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    int       plot_int     = prob_opt->plot_int;
    int       arkode_order = prob_opt->arkode_order;
    int       nls_method   = prob_opt->nls_method;
+   int       nls_max_iter = prob_opt->nls_max_iter;
    int       nls_fp_acc   = prob_opt->nls_fp_acc;
    int       rhs_adv      = prob_opt->rhs_adv;
    int       rhs_diff     = prob_opt->rhs_diff;
@@ -486,6 +492,14 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
             return;
          }
       }
+
+      // Set max number of nonlinear iterations
+      ier = ARKStepSetMaxNonlinIters(arkode_mem, nls_max_iter);
+      if (ier != ARK_SUCCESS)
+      {
+         amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
+         return;
+      }
    }
 
    // Advance the solution in time
@@ -530,6 +544,7 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    int       plot_int     = prob_opt->plot_int;
    int       cvode_method = prob_opt->cvode_method;
    int       nls_method   = prob_opt->nls_method;
+   int       nls_max_iter = prob_opt->nls_max_iter;
    int       nls_fp_acc   = prob_opt->nls_fp_acc;
    int       rhs_adv      = prob_opt->rhs_adv;
    int       rhs_diff     = prob_opt->rhs_diff;
@@ -606,6 +621,14 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
          amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
          return;
       }
+   }
+
+   // Set max number of nonlinear iterations
+   ier = CVodeSetMaxNonlinIters(cvode_mem, nls_max_iter);
+   if (ier != CV_SUCCESS)
+   {
+      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
+      return;
    }
 
    // Advance the solution in time
