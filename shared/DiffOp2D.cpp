@@ -4,7 +4,8 @@ using namespace amrex;
 
 // utility functions for computing diffusion
 static void ComputeDiffFlux(MultiFab& sol, MultiFab& fx, MultiFab& fy,
-                            Geometry& geom, int comp, Real diffCoeff);
+                            Geometry& geom, int comp,
+                            Real diffCoeffx, Real diffCoeffy);
 
 static void ComputeDivergence(MultiFab& div, MultiFab& fx, MultiFab& fy,
                               Geometry& geom, int comp);
@@ -95,9 +96,10 @@ void ComputeAdvectionUpwind(MultiFab& sol_mf, MultiFab& adv_mf, Geometry& geom,
 // Assumes ghots cells are already filled
 // Adds result to diff_mf
 void ComputeDiffusion(MultiFab& sol, MultiFab& diff_mf, MultiFab& fx_mf,
-                      MultiFab& fy_mf, Geometry& geom, int comp, Real diffCoeff)
+                      MultiFab& fy_mf, Geometry& geom, int comp,
+                      Real diffCoeffx, Real diffCoeffy)
 {
-   ComputeDiffFlux(sol, fx_mf, fy_mf, geom, comp, diffCoeff);
+   ComputeDiffFlux(sol, fx_mf, fy_mf, geom, comp, diffCoeffx, diffCoeffy);
    ComputeDivergence(diff_mf, fx_mf, fy_mf, geom, comp);
 }
 
@@ -108,13 +110,13 @@ void ComputeDiffusion(MultiFab& sol, MultiFab& diff_mf, MultiFab& fx_mf,
 // Assumes ghost cells already filled
 // Overwrites fx_mf and fy_mf MultiFabs
 static void ComputeDiffFlux(MultiFab& sol_mf, MultiFab& fx_mf, MultiFab& fy_mf,
-                            Geometry& geom, int comp, Real diffCoeff)
+                            Geometry& geom, int comp, Real diffCoeffx, Real diffCoeffy)
 {
    const auto dx = geom.CellSize();
    Real dxInv = 1.0 / dx[0]; // assume same in all directions
    Real dyInv = 1.0 / dx[1]; // assume same in all directions
-   Real coeffX = diffCoeff * dxInv;
-   Real coeffY = diffCoeff * dyInv;
+   Real coeffX = diffCoeffx * dxInv;
+   Real coeffY = diffCoeffy * dyInv;
 
    int c = comp;  // for brevity
    for (MFIter mfi(sol_mf); mfi.isValid(); ++mfi)

@@ -124,7 +124,8 @@ int ComputeRhsDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
    ProblemData *prob_data = (ProblemData*) data;
    Geometry* geom = prob_data->geom;
    Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
-   Real diffCoeff = prob_data->diffCoeff;
+   Real diffCoeffx = prob_data->diffCoeffx;
+   Real diffCoeffy = prob_data->diffCoeffy;
 
    // fill ghost cells
    sol->FillBoundary(geom->periodicity());
@@ -133,7 +134,8 @@ int ComputeRhsDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
    *rhs = 0.0;
 
    // compute diffusion
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeff);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
+                    diffCoeffx, diffCoeffy);
 
    return 0;
 }
@@ -150,7 +152,8 @@ int ComputeRhsAdvDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
    Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
    Real advCoeffx = prob_data->advCoeffx;
    Real advCoeffy = prob_data->advCoeffy;
-   Real diffCoeff = prob_data->diffCoeff;
+   Real diffCoeffx = prob_data->diffCoeffx;
+   Real diffCoeffy = prob_data->diffCoeffy;
 
    // clear the RHS
    *rhs = 0.0;
@@ -162,7 +165,8 @@ int ComputeRhsAdvDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
    ComputeAdvectionUpwind(*sol, *rhs, *geom, 0, advCoeffx, advCoeffy);
 
    // compute diffusion
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeff);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
+                    diffCoeffx, diffCoeffy);
 
    return 0;
 }
@@ -184,10 +188,10 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
          for (int i = lo.x; i <= hi.x; ++i) {
             Real x = prob_lo[0] + (((Real) i) + 0.5) * dx[0];
 
-            if (x>0.25 && x<0.75 && y>0.25 && y<0.75)
+            if (x>-0.25 && x<0.25 && y>-0.25 && y<0.25)
             {
-               fab(i,j,0,0) = sin(2 * M_PI * x - M_PI/2)
-                  * sin(2 * M_PI * y - M_PI/2);
+               fab(i,j,0,0) = sin(2 * M_PI * x + M_PI/2)
+                  * sin(2 * M_PI * y + M_PI/2);
             }
             else
             {
@@ -290,9 +294,12 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    prob_data.advCoeffy = advCoeffy;
 
    // Diffusion coefficients
-   Real diffCoeff = 2.0e-5;
-   pp.query("diffCoeff", diffCoeff);
-   prob_data.diffCoeff = diffCoeff;
+   Real diffCoeffx = 2.0e-5;
+   Real diffCoeffy = 2.0e-5;
+   pp.query("diffCoeffx", diffCoeffx);
+   pp.query("diffCoeffy", diffCoeffy);
+   prob_data.diffCoeffx = diffCoeffx;
+   prob_data.diffCoeffy = diffCoeffy;
 
    // Ouput problem options and parameters
    amrex::Print()
@@ -323,7 +330,8 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
 
    if (rhs_diff > 0)
       amrex::Print()
-         << "diffCoeff     = " << diffCoeff << std::endl;
+         << "diffCoeffx    = " << diffCoeffx << std::endl
+         << "diffCoeffy    = " << diffCoeffy << std::endl;
 
 }
 

@@ -23,5 +23,6 @@ tfinal = 1.0e4
 dtout = 300.0
 advCoeffx = 5.0e-4
 advCoeffy = 5.0e-4
-diffCoeff = 2.0e-5
+diffCoeffx = 2.0e-5
+diffCoeffy = 2.0e-5
 nls_method = 0

@@ -22,6 +22,8 @@ void ComputeDiffusion(amrex::MultiFab& sol,
                       amrex::MultiFab& fx_mf,
                       amrex::MultiFab& fy_mf,
                       amrex::Geometry& geom,
-                      int comp, amrex::Real diffCoeff);
+                      int comp,
+                      amrex::Real diffCoeffx,
+                      amrex::Real diffCoeffy);
 
 #endif

@@ -151,8 +151,10 @@ int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    *rhs = 0.0;
 
    // compute diffusion of u and v
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
+                    diffCoeffU, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1,
+                    diffCoeffV, diffCoeffV);
 
    return 0;
 }
@@ -205,8 +207,10 @@ int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    ComputeAdvection(*sol, *rhs, *geom, 1, advCoeffV);
 
    // compute diffusion of u and v
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
+                    diffCoeffU, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1,
+                    diffCoeffV, diffCoeffV);
 
    return 0;
 }
@@ -265,8 +269,10 @@ int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    sol->FillBoundary(geom->periodicity());
 
    // compute diffusion of u and v
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
+                    diffCoeffU, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1,
+                    diffCoeffV, diffCoeffV);
 
    // compute reaction term
    ComputeReactionsGS(*sol, *rhs, A, B);
@@ -303,8 +309,10 @@ int ComputeRhsAdvDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    ComputeAdvection(*sol, *rhs, *geom, 1, advCoeffV);
 
    // compute diffusion of u and v
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0, diffCoeffU);
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1, diffCoeffV);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
+                    diffCoeffU, diffCoeffU);
+   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 1,
+                    diffCoeffV, diffCoeffV);
 
    // compute reaction term
    ComputeReactionsGS(*sol, *rhs, A, B);

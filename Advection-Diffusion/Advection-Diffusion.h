@@ -11,7 +11,8 @@ struct ProblemData
    amrex::Geometry* geom;
    amrex::Real advCoeffx;
    amrex::Real advCoeffy;
-   amrex::Real diffCoeff;
+   amrex::Real diffCoeffx;
+   amrex::Real diffCoeffy;
    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>* flux;
 };
 
