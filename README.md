@@ -13,7 +13,7 @@ and Sundials installations respectively. For example, if ARMeX was installed in
 export AMREX_INSTALL_DIR=~/apps/amrex
 export SUNDIALS_INSTALL_DIR=~/apps/sundials
 ```
-for sh/bash/ksh shells or with
+for sh/bash/ksh/zsh shells or with
 ```
 set AMREX_INSTALL_DIR ~/apps/amrex
 set SUNDIALS_INSTALL_DIR ~/apps/sundials
