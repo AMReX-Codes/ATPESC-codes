@@ -35,6 +35,7 @@ struct ProblemOpt
    amrex::Real atol;
    amrex::Real tfinal;
    amrex::Real dtout;
+   int write_diag;
 };
 
 // Run problem

@@ -37,9 +37,10 @@
 # Backup Files
 *~
 
-# Plot directories and files
-plt*
-movie.visit
-
 # Build directory
 build/
+
+# Output directories and files
+plt*
+movie.visit
+ARKStep_diagnostics.txt

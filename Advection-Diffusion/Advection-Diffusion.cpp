@@ -207,6 +207,10 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    // ParmParse is way of reading inputs from the inputs file
    ParmParse pp;
 
+   // --------------------------------------------------------------------------
+   // Problem options
+   // --------------------------------------------------------------------------
+
    // The number of cells on each side of a square domain.
    int n_cell = 256;
    pp.query("n_cell", n_cell);
@@ -284,6 +288,15 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    Real dtout = tfinal;
    pp.query("dtout", dtout);
    prob_opt.dtout = dtout;
+
+   // Output integrator diagnostics to a file
+   int write_diag = 1;
+   pp.query("write_diag", write_diag);
+   prob_opt.write_diag = write_diag;
+
+   // --------------------------------------------------------------------------
+   // Problem data
+   // --------------------------------------------------------------------------
 
    // Advection coefficients
    Real advCoeffx = 5.0e-4;
@@ -510,6 +523,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    Real      atol         = prob_opt->atol;
    Real      tfinal       = prob_opt->tfinal;
    Real      dtout        = prob_opt->dtout;
+   int       write_diag   = prob_opt->write_diag;
 
    // initial time, number of outputs, and error flag
    Real time = 0.0;
@@ -595,6 +609,12 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    ARKStepSStolerances(arkode_mem, atol, rtol);
    ARKStepSetOrder(arkode_mem, arkode_order);
 
+   FILE* diagfp = NULL;
+   if (write_diag) {
+      diagfp = fopen("ARKStep_diagnostics.txt", "w");
+      ARKStepSetDiagnostics(arkode_mem, diagfp);
+   }
+
    // Attach nonlinear/linear solvers as needed
    if (rhs_adv == 1 || rhs_diff == 1)
    {
@@ -662,4 +682,8 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       tout += dtout;
       if (tout > tfinal) tout = tfinal;
    }
+
+   // Close diagnostics file
+   if (write_diag)
+      fclose(diagfp);
 }

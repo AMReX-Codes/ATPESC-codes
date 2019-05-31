@@ -34,6 +34,7 @@ V -> P
 | `atol`          | `Real` | absolute tolerance                                 | 1e-9     |
 | `tfinal`        | `Real` | final integration time                             | 1e4      |
 | `dtout`         | `Real` | output frequency                                   | `tfinal` |
+| `write_diag`    | `int`  | output ARKStep diagnostics to a file               | 1        |
 | `advCoeffx`     | `Real` | advection speed in the x-direction                 | 5e-4     |
 | `advCoeffy`     | `Real` | advection speed in the y-direction                 | 5e-4     |
 | `diffCoeff`     | `Real` | diffusion coefficient                              | 2e-5     |

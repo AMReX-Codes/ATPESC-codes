@@ -12,7 +12,7 @@
 n_cell = 256
 max_grid_size = 64
 plot_int = 1
-stepper = 0
+stepper = 1
 cvode_method = 0
 arkode_order = 4
 rhs_adv = 1
