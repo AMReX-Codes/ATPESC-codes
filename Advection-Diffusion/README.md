@@ -1,6 +1,9 @@
 # Advection-Diffusion Example
 
-$$\frac{\partial u}{\partial t} + \vec{v} \cdot \nabla u -  \nabla \cdot ( D \nabla u ) = 0$$
+$$\frac{\partial u}{\partial t} + \vec{a} \cdot \nabla u -  \nabla \cdot ( D \nabla u ) = 0$$
+
+where $$u$$ is the chemical concentration, $$\vec{a}$$ is the advection speed, and
+$$D$$ is the diffusion coefficient.
 
 ## Problem Options
 
@@ -9,9 +12,9 @@ $$\frac{\partial u}{\partial t} + \vec{v} \cdot \nabla u -  \nabla \cdot ( D \na
 | `n_cell`        | `int`  | number of cells on each side of the square domain  | 256      |
 | `max_grid_size` | `int`  | max size of boxes in box array                     | 64       |
 | `plot_int`      | `int`  | enable (1) or disable (0) plots                    | 0        |
-| `stepper`       | `int`  | use CVODE (0) or ARKode (1)                        | 0        |
+| `stepper`       | `int`  | use CVODE (0) or ARKStep (1)                       | 0        |
 | `cvode_method`  | `int`  | use BDF (0) or Adams (1) methods in CVODE          | 0        |
-| `arkode_order`  | `int`  | ARKode method order                                | 4        |
+| `arkode_order`  | `int`  | ARKStep method order                               | 4        |
 | `nls_method`    | `int`  | use Newton (0) or fixed-point (1) solver           | 0        | 
 | `nls_max_iter`  | `ìnt`  | maximum number of nonlinear iterations             | 3        | 
 | `nls_fp_acc`    | `int`  | number of fixed-point acceleration vectors         | 0        | 
@@ -24,4 +27,5 @@ $$\frac{\partial u}{\partial t} + \vec{v} \cdot \nabla u -  \nabla \cdot ( D \na
 | `dtout`         | `Real` | output frequency                                   | `tfinal` | 
 | `advCoeffx`     | `Real` | advection speed in the x-direction                 | 5e-4     |
 | `advCoeffy`     | `Real` | advection speed in the y-direction                 | 5e-4     |
-| `diffCoeff`     | `Real` | diffusion coefficient                              | 2e-5     |
+| `diffCoeffx`    | `Real` | diffusion coefficient in the x-direction           | 2e-5     |
+| `diffCoeffy`    | `Real` | diffusion coefficient in the y-direction           | 2e-5     |
