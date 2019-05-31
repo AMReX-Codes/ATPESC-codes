@@ -40,15 +40,11 @@ struct ProblemOpt
 // Run problem
 void DoProblem();
 
-// Advection RHS function
+// ODE RHS functions
 int ComputeRhsAdv(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
                   void* data);
-
-// Diffusion RHS function
 int ComputeRhsDiff(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
                    void* data);
-
-// Advection-Diffusion RHS function
 int ComputeRhsAdvDiff(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
                       void* data);
 

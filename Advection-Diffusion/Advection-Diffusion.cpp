@@ -364,6 +364,135 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
    prob_data.geom = &geom;
 }
 
+void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
+                       ProblemData* prob_data)
+{
+   // Extract problem data and options
+   Geometry* geom         = prob_data->geom;
+   int       plot_int     = prob_opt->plot_int;
+   int       cvode_method = prob_opt->cvode_method;
+   int       nls_method   = prob_opt->nls_method;
+   int       nls_max_iter = prob_opt->nls_max_iter;
+   int       nls_fp_acc   = prob_opt->nls_fp_acc;
+   int       ls_max_iter  = prob_opt->ls_max_iter;
+   int       rhs_adv      = prob_opt->rhs_adv;
+   int       rhs_diff     = prob_opt->rhs_diff;
+   Real      rtol         = prob_opt->rtol;
+   Real      atol         = prob_opt->atol;
+   Real      tfinal       = prob_opt->tfinal;
+   Real      dtout        = prob_opt->dtout;
+
+   // initial time, number of outputs, and error flag
+   Real time = 0.0;
+   int  nout = ceil(tfinal/dtout);
+   int  ier  = 0;
+
+   // Write a plotfile of the initial data
+   if (plot_int > 0)
+   {
+      const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
+      MultiFab* sol = NV_MFAB(nv_sol);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, time, 0);
+   }
+
+   // Create CVODE memory
+   void* cvode_mem = NULL;
+   if (cvode_method == 0)
+      cvode_mem = CVodeCreate(CV_BDF);
+   else
+      cvode_mem = CVodeCreate(CV_ADAMS);
+
+   // Initialize CVODE
+   if (rhs_adv > 0 && rhs_diff > 0)
+   {
+      // implicit Advection and Diffusion
+      CVodeInit(cvode_mem, ComputeRhsAdvDiff, time, nv_sol);
+   }
+   else if (rhs_adv > 0)
+   {
+      // implicit Advection
+      CVodeInit(cvode_mem, ComputeRhsAdv, time, nv_sol);
+   }
+   else if (rhs_diff > 0)
+   {
+      // implicit Diffusion
+      CVodeInit(cvode_mem, ComputeRhsDiff, time, nv_sol);
+   }
+   else
+   {
+      amrex::Print() << "Invalid RHS options for CVODE" << std::endl;
+      return;
+   }
+
+   // Set CVODE options
+   CVodeSetUserData(cvode_mem, prob_data);
+   CVodeSStolerances(cvode_mem, atol, rtol);
+
+   // Attach nonlinear/linear solvers as needed
+   if (nls_method == 0)
+   {
+      // Create and attach GMRES linear solver for Newton
+      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+      ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
+      if (ier != CVLS_SUCCESS)
+      {
+         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+   else
+   {
+      // Create and attach fixed point solver
+      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
+      ier = CVodeSetNonlinearSolver(cvode_mem, NLS);
+      if (ier != CV_SUCCESS)
+      {
+         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+
+   // Set max number of nonlinear iterations
+   ier = CVodeSetMaxNonlinIters(cvode_mem, nls_max_iter);
+   if (ier != CV_SUCCESS)
+   {
+      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
+      return;
+   }
+
+   // Advance the solution in time
+   Real tout = time + dtout; // first output time
+   Real tret;                // return time
+   for (int iout=0; iout < nout; iout++)
+   {
+      ier = CVode(cvode_mem, tout, nv_sol, &tret, CV_NORMAL);
+      if (ier < 0)
+      {
+         amrex::Print() << "Error in CVODE" << std::endl;
+         return;
+      }
+
+      // Get integration stats
+      long nf_evals;
+      CVodeGetNumRhsEvals(cvode_mem, &nf_evals);
+      amrex::Print() << "t = " << std::setw(5) << tret
+                     << "  rhs evals = " << std::setw(7) << nf_evals
+                     << std::endl;
+
+      // Write output
+      if (plot_int > 0)
+      {
+         const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
+         MultiFab* sol = NV_MFAB(nv_sol);
+         WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, tret, iout+1);
+      }
+
+      // Update output time
+      tout += dtout;
+      if (tout > tfinal) tout = tfinal;
+   }
+}
+
 void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
                         ProblemData* prob_data)
 {
@@ -519,135 +648,6 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       amrex::Print() << "t = " << std::setw(5) << tret
                      << "  explicit evals = " << std::setw(7) << nfe_evals
                      << "  implicit evals = " << std::setw(7) << nfi_evals
-                     << std::endl;
-
-      // Write output
-      if (plot_int > 0)
-      {
-         const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
-         MultiFab* sol = NV_MFAB(nv_sol);
-         WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, tret, iout+1);
-      }
-
-      // Update output time
-      tout += dtout;
-      if (tout > tfinal) tout = tfinal;
-   }
-}
-
-void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
-                       ProblemData* prob_data)
-{
-   // Extract problem data and options
-   Geometry* geom         = prob_data->geom;
-   int       plot_int     = prob_opt->plot_int;
-   int       cvode_method = prob_opt->cvode_method;
-   int       nls_method   = prob_opt->nls_method;
-   int       nls_max_iter = prob_opt->nls_max_iter;
-   int       nls_fp_acc   = prob_opt->nls_fp_acc;
-   int       ls_max_iter  = prob_opt->ls_max_iter;
-   int       rhs_adv      = prob_opt->rhs_adv;
-   int       rhs_diff     = prob_opt->rhs_diff;
-   Real      rtol         = prob_opt->rtol;
-   Real      atol         = prob_opt->atol;
-   Real      tfinal       = prob_opt->tfinal;
-   Real      dtout        = prob_opt->dtout;
-
-   // initial time, number of outputs, and error flag
-   Real time = 0.0;
-   int  nout = ceil(tfinal/dtout);
-   int  ier  = 0;
-
-   // Write a plotfile of the initial data
-   if (plot_int > 0)
-   {
-      const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
-      MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, time, 0);
-   }
-
-   // Create CVODE memory
-   void* cvode_mem = NULL;
-   if (cvode_method == 0)
-      cvode_mem = CVodeCreate(CV_BDF);
-   else
-      cvode_mem = CVodeCreate(CV_ADAMS);
-
-   // Initialize CVODE
-   if (rhs_adv > 0 && rhs_diff > 0)
-   {
-      // implicit Advection and Diffusion
-      CVodeInit(cvode_mem, ComputeRhsAdvDiff, time, nv_sol);
-   }
-   else if (rhs_adv > 0)
-   {
-      // implicit Advection
-      CVodeInit(cvode_mem, ComputeRhsAdv, time, nv_sol);
-   }
-   else if (rhs_diff > 0)
-   {
-      // implicit Diffusion
-      CVodeInit(cvode_mem, ComputeRhsDiff, time, nv_sol);
-   }
-   else
-   {
-      amrex::Print() << "Invalid RHS options for CVODE" << std::endl;
-      return;
-   }
-
-   // Set CVODE options
-   CVodeSetUserData(cvode_mem, prob_data);
-   CVodeSStolerances(cvode_mem, atol, rtol);
-
-   // Attach nonlinear/linear solvers as needed
-   if (nls_method == 0)
-   {
-      // Create and attach GMRES linear solver for Newton
-      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
-      ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
-      if (ier != CVLS_SUCCESS)
-      {
-         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
-         return;
-      }
-   }
-   else
-   {
-      // Create and attach fixed point solver
-      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
-      ier = CVodeSetNonlinearSolver(cvode_mem, NLS);
-      if (ier != CV_SUCCESS)
-      {
-         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
-         return;
-      }
-   }
-
-   // Set max number of nonlinear iterations
-   ier = CVodeSetMaxNonlinIters(cvode_mem, nls_max_iter);
-   if (ier != CV_SUCCESS)
-   {
-      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
-      return;
-   }
-
-   // Advance the solution in time
-   Real tout = time + dtout; // first output time
-   Real tret;                // return time
-   for (int iout=0; iout < nout; iout++)
-   {
-      ier = CVode(cvode_mem, tout, nv_sol, &tret, CV_NORMAL);
-      if (ier < 0)
-      {
-         amrex::Print() << "Error in CVODE" << std::endl;
-         return;
-      }
-
-      // Get integration stats
-      long nf_evals;
-      CVodeGetNumRhsEvals(cvode_mem, &nf_evals);
-      amrex::Print() << "t = " << std::setw(5) << tret
-                     << "  rhs evals = " << std::setw(7) << nf_evals
                      << std::endl;
 
       // Write output
