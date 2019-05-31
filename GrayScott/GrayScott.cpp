@@ -6,6 +6,7 @@
 #include <arkode/arkode_arkstep.h>
 #include <arkode/arkode_mristep.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
+#include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 
 #include "GrayScott.h"
 #include "DiffOp.h"
@@ -18,8 +19,6 @@ using namespace amrex;
 int main(int argc, char* argv[])
 {
    amrex::Initialize(argc,argv);
-   amrex::Print() << "Hello world from AMReX version "
-                  << amrex::Version() << "\n";
 
    DoProblem();
 
@@ -32,30 +31,25 @@ void DoProblem()
    // What time is it now?  We'll use this to compute total run time.
    Real strt_time = amrex::second();
 
+   // Set problem data and options
+   ProblemData prob_data;
+   ProblemOpt  prob_opt;
+   ParseInputs(prob_opt, prob_data);
 
-   // --- Problem setup ---
-   int n_cell, max_grid_size, stepper, plot_int;
-   Real tfinal, dtout;
-   GrayScottProblem problem;
-   ParseInputs(n_cell, max_grid_size, stepper, tfinal, dtout, plot_int,
-               problem);
-
-   // make BoxArray and Geometry
+   // Make BoxArray and Geometry
    BoxArray ba;
    Geometry geom;
-   SetUpGeometry(ba, geom, problem, n_cell, max_grid_size);
+   SetUpGeometry(ba, geom, prob_opt, prob_data);
 
-
-   // --- Create solution vectors ---
    // How Boxes are distrubuted among MPI processes
    DistributionMapping dm(ba);
 
-   // allocate the solution MultiFab
+   // Allocate the solution MultiFab
    int nGhost = 1;  // number of ghost cells for each array
    int nComp  = 2;  // number of components for each array
    MultiFab sol(ba, dm, nComp, nGhost);
 
-   // build the flux MultiFabs
+   // Build the flux MultiFabs
    Array<MultiFab, AMREX_SPACEDIM> flux;
    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
    {
@@ -65,35 +59,32 @@ void DoProblem()
       edge_ba.surroundingNodes(dir);
       flux[dir].define(edge_ba, dm, 1, 0);
    }
-   problem.flux = &flux;
+   prob_data.flux = &flux;
 
-   // create an N_Vector wrapper for the solution MultiFab
-   sunindextype length = nComp * n_cell * n_cell;
+   // Create an N_Vector wrapper for the solution MultiFab
+   sunindextype length = nComp * prob_opt.n_cell * prob_opt.n_cell;
    N_Vector nv_sol     = N_VMake_Multifab(length, &sol);
 
-   // set the initial condition
+   // Set the initial condition
    FillInitConds2D(sol, geom);
 
-
-   // --- Time advance to end ---
-   switch (stepper)
+   // Integrate in time
+   switch (prob_opt.stepper)
    {
    case 0:
-      ComputeSolutionCV(nv_sol, &problem, tfinal, dtout, plot_int);
+      ComputeSolutionCV(nv_sol, &prob_opt, &prob_data);
       break;
    case 1:
-      ComputeSolutionARK(nv_sol, &problem, tfinal, dtout, plot_int);
+      ComputeSolutionARK(nv_sol, &prob_opt, &prob_data);
       break;
    case 2:
-      ComputeSolutionMRI(nv_sol, &problem, tfinal, dtout, plot_int);
+      ComputeSolutionMRI(nv_sol, &prob_opt, &prob_data);
       break;
    default:
       amrex::Print() << "Invalid stepper option" << std::endl;
       return;
    }
 
-
-   // --- Print time and exit ---
    // Call the timer again and compute the maximum difference between the start
    // time and stop time over all processors
    Real stop_time = amrex::second() - strt_time;
@@ -104,18 +95,17 @@ void DoProblem()
    amrex::Print() << "Run time = " << stop_time << std::endl;
 }
 
-int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                  void* problem)
+int ComputeRhsAdv(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Geometry* geom = gs_problem->geom;
-   Real advCoeffU = gs_problem->advCoeffU;
-   Real advCoeffV = gs_problem->advCoeffV;
+   ProblemData *prob_data = (ProblemData*) data;
+   Geometry* geom = prob_data->geom;
+   Real advCoeffU = prob_data->advCoeffU;
+   Real advCoeffV = prob_data->advCoeffV;
 
    // clear the RHS
    *rhs = 0.0;
@@ -130,19 +120,18 @@ int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    return 0;
 }
 
-int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                   void* problem)
+int ComputeRhsDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Geometry* geom = gs_problem->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
-   Real diffCoeffU = gs_problem->diffCoeffU;
-   Real diffCoeffV = gs_problem->diffCoeffV;
+   ProblemData *prob_data = (ProblemData*) data;
+   Geometry* geom = prob_data->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
+   Real diffCoeffU = prob_data->diffCoeffU;
+   Real diffCoeffV = prob_data->diffCoeffV;
 
    // fill ghost cells
    sol->FillBoundary(geom->periodicity());
@@ -159,17 +148,16 @@ int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    return 0;
 }
 
-int ComputeRhsReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                    void* problem)
+int ComputeRhsReact(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Real A = gs_problem->A;
-   Real B = gs_problem->B;
+   ProblemData *prob_data = (ProblemData*) data;
+   Real A = prob_data->A;
+   Real B = prob_data->B;
 
    // clear the RHS
    *rhs = 0.0;
@@ -180,21 +168,20 @@ int ComputeRhsReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    return 0;
 }
 
-int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                      void* problem)
+int ComputeRhsAdvDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Geometry* geom = gs_problem->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
-   Real advCoeffU  = gs_problem->advCoeffU;
-   Real advCoeffV  = gs_problem->advCoeffV;
-   Real diffCoeffU = gs_problem->diffCoeffU;
-   Real diffCoeffV = gs_problem->diffCoeffV;
+   ProblemData *prob_data = (ProblemData*) data;
+   Geometry* geom = prob_data->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
+   Real advCoeffU  = prob_data->advCoeffU;
+   Real advCoeffV  = prob_data->advCoeffV;
+   Real diffCoeffU = prob_data->diffCoeffU;
+   Real diffCoeffV = prob_data->diffCoeffV;
 
    // clear the RHS
    *rhs = 0.0;
@@ -215,20 +202,19 @@ int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    return 0;
 }
 
-int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                       void* problem)
+int ComputeRhsAdvReact(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Geometry* geom = gs_problem->geom;
-   Real advCoeffU = gs_problem->advCoeffU;
-   Real advCoeffV = gs_problem->advCoeffV;
-   Real A         = gs_problem->A;
-   Real B         = gs_problem->B;
+   ProblemData *prob_data = (ProblemData*) data;
+   Geometry* geom = prob_data->geom;
+   Real advCoeffU = prob_data->advCoeffU;
+   Real advCoeffV = prob_data->advCoeffV;
+   Real A         = prob_data->A;
+   Real B         = prob_data->B;
 
    // clear the RHS
    *rhs = 0.0;
@@ -246,21 +232,20 @@ int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    return 0;
 }
 
-int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                        void* problem)
+int ComputeRhsDiffReact(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Geometry* geom = gs_problem->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
-   Real diffCoeffU = gs_problem->diffCoeffU;
-   Real diffCoeffV = gs_problem->diffCoeffV;
-   Real A          = gs_problem->A;
-   Real B          = gs_problem->B;
+   ProblemData *prob_data = (ProblemData*) data;
+   Geometry* geom = prob_data->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
+   Real diffCoeffU = prob_data->diffCoeffU;
+   Real diffCoeffV = prob_data->diffCoeffV;
+   Real A          = prob_data->A;
+   Real B          = prob_data->B;
 
    // clear the RHS
    *rhs = 0.0;
@@ -280,23 +265,22 @@ int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
    return 0;
 }
 
-int ComputeRhsAdvDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                           void* problem)
+int ComputeRhsAdvDiffReact(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
 {
    // extract MultiFabs
    MultiFab* sol = NV_MFAB(nv_sol);
    MultiFab* rhs = NV_MFAB(nv_rhs);
 
    // extract problem data
-   GrayScottProblem *gs_problem = (GrayScottProblem*) problem;
-   Geometry* geom = gs_problem->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(gs_problem->flux);
-   Real advCoeffU  = gs_problem->advCoeffU;
-   Real advCoeffV  = gs_problem->advCoeffV;
-   Real diffCoeffU = gs_problem->diffCoeffU;
-   Real diffCoeffV = gs_problem->diffCoeffV;
-   Real A          = gs_problem->A;
-   Real B          = gs_problem->B;
+   ProblemData *prob_data = (ProblemData*) data;
+   Geometry* geom = prob_data->geom;
+   Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
+   Real advCoeffU  = prob_data->advCoeffU;
+   Real advCoeffV  = prob_data->advCoeffV;
+   Real diffCoeffU = prob_data->diffCoeffU;
+   Real diffCoeffV = prob_data->diffCoeffV;
+   Real A          = prob_data->A;
+   Real B          = prob_data->B;
 
    // clear the RHS
    *rhs = 0.0;
@@ -335,8 +319,8 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
          Real y = prob_lo[1] + (((Real) j) + 0.5) * dx[1];
 
          for (int i = lo.x; i <= hi.x; ++i) {
-            fab(i,j,0,0) = 0.;
-            fab(i,j,0,1) = 0.;
+            fab(i,j,0,0) = 0.0;
+            fab(i,j,0,1) = 0.0;
 
             Real x = prob_lo[0] + (((Real) i) + 0.5) * dx[0];
             if (x>=1.14 && x<=1.33 && y>=1.14 && y<=1.33)
@@ -349,76 +333,147 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
    }
 }
 
-void ParseInputs(int& n_cell, int& max_grid_size, int& stepper, Real& tfinal,
-                 Real& dtout, int& plot_int, GrayScottProblem& problem)
+void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
 {
    // ParmParse is way of reading inputs from the inputs file
    ParmParse pp;
 
-   // We need to get n_cell from the inputs file - this is the number of cells
-   // on each side of a square domain.
-   pp.get("n_cell", n_cell);
+   // The number of cells on each side of a square domain.
+   int n_cell = 256;
+   pp.query("n_cell", n_cell);
+   prob_opt.n_cell = n_cell;
 
    // The domain is broken into boxes of size max_grid_size
-   pp.get("max_grid_size", max_grid_size);
+   int max_grid_size = 64;
+   pp.query("max_grid_size", max_grid_size);
+   prob_opt.max_grid_size = max_grid_size;
 
-   // Default plot_int to -1, allow us to set it to something else in the inputs
-   // file. If plot_int < 0 then no plot files will be written
-   plot_int = -1;
+   // Enable (>0) or disable (<0) writing output files
+   int plot_int = -1; // plots off
    pp.query("plot_int", plot_int);
+   prob_opt.plot_int = plot_int;
 
-   // Specify which integration method to use (defaults to 0)
+   // Specify which integration method to use
    // 0 = CVODE
    // 1 = ARKStep
    // 2 = MRIStep
-   stepper = 0;
+   int stepper = 0;
    pp.query("stepper", stepper);
+   prob_opt.stepper = stepper;
 
-   // Specify final time for integration (default to 10,000)
-   tfinal = 1.0e4;
+   // Specify which CVODE method to use
+   int cvode_method = 0; // BDF
+   pp.query("cvode_method", cvode_method);
+   prob_opt.cvode_method = cvode_method;
+
+   // Specify the ARKode method order
+   int arkode_order = 4; // 4th order
+   pp.query("arkode_order", arkode_order);
+   prob_opt.arkode_order = arkode_order;
+
+   // Specify the nonlinear solver
+   int nls_method = 0; // Newton
+   pp.query("nls_method", nls_method);
+   prob_opt.nls_method = nls_method;
+
+   // Specify the max number of nonlinear iterations
+   int nls_max_iter = 3;
+   pp.query("nls_max_iter", nls_max_iter);
+   prob_opt.nls_max_iter = nls_max_iter;
+
+   // Specify the number of fixed point acceleration vectors
+   int nls_fp_acc = 0; // no acceleration
+   pp.query("nls_fp_acc", nls_fp_acc);
+   prob_opt.nls_fp_acc = nls_fp_acc;
+
+   // Specify the max number of linear iterations
+   int ls_max_iter = 5;
+   pp.query("ls_max_iter", ls_max_iter);
+   prob_opt.ls_max_iter = ls_max_iter;
+
+   // Specify relative and absolute tolerances
+   Real rtol = 1.0e-4;
+   Real atol = 1.0e-9;
+   pp.query("rtol", rtol);
+   pp.query("atol", atol);
+   prob_opt.rtol = rtol;
+   prob_opt.atol = atol;
+
+   // Specify final time for integration
+   Real tfinal = 1.0e4;
    pp.query("tfinal", tfinal);
+   prob_opt.tfinal = tfinal;
 
-   // Specify output frequency (default to final time)
-   dtout = tfinal;
+   // Specify output frequency
+   Real dtout = tfinal;
    pp.query("dtout", dtout);
+   prob_opt.dtout = dtout;
 
-   // Get Gray-Scott problem coefficients
-   Real advCoeffU, advCoeffV, diffCoeffU, diffCoeffV, A, B;
-
-   advCoeffU = 5.0e-4;
-   advCoeffV = 5.0e-4;
+   // Advection coefficients
+   Real advCoeffU = 5.0e-4;
+   Real advCoeffV = 5.0e-4;
    pp.query("advCoeffU", advCoeffU);
    pp.query("advCoeffV", advCoeffV);
+   prob_data.advCoeffU = advCoeffU;
+   prob_data.advCoeffV = advCoeffV;
 
-   diffCoeffU = 2.0e-5;
-   diffCoeffV = 1.0e-5;
+   // Diffusion coefficients
+   Real diffCoeffU = 2.0e-5;
+   Real diffCoeffV = 1.0e-5;
    pp.query("diffCoeffU", diffCoeffU);
    pp.query("diffCoeffV", diffCoeffV);
+   prob_data.diffCoeffU = diffCoeffU;
+   prob_data.diffCoeffV = diffCoeffV;
 
-   A = 0.04;
-   B = 0.06;
+   // Gray-Scott reaction parameters
+   Real A = 0.04;
+   Real B = 0.06;
    pp.query("A", A);
    pp.query("B", B);
+   prob_data.A = A;
+   prob_data.B = B;
 
-   amrex::Print() << "advCoeffU = " << advCoeffU
-                  << " advCoeffV = " << advCoeffV << std::endl
-                  << "diffCoeffU = " << diffCoeffU
-                  << " diffCoeffV = " << diffCoeffV << std::endl
-                  << "A = " << A
-                  << " B = " << B << std::endl;
+   // Output problem options and parameters
+   amrex::Print()
+      << "n_cell        = " << n_cell        << std::endl
+      << "max_grid_size = " << max_grid_size << std::endl
+      << "plot_int      = " << plot_int      << std::endl
+      << "stepper       = " << stepper       << std::endl;
 
-   problem.advCoeffU = advCoeffU;
-   problem.advCoeffV = advCoeffV;
-   problem.diffCoeffU = diffCoeffU;
-   problem.diffCoeffV = diffCoeffV;
-   problem.A = A;
-   problem.B = B;
+   if (stepper == 0)
+      amrex::Print()
+         << "cvode_method  = " << cvode_method  << std::endl;
+   else
+      amrex::Print()
+         << "arkode_order  = " << arkode_order << std::endl;
+
+   amrex::Print()
+      << "rtol          = " << rtol          << std::endl
+      << "atol          = " << atol          << std::endl
+      << "tfinal        = " << tfinal        << std::endl
+      << "dtout         = " << dtout         << std::endl;
+
+   amrex::Print()
+      << "advCoeffU     = " << advCoeffU << std::endl
+      << "advCoeffV     = " << advCoeffV << std::endl;
+
+   amrex::Print()
+      << "diffCoeffU    = " << diffCoeffU << std::endl
+      << "diffCoeffV    = " << diffCoeffV << std::endl;
+
+   amrex::Print()
+      << "A             = " << A << std::endl
+      << "B             = " << B << std::endl;
+
 }
 
 void SetUpGeometry(BoxArray& ba, Geometry& geom,
-                   GrayScottProblem& problem,
-                   int n_cell, int max_grid_size)
+                   ProblemOpt& prob_opt, ProblemData& prob_data)
 {
+   // Extract problem options
+   int n_cell = prob_opt.n_cell;
+   int max_grid_size = prob_opt.max_grid_size;
+
    IntVect dom_lo(AMREX_D_DECL(       0,        0,        0));
    IntVect dom_hi(AMREX_D_DECL(n_cell-1, n_cell-1, n_cell-1));
    Box domain(dom_lo, dom_hi); // cell-centered
@@ -438,54 +493,101 @@ void SetUpGeometry(BoxArray& ba, Geometry& geom,
    Vector<int> is_periodic(AMREX_SPACEDIM, 1);  // periodic in all direction
    geom.define(domain, &real_box, CoordSys::cartesian, is_periodic.data());
 
-   problem.geom = &geom;
+   prob_data.geom = &geom;
 }
 
-void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
-                        Real tfinal, Real dtout, int plot_int)
+void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
+                       ProblemData* prob_data)
 {
-   Geometry* geom = problem->geom;
+   // Extract problem data and options
+   Geometry* geom         = prob_data->geom;
+   int       plot_int     = prob_opt->plot_int;
+   int       cvode_method = prob_opt->cvode_method;
+   int       nls_method   = prob_opt->nls_method;
+   int       nls_max_iter = prob_opt->nls_max_iter;
+   int       nls_fp_acc   = prob_opt->nls_fp_acc;
+   int       ls_max_iter  = prob_opt->ls_max_iter;
+   Real      rtol         = prob_opt->rtol;
+   Real      atol         = prob_opt->atol;
+   Real      tfinal       = prob_opt->tfinal;
+   Real      dtout        = prob_opt->dtout;
 
-   Real time = 0.0;                // time = starting time in the simulation
-   int  ier  = 0;                  // error flag
-   int  nout = ceil(tfinal/dtout); // number of outputs
+   // initial time, number of outputs, and error flag
+   Real time = 0.0;
+   int  nout = ceil(tfinal/dtout);
+   int  ier  = 0;
 
    // Write a plotfile of the initial data
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
       MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                               *geom, time, 0);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"}, *geom, time, 0);
    }
 
-   // Create the MRI stepper
-   void* arkode_mem = MRIStepCreate(ComputeRhsDiff, ComputeRhsReact,
-                                    time, nv_sol);
+   // Create CVODE memory
+   void* cvode_mem = NULL;
+   if (cvode_method == 0)
+      cvode_mem = CVodeCreate(CV_BDF);
+   else
+      cvode_mem = CVodeCreate(CV_ADAMS);
 
-   // Set MRIStep options
-   MRIStepSetFixedStep(arkode_mem, 0.5, 0.5);
-   MRIStepSetMaxNumSteps(arkode_mem, 500000);
-   MRIStepSetUserData(arkode_mem, problem);
+   // Initialize CVODE implicit adv-diff-react
+   CVodeInit(cvode_mem, ComputeRhsAdvDiffReact, time, nv_sol);
+
+   // Set CVODE options
+   CVodeSetUserData(cvode_mem, prob_data);
+   CVodeSStolerances(cvode_mem, atol, rtol);
+
+   // Attach nonlinear/linear solvers as needed
+   if (nls_method == 0)
+   {
+      // Create and attach GMRES linear solver for Newton
+      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+      ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
+      if (ier != CVLS_SUCCESS)
+      {
+         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+   else
+   {
+      // Create and attach fixed point solver
+      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
+      ier = CVodeSetNonlinearSolver(cvode_mem, NLS);
+      if (ier != CV_SUCCESS)
+      {
+         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+
+   // Set max number of nonlinear iterations
+   ier = CVodeSetMaxNonlinIters(cvode_mem, nls_max_iter);
+   if (ier != CV_SUCCESS)
+   {
+      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
+      return;
+   }
 
    // Advance the solution in time
-   realtype tout = time + dtout; // first output time
-   realtype tret;                // return time
+   Real tout = time + dtout; // first output time
+   Real tret;                // return time
    for (int iout=0; iout < nout; iout++)
    {
-      ier = MRIStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
+      ier = CVode(cvode_mem, tout, nv_sol, &tret, CV_NORMAL);
       if (ier < 0)
       {
-         amrex::Print() << "Error in MRIStepEvolve" << std::endl;
+         amrex::Print() << "Error in CVODE" << std::endl;
          return;
       }
 
       // Get integration stats
-      long nfs_evals, nff_evals;
-      MRIStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
+      long nf_evals;
+      CVodeGetNumRhsEvals(cvode_mem, &nf_evals);
       amrex::Print() << "t = " << std::setw(5) << tret
-                     << "  slow evals " << std::setw(7) << nfs_evals
-                     << "  fast evals " << std::setw(7) << nff_evals
+                     << "  rhs evals = " << std::setw(7) << nf_evals
                      << std::endl;
 
       // Write output
@@ -493,8 +595,8 @@ void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
       {
          const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
          MultiFab* sol = NV_MFAB(nv_sol);
-         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                                  *geom, tret, iout+1);
+         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"}, *geom, tret,
+                                  iout+1);
       }
 
       // Update output time
@@ -503,50 +605,86 @@ void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
    }
 }
 
-void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
-                        Real tfinal, Real dtout, int plot_int)
+void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
+                        ProblemData* prob_data)
 {
-   Geometry* geom = problem->geom;
+   // Extract problem data and options
+   Geometry* geom         = prob_data->geom;
+   int       plot_int     = prob_opt->plot_int;
+   int       arkode_order = prob_opt->arkode_order;
+   int       nls_method   = prob_opt->nls_method;
+   int       nls_max_iter = prob_opt->nls_max_iter;
+   int       nls_fp_acc   = prob_opt->nls_fp_acc;
+   int       ls_max_iter  = prob_opt->ls_max_iter;
+   Real      rtol         = prob_opt->rtol;
+   Real      atol         = prob_opt->atol;
+   Real      tfinal       = prob_opt->tfinal;
+   Real      dtout        = prob_opt->dtout;
 
-   Real time = 0.0;                // time = starting time in the simulation
-   int  ier  = 0;                  // error flag
-   int  nout = ceil(tfinal/dtout); // number of outputs
+   // initial time, number of outputs, and error flag
+   Real time = 0.0;
+   int  nout = ceil(tfinal/dtout);
+   int  ier  = 0;
 
    // Write a plotfile of the initial data
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
       MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                               *geom, time, 0);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"}, *geom, time, 0);
    }
 
    // Create the ARK stepper
+   void* arkode_mem = NULL;
 
    // explicit diffusion, implicit reactions
    // void* arkode_mem = ARKStepCreate(ComputeRhsDiff, ComputeRhsReact,
    //                                  time, nv_sol);
 
    // explicit reactions, implicit diffusion
-   void* arkode_mem = ARKStepCreate(ComputeRhsReact, ComputeRhsDiff,
-                                    time, nv_sol);
+   arkode_mem = ARKStepCreate(ComputeRhsReact, ComputeRhsDiff,
+                              time, nv_sol);
 
    // Set ARKStep options
-   ARKStepSetMaxNumSteps(arkode_mem, 5000);
-   ARKStepSetUserData(arkode_mem, problem);
+   ARKStepSetUserData(arkode_mem, prob_data);
+   ARKStepSStolerances(arkode_mem, atol, rtol);
+   ARKStepSetOrder(arkode_mem, arkode_order);
 
-   // Create and attach GMRES linear solver (without preconditioning)
-   SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
-   ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
-   if (ier != ARKLS_SUCCESS)
+   // Attach nonlinear/linear solvers as needed
+   if (nls_method == 0)
    {
-      amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
+      // Create and attach GMRES linear solver for Newton
+      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+      ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
+      if (ier != ARKLS_SUCCESS)
+      {
+         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+   else
+   {
+      // Create and attach GMRES linear solver (if implicit and using Newton)
+      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
+      ier = ARKStepSetNonlinearSolver(arkode_mem, NLS);
+      if (ier != ARK_SUCCESS)
+      {
+         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+
+   // Set max number of nonlinear iterations
+   ier = ARKStepSetMaxNonlinIters(arkode_mem, nls_max_iter);
+   if (ier != ARK_SUCCESS)
+   {
+      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
       return;
    }
 
    // Advance the solution in time
-   realtype tout = time + dtout; // first output time
-   realtype tret;                // return time
+   Real tout = time + dtout; // first output time
+   Real tret;                // return time
    for (int iout=0; iout < nout; iout++)
    {
       ier = ARKStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
@@ -569,8 +707,8 @@ void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
       {
          const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
          MultiFab* sol = NV_MFAB(nv_sol);
-         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                                  *geom, tret, iout+1);
+         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"}, *geom, tret,
+                                  iout+1);
       }
 
       // Update output time
@@ -579,59 +717,64 @@ void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
    }
 }
 
-void ComputeSolutionCV(N_Vector nv_sol, GrayScottProblem* problem,
-                       Real tfinal, Real dtout, int plot_int)
+void ComputeSolutionMRI(N_Vector nv_sol, ProblemOpt* prob_opt,
+                        ProblemData* prob_data)
 {
-   Geometry* geom = problem->geom;
+   // Extract problem data and options
+   Geometry* geom         = prob_data->geom;
+   int       plot_int     = prob_opt->plot_int;
+   int       nls_method   = prob_opt->nls_method;
+   int       nls_max_iter = prob_opt->nls_max_iter;
+   int       nls_fp_acc   = prob_opt->nls_fp_acc;
+   int       ls_max_iter  = prob_opt->ls_max_iter;
+   Real      rtol         = prob_opt->rtol;
+   Real      atol         = prob_opt->atol;
+   Real      tfinal       = prob_opt->tfinal;
+   Real      dtout        = prob_opt->dtout;
 
-   Real time = 0.0;                // time = starting time in the simulation
-   int  ier  = 0;                  // error flag
-   int  nout = ceil(tfinal/dtout); // number of outputs
+   // initial time, number of outputs, and error flag
+   Real time = 0.0;
+   int  nout = ceil(tfinal/dtout);
+   int  ier  = 0;
 
    // Write a plotfile of the initial data
    if (plot_int > 0)
    {
       const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
       MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                               *geom, time, 0);
+      WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"}, *geom, time, 0);
    }
 
-   // Create CVODE memory
-   void* cvode_mem = CVodeCreate(CV_BDF);
-   CVodeInit(cvode_mem, ComputeRhsAdvDiffReact, time, nv_sol);
+   // Create the MRI stepper
+   void* arkode_mem = NULL;
 
-   // Set CVODE options
-   CVodeSStolerances(cvode_mem, 1.0e-4, 1.0e-9);
-   CVodeSetMaxNumSteps(cvode_mem, 5000);
-   CVodeSetUserData(cvode_mem, problem);
+   // explicit slow diffusion, explicit fast reactions
+   arkode_mem = MRIStepCreate(ComputeRhsDiff, ComputeRhsReact,
+                              time, nv_sol);
 
-   // Create and attach GMRES linear solver (without preconditioning)
-   SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, 100);
-   ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
-   if (ier != CVLS_SUCCESS)
-   {
-      amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
-      return;
-   }
+   // Set MRIStep options
+   ARKStepSetUserData(arkode_mem, prob_data);
+   MRIStepSetFixedStep(arkode_mem, 0.5, 0.5);
+   MRIStepSetMaxNumSteps(arkode_mem, 500000);
 
    // Advance the solution in time
-   realtype tout = time + dtout; // first output time
-   realtype tret;                // return time
+   Real tout = time + dtout; // first output time
+   Real tret;                // return time
    for (int iout=0; iout < nout; iout++)
    {
-      ier = CVode(cvode_mem, tout, nv_sol, &tret, CV_NORMAL);
+      ier = MRIStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
       if (ier < 0)
       {
-         amrex::Print() << "Error in CVODE" << std::endl;
+         amrex::Print() << "Error in MRIStepEvolve" << std::endl;
          return;
       }
 
       // Get integration stats
-      long nf_evals;
-      CVodeGetNumRhsEvals(cvode_mem, &nf_evals);
+      long nfs_evals, nff_evals;
+      MRIStepGetNumRhsEvals(arkode_mem, &nfs_evals, &nff_evals);
       amrex::Print() << "t = " << std::setw(5) << tret
-                     << "  rhs evals = " << std::setw(7) << nf_evals
+                     << "  slow evals " << std::setw(7) << nfs_evals
+                     << "  fast evals " << std::setw(7) << nff_evals
                      << std::endl;
 
       // Write output
@@ -639,8 +782,8 @@ void ComputeSolutionCV(N_Vector nv_sol, GrayScottProblem* problem,
       {
          const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
          MultiFab* sol = NV_MFAB(nv_sol);
-         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"},
-                                  *geom, tret, iout+1);
+         WriteSingleLevelPlotfile(pltfile, *sol, {"u", "v"}, *geom, tret,
+                                  iout+1);
       }
 
       // Update output time

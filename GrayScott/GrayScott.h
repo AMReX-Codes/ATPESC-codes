@@ -6,7 +6,7 @@
 #include <AMReX_Array.H>
 
 // user-data structure passed through SUNDIALS to RHS functions
-struct GrayScottProblem
+struct ProblemData
 {
    amrex::Geometry* geom;
    amrex::Real advCoeffU;
@@ -18,52 +18,66 @@ struct GrayScottProblem
    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>* flux;
 };
 
+// user-data structure for problem options
+struct ProblemOpt
+{
+   int n_cell;
+   int max_grid_size;
+   int plot_int;
+   int stepper;
+   int cvode_method;
+   int arkode_order;
+   int nls_method;
+   int nls_max_iter;
+   int nls_fp_acc;
+   int ls_max_iter;
+   amrex::Real rtol;
+   amrex::Real atol;
+   amrex::Real tfinal;
+   amrex::Real dtout;
+};
+
 // Run problem
 void DoProblem();
 
-// ODE RHS functions called by SUNDIALS
-int ComputeRhsDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                   void* problem);
-int ComputeRhsAdv(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                  void* problem);
-int ComputeRhsReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                    void* problem);
+// ODE RHS functions
+int ComputeRhsAdv(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                  void* data);
+int ComputeRhsDiff(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                   void* data);
+int ComputeRhsReact(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                    void* data);
 
-int ComputeRhsAdvDiff(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                      void* problem);
-int ComputeRhsAdvReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                       void* problem);
-int ComputeRhsDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                        void* problem);
+int ComputeRhsAdvDiff(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                      void* data);
+int ComputeRhsAdvReact(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                       void* data);
+int ComputeRhsDiffReact(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                        void* data);
 
-int ComputeRhsAdvDiffReact(realtype t, N_Vector nv_sol, N_Vector nv_rhs,
-                           void* problem);
+int ComputeRhsAdvDiffReact(amrex::Real t, N_Vector nv_sol, N_Vector nv_rhs,
+                           void* data);
 
 // Set the ODE initial condition
-void FillInitConds2D(amrex::MultiFab& sol,
-                     const amrex::Geometry& geom);
+void FillInitConds2D(amrex::MultiFab& sol, const amrex::Geometry& geom);
 
 // Parse the problem input file
-void ParseInputs(int& n_cell, int& max_grid_size, int& stepper,
-                 amrex::Real& tfinal, amrex::Real& dtout,
-                 int& plot_int, GrayScottProblem& problem);
+void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data);
 
 // Decompose the problem in space
-void SetUpGeometry(amrex::BoxArray& ba,
-                   amrex::Geometry& geom,
-                   GrayScottProblem& problem,
-                   int n_cell, int max_grid_size);
+void SetUpGeometry(amrex::BoxArray& ba, amrex::Geometry& geom,
+                   ProblemOpt& prob_opt, ProblemData& prob_data);
 
 // Advance the solution in time with CVODE
-void ComputeSolutionCV(N_Vector nv_sol, GrayScottProblem* problem,
-                       amrex::Real tfinal, amrex::Real dtout, int plot_int);
+void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
+                       ProblemData* prob_data);
 
 // Advance the solution in time with ARKode ARKStep
-void ComputeSolutionARK(N_Vector nv_sol, GrayScottProblem* problem,
-                        amrex::Real tfinal, amrex::Real dtout, int plot_int);
+void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
+                        ProblemData* prob_data);
 
 // Advance the solution in time with ARKode MRIStep
-void ComputeSolutionMRI(N_Vector nv_sol, GrayScottProblem* problem,
-                        amrex::Real tfinal, amrex::Real dtout, int plot_int);
+void ComputeSolutionMRI(N_Vector nv_sol, ProblemOpt* prob_opt,
+                        ProblemData* prob_data);
 
 #endif

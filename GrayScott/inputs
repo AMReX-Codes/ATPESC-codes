@@ -1,17 +1,5 @@
 # ------------------------------------------------------------------------------
-# Input parameters for the Gray-Scott (reaction-diffusion) example:
-#
-#   du/dt = Au grad(u) - Du divgrad(u) - u v^2 + A (1-u)
-#   dv/dt = Av grad(v) - Dv divgrad(v) + u v^2 - (A + B) v
-#
-#   u = concentration of species U
-#   v = concentration of species V
-#
-# Chemical Reaction:
-#
-#   U + 2V -> 3V
-#        V -> P
-#
+# Input parameters for the Gray-Scott example
 # ------------------------------------------------------------------------------
 # stepper       : 0 = CVODE, 1 = ARKStep, 2 = MRIStep
 # tfinal        : final simulation time
@@ -26,12 +14,16 @@
 # A             : rate that feeds U and drains U, V, and P
 # B             : rate for converting V to P
 # ------------------------------------------------------------------------------
-stepper = 0
-tfinal = 1.0e4
-plot_int = 1
-dtout = 300.0
 n_cell = 256
 max_grid_size = 64
+plot_int = 1
+stepper = 0
+cvode_method = 0
+arkode_order = 4
+rtol = 1.0e-4
+atol = 1.0e-9
+tfinal = 1.0e4
+dtout = 300.0
 advCoeffU = 5.0e-4
 advCoeffV = 5.0e-4
 diffCoeffU = 2.0e-5
