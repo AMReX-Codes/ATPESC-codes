@@ -14,7 +14,7 @@ for the chemical reaction:
 
 U + 2V -> 3V
 
-     V -> P
+V -> P
 
 ## Problem Options
 
