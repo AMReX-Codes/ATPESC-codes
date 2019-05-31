@@ -673,7 +673,7 @@ booleantype N_VInvTest_Multifab(N_Vector x, N_Vector z)
 
    amrex::ParallelDescriptor::ReduceRealMin(val);
 
-   if (val = ZERO)
+   if (val == ZERO)
    {
       return SUNFALSE;
    }
