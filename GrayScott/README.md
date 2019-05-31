@@ -13,6 +13,7 @@ $$R_v =   u v^2 - (A + B) v$$
 for the chemical reaction:
 
 U + 2V -> 3V
+
      V -> P
 
 ## Problem Options
