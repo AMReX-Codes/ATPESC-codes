@@ -36,6 +36,7 @@ struct ProblemOpt
    amrex::Real fixed_dt;
    amrex::Real tfinal;
    amrex::Real dtout;
+   int max_steps;
    int write_diag;
 };
 

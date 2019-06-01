@@ -294,6 +294,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("dtout", dtout);
    prob_opt.dtout = dtout;
 
+   // Specify maximum number of steps between outputs
+   int max_steps = 1000;
+   pp.query("max_steps", max_steps);
+   prob_opt.max_steps = max_steps;
+
    // Output integrator diagnostics to a file
    int write_diag = 1;
    pp.query("write_diag", write_diag);
@@ -401,6 +406,7 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    Real      atol         = prob_opt->atol;
    Real      tfinal       = prob_opt->tfinal;
    Real      dtout        = prob_opt->dtout;
+   int       max_steps    = prob_opt->max_steps;
 
    // initial time, number of outputs, and error flag
    Real time = 0.0;
@@ -444,9 +450,14 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
       return;
    }
 
-   // Set CVODE options
+   // Attach the user data structure to CVODE
    CVodeSetUserData(cvode_mem, prob_data);
+
+   // Set integration tolerances
    CVodeSStolerances(cvode_mem, atol, rtol);
+
+   // Set the max number of steps between outputs
+   CVodeSetMaxNumSteps(cvode_mem, max_steps);
 
    // Attach nonlinear/linear solvers as needed
    if (nls_method == 0)
@@ -531,6 +542,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    Real      fixed_dt     = prob_opt->fixed_dt;
    Real      tfinal       = prob_opt->tfinal;
    Real      dtout        = prob_opt->dtout;
+   int       max_steps    = prob_opt->max_steps;
    int       write_diag   = prob_opt->write_diag;
 
    // initial time, number of outputs, and error flag
@@ -623,6 +635,9 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       ARKStepSetFixedStep(arkode_mem, fixed_dt);
    else
       ARKStepSStolerances(arkode_mem, atol, rtol);
+
+   // Set the max number of steps between outputs
+   ARKStepSetMaxNumSteps(arkode_mem, max_steps);
 
    // Set file for writing ARKStep diagnostics
    FILE* diagfp = NULL;

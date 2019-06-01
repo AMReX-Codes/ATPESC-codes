@@ -26,6 +26,7 @@ $$D$$ is the diffusion coefficient.
 | `fixed_dt`      | `Real` | use a fixed time step size (if `fixed_dt` > 0.0)   | -1.0     |
 | `tfinal`        | `Real` | final integration time                             | 1e4      |
 | `dtout`         | `Real` | output frequency                                   | `tfinal` |
+| `max_steps`     | `int`  | maximum number of steps between outputs            | 1000     |
 | `write_diag`    | `int`  | output ARKStep diagnostics to a file               | 1        |
 | `advCoeffx`     | `Real` | advection speed in the x-direction                 | 5e-4     |
 | `advCoeffy`     | `Real` | advection speed in the y-direction                 | 5e-4     |
