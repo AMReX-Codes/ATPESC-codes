@@ -23,6 +23,7 @@ $$D$$ is the diffusion coefficient.
 | `rhs_diff`      | `int`  | diffusion: disable (0), implicit (1), explicit (2) | 1        |
 | `rtol`          | `Real` | relative tolerance                                 | 1e-4     |
 | `atol`          | `Real` | absolute tolerance                                 | 1e-9     |
+| `fixed_dt`      | `Real` | use a fixed time step size (if `fixed_dt` > 0.0)   | -1.0     |
 | `tfinal`        | `Real` | final integration time                             | 1e4      |
 | `dtout`         | `Real` | output frequency                                   | `tfinal` |
 | `write_diag`    | `int`  | output ARKStep diagnostics to a file               | 1        |

@@ -279,6 +279,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    prob_opt.rtol = rtol;
    prob_opt.atol = atol;
 
+   // Specify a fixed time step size
+   Real fixed_dt = -1.0; // diabled by default (use adaptive steps)
+   pp.query("fixed_dt", fixed_dt);
+   prob_opt.fixed_dt = fixed_dt;
+
    // Specify final time for integration
    Real tfinal = 1.0e4;
    pp.query("tfinal", tfinal);
@@ -320,32 +325,34 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
       << "max_grid_size = " << max_grid_size << std::endl
       << "plot_int      = " << plot_int      << std::endl
       << "stepper       = " << stepper       << std::endl;
-
    if (stepper == 0)
       amrex::Print()
          << "cvode_method  = " << cvode_method  << std::endl;
    else
       amrex::Print()
          << "arkode_order  = " << arkode_order << std::endl;
-
    amrex::Print()
-      << "rhs_adv       = " << rhs_adv       << std::endl
-      << "rhs_diff      = " << rhs_diff      << std::endl
-      << "rtol          = " << rtol          << std::endl
-      << "atol          = " << atol          << std::endl
+      << "rhs_adv       = " << rhs_adv  << std::endl
+      << "rhs_diff      = " << rhs_diff << std::endl;
+   if (fixed_dt > 0.0)
+      amrex::Print()
+         << "fixed_dt      = " << fixed_dt << std::endl;
+   else
+      amrex::Print()
+         << "rtol          = " << rtol << std::endl
+         << "atol          = " << atol << std::endl;
+   amrex::Print()
       << "tfinal        = " << tfinal        << std::endl
-      << "dtout         = " << dtout         << std::endl;
-
+      << "dtout         = " << dtout         << std::endl
+      << "write_diag    = " << write_diag    << std::endl;
    if (rhs_adv > 0)
       amrex::Print()
          << "advCoeffx     = " << advCoeffx << std::endl
          << "advCoeffy     = " << advCoeffy << std::endl;
-
    if (rhs_diff > 0)
       amrex::Print()
          << "diffCoeffx    = " << diffCoeffx << std::endl
          << "diffCoeffy    = " << diffCoeffy << std::endl;
-
 }
 
 void SetUpGeometry(BoxArray& ba, Geometry& geom,
@@ -521,6 +528,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    int       rhs_diff     = prob_opt->rhs_diff;
    Real      rtol         = prob_opt->rtol;
    Real      atol         = prob_opt->atol;
+   Real      fixed_dt     = prob_opt->fixed_dt;
    Real      tfinal       = prob_opt->tfinal;
    Real      dtout        = prob_opt->dtout;
    int       write_diag   = prob_opt->write_diag;
@@ -604,11 +612,19 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       return;
    }
 
-   // Set ARKStep options
+   // Attach the user data structure to ARKStep
    ARKStepSetUserData(arkode_mem, prob_data);
-   ARKStepSStolerances(arkode_mem, atol, rtol);
+
+   // Set the method order
    ARKStepSetOrder(arkode_mem, arkode_order);
 
+   // Set the time step size or integration tolerances
+   if (fixed_dt > 0.0)
+      ARKStepSetFixedStep(arkode_mem, fixed_dt);
+   else
+      ARKStepSStolerances(arkode_mem, atol, rtol);
+
+   // Set file for writing ARKStep diagnostics
    FILE* diagfp = NULL;
    if (write_diag) {
       diagfp = fopen("ARKStep_diagnostics.txt", "w");

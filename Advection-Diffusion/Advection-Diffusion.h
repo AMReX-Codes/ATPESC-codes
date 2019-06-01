@@ -33,6 +33,7 @@ struct ProblemOpt
    int rhs_diff;
    amrex::Real rtol;
    amrex::Real atol;
+   amrex::Real fixed_dt;
    amrex::Real tfinal;
    amrex::Real dtout;
    int write_diag;
