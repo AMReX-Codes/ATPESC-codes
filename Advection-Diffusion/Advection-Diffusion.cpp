@@ -176,6 +176,11 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
    const auto dx = geom.CellSize();
    const auto prob_lo = geom.ProbLo();
    const auto prob_hi = geom.ProbHi();
+
+   Real sigma = 0.1;
+   Real a = 1.0/(sigma*sqrt(2*M_PI));
+   Real b = -0.5/(sigma*sigma);
+
    for (MFIter mfi(sol); mfi.isValid(); ++mfi)
    {
       const Box& bx = mfi.validbox();
@@ -188,15 +193,8 @@ void FillInitConds2D(MultiFab& sol, const Geometry& geom)
          for (int i = lo.x; i <= hi.x; ++i) {
             Real x = prob_lo[0] + (((Real) i) + 0.5) * dx[0];
 
-            if (x>-0.25 && x<0.25 && y>-0.25 && y<0.25)
-            {
-               fab(i,j,0,0) = sin(2 * M_PI * x + M_PI/2)
-                  * sin(2 * M_PI * y + M_PI/2);
-            }
-            else
-            {
-               fab(i,j,0,0) = 0.0;
-            }
+            Real r = x*x + y*y;
+            fab(i,j,0,0) = a * exp(b*r);
          }
       }
    }
