@@ -18,7 +18,6 @@ int main (int argc, char* argv[])
         int verbose = 1;
         int n_cell = 128;
         int max_grid_size = 32;
-        int is_periodic = 0;
 
         // read parameters
         {
@@ -26,18 +25,18 @@ int main (int argc, char* argv[])
             pp.query("verbose", verbose);
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
-            pp.query("is_periodic", is_periodic);
         }
+        int n_cell_x = 2*n_cell;
 
         Geometry geom;
         BoxArray grids;
         DistributionMapping dmap;
         {
-            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.,1.,1.)});
-            Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(is_periodic,is_periodic,is_periodic)};
+            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.,1.,1.)});
+            Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
-                       IntVect{AMREX_D_DECL(n_cell-1,n_cell-1,n_cell-1)});
+                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell-1,n_cell-1)});
             geom.define(domain);
             
             grids.define(domain);
@@ -48,9 +47,41 @@ int main (int argc, char* argv[])
 
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
+
+#if 0
         // build a simple geometry using the "eb2." parameters in the inputs file
         EB2::Build(geom, required_coarsening_level, max_coarsening_level);
+#else
+        int n_sphere = 2;
+        if (n_sphere == 1)
+        {
+           EB2::SphereIF sphere_0(0.25, {AMREX_D_DECL(0.5,0.5,0.5)}, false);
+           auto gshop = EB2::makeShop(sphere_0);
+           EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
 
+        } else {
+
+           EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
+           EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
+           EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
+           auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
+
+           EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
+           EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
+           EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
+           auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
+
+           EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
+           EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
+           EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
+           auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
+
+           auto all = EB2::makeUnion(column_1,column_2,column_3);
+
+           auto gshop  = EB2::makeShop(all);
+           EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+        }
+#endif
         const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
         const EB2::Level& eb_level = eb_is.getLevel(geom);
 
@@ -97,13 +128,15 @@ int main (int argc, char* argv[])
         macproj.setVerbose(verbose);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
-                                          LinOpBCType::Neumann,
-                                          LinOpBCType::Neumann)},
-                            {AMREX_D_DECL(LinOpBCType::Neumann,
-                                          LinOpBCType::Neumann,
-                                          LinOpBCType::Neumann)});
+                                          LinOpBCType::Periodic,
+                                          LinOpBCType::Periodic)},
+                            {AMREX_D_DECL(LinOpBCType::Dirichlet,
+                                          LinOpBCType::Periodic,
+                                          LinOpBCType::Periodic)});
 
-        Real reltol = 1.e-12;
+        Real reltol = 1.e-8;
+
+        // macproj.setBottomSolver(MLMG::BottomSolver::bicgcg);
         macproj.project(reltol);
 
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -124,7 +157,7 @@ int main (int argc, char* argv[])
                                      "before-vz",
 #endif
                                      "divu-before",
-                                     "after-vx", "after-vy",
+                                     "xvel", "yvel",
 #if (AMREX_SPACEDIM == 3)
                                       "after-vz",       
 #endif
