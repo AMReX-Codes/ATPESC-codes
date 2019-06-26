@@ -6,7 +6,7 @@ Example codes for ATPESC 2019
 
 To build the examples using the provided Makefile set the environment variables
 `AMREX_INSTALL_DIR` and `SUNDIALS_INSTALL_DIR` to the directories for the AMReX
-and Sundials installations respectively. For example, if ARMeX was installed in
+and Sundials installations respectively. For example, if AMReX was installed in
 `~/apps/amrex` and and Sundials in `~/apps/sundials`, then the required
  environment variables can be created with
 ```
