@@ -777,7 +777,7 @@ void ComputeSolutionMRI(N_Vector nv_sol, ProblemOpt* prob_opt,
                               time, nv_sol);
 
    // Set MRIStep options
-   ARKStepSetUserData(arkode_mem, prob_data);
+   MRIStepSetUserData(arkode_mem, prob_data);
    MRIStepSetFixedStep(arkode_mem, 0.5, 0.5);
    MRIStepSetMaxNumSteps(arkode_mem, 500000);
 
