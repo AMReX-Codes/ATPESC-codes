@@ -126,6 +126,7 @@ int main (int argc, char* argv[])
                              {geom});                          // Geometry
 
         macproj.setVerbose(verbose);
+        macproj.setCGVerbose(verbose);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Periodic,
@@ -136,6 +137,7 @@ int main (int argc, char* argv[])
 
         Real reltol = 1.e-8;
 
+        // macproj.setBottomSolver(MLMG::BottomSolver::hypre);
         // macproj.setBottomSolver(MLMG::BottomSolver::bicgcg);
         macproj.project(reltol);
 
@@ -164,6 +166,22 @@ int main (int argc, char* argv[])
                                      "divu-after"},
                                     geom, 0.0, 0);
     }
+
+#if 0
+    // This is what I'm thinking the particle loop will look like ... 
+    {
+        MyParticleContainer particles(geom,dm,ba);
+        particles.InitParticles();
+
+        for (int step = 0; step < parms.nsteps; ++step)
+        {
+             amrex::Print() << "    Time step: " <<  step << std::endl;
+             amrex::Print() << " Number of particles is " << particles.TotalNumberOfParticles() << std::endl;
+             particles.MoveParticles();
+             particles.Redistribute();
+        }
+    }
+#endif
 
     amrex::Finalize();
 }
