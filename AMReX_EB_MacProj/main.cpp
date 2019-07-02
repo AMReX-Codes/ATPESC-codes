@@ -1,4 +1,4 @@
-
+#include <AMReX_Particles.H>
 #include <AMReX.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_EBMultiFabUtil.H>
@@ -7,6 +7,7 @@
 #include <AMReX_MacProjector.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
+#include <TracerParticleContainer.H>
 
 using namespace amrex;
 
@@ -95,6 +96,13 @@ int main (int argc, char* argv[])
         // such as BaseFab, FArrayBox, FabArray, and MultiFab
         EBFArrayBoxFactory factory(eb_level, geom, grids, dmap, ng_ebs, ebs);
 
+
+	// Initialize Particles
+	TracerParticleContainer PC(geom, dmap, grids);
+	PC.InitParticles();
+	PC.writeParticles(0);
+    
+	
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
         MultiFab plotfile_mf;
         plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
@@ -107,6 +115,9 @@ int main (int argc, char* argv[])
             beta[idim].setVal(1.0);
         }
 
+
+
+	
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
