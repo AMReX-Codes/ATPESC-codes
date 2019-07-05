@@ -3,4 +3,3 @@ amrex.fpe_trap_invalid=1
 verbose = 2
 n_cell = 128
 max_grid_size = 64
-do_tracers = 0
