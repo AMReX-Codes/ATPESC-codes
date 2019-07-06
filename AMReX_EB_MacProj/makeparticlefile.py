@@ -5,9 +5,9 @@
 
 import numpy as np
 
-NX = 4
-NY = 12
-NZ = 12
+NX = 3
+NY = 5
+NZ = 5
 
 dimx = [0,0.1]  #They'll start evenly close to the edge/source and flow through
 dimy = [0,1]
@@ -24,6 +24,7 @@ for i in range(NX):
         for k in range(NZ):
             if (i==0 and j==0 and k==0):
                 f.write("%d \r\n" % (NX*NY*NZ))
+                f.write("%f %f %f \r\n" % ((i+1)*dx, (j+1)*dy, (k+1)*dz))
             else:
                 f.write("%f %f %f \r\n" % ((i+1)*dx, (j+1)*dy, (k+1)*dz))
 f.close()
