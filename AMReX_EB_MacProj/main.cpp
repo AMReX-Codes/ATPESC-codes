@@ -45,7 +45,7 @@ int main (int argc, char* argv[])
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
                        IntVect{AMREX_D_DECL(n_cell_x-1,n_cell-1,n_cell-1)});
             geom.define(domain);
-            
+
             grids.define(domain);
             grids.maxSize(max_grid_size);
 
@@ -61,32 +61,32 @@ int main (int argc, char* argv[])
 #else
         int n_sphere = 2;
         if (n_sphere == 1)
-        {
-           EB2::SphereIF sphere_0(0.25, {AMREX_D_DECL(0.5,0.5,0.5)}, false);
-           auto gshop = EB2::makeShop(sphere_0);
-           EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+            {
+                EB2::SphereIF sphere_0(0.25, {AMREX_D_DECL(0.5,0.5,0.5)}, false);
+                auto gshop = EB2::makeShop(sphere_0);
+                EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
 
-        } else {
+            } else {
 
-           EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
-           EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
-           EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
-           auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
+            EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
+            EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
+            EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
+            auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
 
-           EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
-           EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
-           EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
-           auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
+            EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
+            EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
+            EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
+            auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
 
-           EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
-           EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
-           EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
-           auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
+            EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
+            EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
+            EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
+            auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
 
-           auto all = EB2::makeUnion(column_1,column_2,column_3);
+            auto all = EB2::makeUnion(column_1,column_2,column_3);
 
-           auto gshop  = EB2::makeShop(all);
-           EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+            auto gshop  = EB2::makeShop(all);
+            EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
         }
 #endif
         const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
@@ -103,27 +103,24 @@ int main (int argc, char* argv[])
         EBFArrayBoxFactory factory(eb_level, geom, grids, dmap, ng_ebs, ebs);
 
 
-	// Initialize Particles
-	TracerParticleContainer TracerPC(geom, dmap, grids);
-	TracerPC.InitFromAsciiFile("tracers_file", 0);
-	
-	
+        // Initialize Particles
+        TracerParticleContainer TracerPC(geom, dmap, grids);
+        TracerPC.InitFromAsciiFile("tracers_file", 0);
+
+
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
         MultiFab plotfile_mf;
         plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
 
-        Array<MultiFab,AMREX_SPACEDIM> vel; 
+        Array<MultiFab,AMREX_SPACEDIM> vel;
         Array<MultiFab,AMREX_SPACEDIM> beta;
-		
+
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-	  vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
+            vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
             beta[idim].define(amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 0, MFInfo(), factory);
             beta[idim].setVal(1.0);
         }
 
-
-
-	
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
@@ -131,15 +128,15 @@ int main (int argc, char* argv[])
 
         // copy velocity into plotfile
         average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
-        
+
         // compute and output divergence, then copy into plofile
         MultiFab divu(grids, dmap, 1, 0, MFInfo(), factory);
         EB_computeDivergence(divu, amrex::GetArrOfConstPtrs(vel), geom);
         amrex::Print() << "\nmax-norm of divu before projection is " << divu.norm0() << "\n" << std::endl;
         plotfile_mf.copy(divu,0,AMREX_SPACEDIM,1);
-        
+
         MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
-                             {amrex::GetArrOfConstPtrs(beta)}, // beta 
+                             {amrex::GetArrOfConstPtrs(beta)}, // beta
                              {geom});                          // Geometry
 
         macproj.setVerbose(verbose);
@@ -147,9 +144,9 @@ int main (int argc, char* argv[])
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Periodic,
                                           LinOpBCType::Periodic)},
-                            {AMREX_D_DECL(LinOpBCType::Dirichlet,
-                                          LinOpBCType::Periodic,
-                                          LinOpBCType::Periodic)});
+            {AMREX_D_DECL(LinOpBCType::Dirichlet,
+                          LinOpBCType::Periodic,
+                          LinOpBCType::Periodic)});
 
         Real reltol = 1.e-8;
 
@@ -161,11 +158,11 @@ int main (int argc, char* argv[])
         }
 
 
-	// Step Particles
-	TracerPC.AdvectWithUmac(vel.data(), 0, .1);  // Change the .1 to dt once there is a timeloop
+        // Step Particles
+        TracerPC.AdvectWithUmac(vel.data(), 0, .1);  // Change the .1 to dt once there is a timeloop
 
 
-	
+
         // copy velocity into plotfile
         average_face_to_cellcenter(plotfile_mf,AMREX_SPACEDIM+1,amrex::GetArrOfConstPtrs(vel));
 
@@ -177,16 +174,16 @@ int main (int argc, char* argv[])
         EB_WriteSingleLevelPlotfile("plt", plotfile_mf,
                                     {"before-vx", "before-vy",
 #if (AMREX_SPACEDIM == 3)
-                                     "before-vz",
+                                            "before-vz",
 #endif
-                                     "divu-before",
-                                     "xvel", "yvel",
+                                            "divu-before",
+                                            "xvel", "yvel",
 #if (AMREX_SPACEDIM == 3)
-                                      "after-vz",       
+                                            "after-vz",
 #endif
-                                     "divu-after"},
+                                            "divu-after"},
                                     geom, 0.0, 0);
-	TracerPC.Checkpoint("plt", "Tracer", true); //Write Traceres to plotfile
+        TracerPC.Checkpoint("plt", "Tracer", true); //Write Tracers to plotfile
     }
 
     amrex::Finalize();
