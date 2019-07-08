@@ -1,4 +1,4 @@
-
+#include <AMReX_Particles.H>
 #include <AMReX.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_EBMultiFabUtil.H>
@@ -7,6 +7,13 @@
 #include <AMReX_MacProjector.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
+#include <AMReX_VisMF.H>
+#include <AMReX_TracerParticles.H>
+#include <AMReX_VisMF.H>
+#include <AMReX_TagBox.H>
+#include <AMReX_ParmParse.H>
+
+
 
 using namespace amrex;
 
@@ -95,18 +102,28 @@ int main (int argc, char* argv[])
         // such as BaseFab, FArrayBox, FabArray, and MultiFab
         EBFArrayBoxFactory factory(eb_level, geom, grids, dmap, ng_ebs, ebs);
 
+
+	// Initialize Particles
+	TracerParticleContainer TracerPC(geom, dmap, grids);
+	TracerPC.InitFromAsciiFile("tracers_file", 0);
+	
+	
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
         MultiFab plotfile_mf;
         plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
 
-        Array<MultiFab,AMREX_SPACEDIM> vel;
+        Array<MultiFab,AMREX_SPACEDIM> vel; 
         Array<MultiFab,AMREX_SPACEDIM> beta;
+		
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-            vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
+	  vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
             beta[idim].define(amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 0, MFInfo(), factory);
             beta[idim].setVal(1.0);
         }
 
+
+
+	
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
@@ -143,6 +160,12 @@ int main (int argc, char* argv[])
             vel[idim].FillBoundary(geom.periodicity());
         }
 
+
+	// Step Particles
+	TracerPC.AdvectWithUmac(vel.data(), 0, .1);  // Change the .1 to dt once there is a timeloop
+
+
+	
         // copy velocity into plotfile
         average_face_to_cellcenter(plotfile_mf,AMREX_SPACEDIM+1,amrex::GetArrOfConstPtrs(vel));
 
@@ -163,6 +186,7 @@ int main (int argc, char* argv[])
 #endif
                                      "divu-after"},
                                     geom, 0.0, 0);
+	TracerPC.Checkpoint("plt", "Tracer", true); //Write Traceres to plotfile
     }
 
     amrex::Finalize();
