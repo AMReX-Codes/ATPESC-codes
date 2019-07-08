@@ -17,6 +17,29 @@
 
 using namespace amrex;
 
+void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, const auto& pc)
+{
+    std::stringstream sstream;
+    sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
+    std::string plotfile_name = sstream.str();
+
+    amrex::Print() << "Writing " << plotfile_name << std::endl;    
+    
+    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                {"before-vx", "before-vy",
+#if (AMREX_SPACEDIM == 3)
+                                        "before-vz",
+#endif
+                                        "divu-before",
+                                        "xvel", "yvel",
+#if (AMREX_SPACEDIM == 3)
+                                        "after-vz",
+#endif
+                                        "divu-after"},
+                                geom, 0.0, 0);
+    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
+}
+
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc, argv);
@@ -25,6 +48,10 @@ int main (int argc, char* argv[])
         int verbose = 1;
         int n_cell = 128;
         int max_grid_size = 32;
+        std::string initial_tracer_file = "";
+        Real max_time = 1.0;
+        int max_steps = 100;
+        Real time_step = 0.01;
 
         // read parameters
         {
@@ -32,6 +59,10 @@ int main (int argc, char* argv[])
             pp.query("verbose", verbose);
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
+            pp.query("initial_tracer_file", initial_tracer_file);
+            pp.query("max_time", max_time);
+            pp.query("max_steps", max_steps);
+            pp.query("time_step", time_step);
         }
         int n_cell_x = 2*n_cell;
 
@@ -105,7 +136,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         TracerParticleContainer TracerPC(geom, dmap, grids);
-        TracerPC.InitFromAsciiFile("tracers_file", 0);
+        TracerPC.InitFromAsciiFile(initial_tracer_file, 0);
 
 
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
@@ -157,12 +188,6 @@ int main (int argc, char* argv[])
             vel[idim].FillBoundary(geom.periodicity());
         }
 
-
-        // Step Particles
-        TracerPC.AdvectWithUmac(vel.data(), 0, .1);  // Change the .1 to dt once there is a timeloop
-
-
-
         // copy velocity into plotfile
         average_face_to_cellcenter(plotfile_mf,AMREX_SPACEDIM+1,amrex::GetArrOfConstPtrs(vel));
 
@@ -171,19 +196,28 @@ int main (int argc, char* argv[])
         amrex::Print() << "\nmax-norm of divu after projection is " << divu.norm0() << "\n" << std::endl;
         plotfile_mf.copy(divu,0,2*AMREX_SPACEDIM+1,1);
 
-        EB_WriteSingleLevelPlotfile("plt", plotfile_mf,
-                                    {"before-vx", "before-vy",
-#if (AMREX_SPACEDIM == 3)
-                                            "before-vz",
-#endif
-                                            "divu-before",
-                                            "xvel", "yvel",
-#if (AMREX_SPACEDIM == 3)
-                                            "after-vz",
-#endif
-                                            "divu-after"},
-                                    geom, 0.0, 0);
-        TracerPC.Checkpoint("plt", "Tracer", true); //Write Tracers to plotfile
+        Real time = 0.0;
+        for (int i = 0; i < max_steps; i++)
+        {
+            if (time < max_time) {
+                time_step = std::min(time_step, max_time - time);
+
+                amrex::Print() << "\nTimestep " << i << ", Time = " << time << std::endl;
+                amrex::Print() << "Advecting particles with Umac for timestep " << time_step << std::endl;
+                // Step Particles
+                TracerPC.AdvectWithUmac(vel.data(), 0, time_step);
+
+                // Write to a plotfile
+                write_plotfile(i, geom, plotfile_mf, TracerPC);
+
+                // Increment time
+                time += time_step;
+            } else {
+                // Write to a plotfile
+                write_plotfile(i, geom, plotfile_mf, TracerPC);
+                break;
+            }
+        }
     }
 
     amrex::Finalize();
