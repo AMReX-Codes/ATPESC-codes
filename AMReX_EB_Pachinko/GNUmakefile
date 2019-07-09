@@ -15,7 +15,7 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ./Make.package
 
-Pdirs := Base Boundary AmrCore
+Pdirs := Base Boundary AmrCore Particle
 Pdirs += EB
 Pdirs += LinearSolvers/C_CellMG LinearSolvers/MLMG
 
