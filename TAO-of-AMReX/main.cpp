@@ -9,6 +9,7 @@ int main (int argc, char* argv[])
     {
         BL_PROFILE("main");
         MyTest mytest;
+        mytest.dfdp.resize(2*AMREX_SPACEDIM);
 
         {
             // get boundary values to set

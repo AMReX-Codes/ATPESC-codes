@@ -67,6 +67,8 @@ private:
 
     amrex::Real ascalar = 1.e-3;
     amrex::Real bscalar = 1.0;
+
+    amrex::Vector<amrex::Real> dfdp; // {dfdp_x_lo, dfdp_x_hi, dfdp_y_lo, dfdp_y_hi, ...}
 };
 
 #endif
