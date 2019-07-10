@@ -4,6 +4,8 @@ verbose = 2
 n_cell = 128
 max_grid_size = 64
 
+plot_int = 10
+
 initial_tracer_file = tracers_file_2d
 
 max_time = 1.0

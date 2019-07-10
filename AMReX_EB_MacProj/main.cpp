@@ -51,6 +51,7 @@ int main (int argc, char* argv[])
         std::string initial_tracer_file = "";
         Real max_time = 1.0;
         int max_steps = 100;
+        int plot_int  = 1;
         Real time_step = 0.01;
 
         // read parameters
@@ -62,6 +63,7 @@ int main (int argc, char* argv[])
             pp.query("initial_tracer_file", initial_tracer_file);
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
+            pp.query("plot_int", plot_int);
             pp.query("time_step", time_step);
         }
         int n_cell_x = 2*n_cell;
@@ -210,7 +212,8 @@ int main (int argc, char* argv[])
                 TracerPC.AdvectWithUmac(vel.data(), 0, time_step);
 
                 // Write to a plotfile
-                write_plotfile(i, geom, plotfile_mf, TracerPC);
+                if (i%plot_int == 0)
+                   write_plotfile(i, geom, plotfile_mf, TracerPC);
 
                 // Increment time
                 time += time_step;
@@ -221,22 +224,6 @@ int main (int argc, char* argv[])
             }
         }
     }
-
-#if 0
-    // This is what I'm thinking the particle loop will look like ... 
-    {
-        MyParticleContainer particles(geom,dm,ba);
-        particles.InitParticles();
-
-        for (int step = 0; step < parms.nsteps; ++step)
-        {
-             amrex::Print() << "    Time step: " <<  step << std::endl;
-             amrex::Print() << " Number of particles is " << particles.TotalNumberOfParticles() << std::endl;
-             particles.MoveParticles();
-             particles.Redistribute();
-        }
-    }
-#endif
 
     amrex::Finalize();
 }
