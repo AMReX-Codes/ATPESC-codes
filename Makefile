@@ -6,8 +6,12 @@
 # SUNDIALS_INSTALL_DIR = path to SUNDIALS installation
 # ------------------------------------------------------------------------------
 
-CXX = mpicxx
-FC = gfortran
+ifeq ($(CXX),)
+  CXX = mpicxx
+endif
+ifeq ($(FC),)
+  FC = gfortran
+endif
 
 CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I$(SUNDIALS_INSTALL_DIR)/include
 CXXFLAGS = -O2 -std=c++11
