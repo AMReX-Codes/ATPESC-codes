@@ -16,7 +16,7 @@ endif
 CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I$(SUNDIALS_INSTALL_DIR)/include
 CXXFLAGS = -O2 -std=c++11
 FFLAGS = -O2
-LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(SUNDIALS_INSTALL_DIR)/lib
+LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(SUNDIALS_INSTALL_DIR)/lib -Wl,-rpath,$(SUNDIALS_INSTALL_DIR)/lib
 
 LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode
 
