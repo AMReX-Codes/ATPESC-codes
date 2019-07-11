@@ -45,7 +45,7 @@ int main (int argc, char* argv[])
     amrex::Initialize(argc, argv);
 
     {
-        int verbose = 1;
+        int verbose = 0;
         int n_cell = 128;
         int max_grid_size = 32;
         std::string initial_tracer_file = "";
@@ -140,7 +140,6 @@ int main (int argc, char* argv[])
         TracerParticleContainer TracerPC(geom, dmap, grids);
         TracerPC.InitFromAsciiFile(initial_tracer_file, 0);
 
-
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
         MultiFab plotfile_mf;
         plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
@@ -173,7 +172,7 @@ int main (int argc, char* argv[])
                              {geom});                          // Geometry
 
         macproj.setVerbose(verbose);
-        macproj.setCGVerbose(verbose);
+        macproj.setCGVerbose(0);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Periodic,
@@ -210,6 +209,8 @@ int main (int argc, char* argv[])
                 amrex::Print() << "Advecting particles with Umac for timestep " << time_step << std::endl;
                 // Step Particles
                 TracerPC.AdvectWithUmac(vel.data(), 0, time_step);
+
+                TracerPC.Redistribute();
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
