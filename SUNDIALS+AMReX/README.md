@@ -1,11 +1,15 @@
-# Advection-Diffusion Example
+# ATPESC-codes
+
+SUNDIALS+AMReX example codes for ATPESC 2019
+
+## Advection-Diffusion Example
 
 $$\frac{\partial u}{\partial t} + \vec{a} \cdot \nabla u -  \nabla \cdot ( D \nabla u ) = 0$$
 
 where $$u$$ is the chemical concentration, $$\vec{a}$$ is the advection speed, and
 $$D$$ is the diffusion coefficient.
 
-## Problem Options
+### Problem Options
 
 | Option          | Type   | Description                                        | Default  |
 | ----------------|--------|----------------------------------------------------|----------|
@@ -32,3 +36,30 @@ $$D$$ is the diffusion coefficient.
 | `advCoeffy`     | `Real` | advection speed in the y-direction                 | 5e-4     |
 | `diffCoeffx`    | `Real` | diffusion coefficient in the x-direction           | 2e-5     |
 | `diffCoeffy`    | `Real` | diffusion coefficient in the y-direction           | 2e-5     |
+
+
+## Building
+
+To build the examples using the provided Makefile set the environment variables
+`AMREX_INSTALL_DIR` and `SUNDIALS_INSTALL_DIR` to the directories for the AMReX
+and Sundials installations respectively.  Also set the environment
+variable `MPICXX` to the MPI C++ wrapper to use for compilation.  For
+example, if AMReX was installed in `~/apps/amrex` and and Sundials in
+`~/apps/sundials`, and the MPI C++ wrapper is just `mpicxx`, then the required 
+ environment variables can be created with
+```
+export AMREX_INSTALL_DIR=~/apps/amrex
+export SUNDIALS_INSTALL_DIR=~/apps/sundials
+export MPICXX=mpicxx
+```
+for sh/bash/ksh/zsh shells or with
+```
+set AMREX_INSTALL_DIR ~/apps/amrex
+set SUNDIALS_INSTALL_DIR ~/apps/sundials
+set MPICXX mpicxx
+```
+for csh/tcsh shells. After the environment variables are set run `make` to build
+the example executables, `Advection-Diffusion.exe` and `GrayScott.exe`.
+
+If any of these environment variables are left unset, they default to
+valid values for compilation on Cooley for the ATPESC 2019 workshop.
