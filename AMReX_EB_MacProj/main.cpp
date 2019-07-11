@@ -8,12 +8,11 @@
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_VisMF.H>
-#include <AMReX_TracerParticles.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_TagBox.H>
 #include <AMReX_ParmParse.H>
 
-
+#include <MyParticleContainer.H>
 
 using namespace amrex;
 
@@ -89,39 +88,57 @@ int main (int argc, char* argv[])
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
 
 #if 0
-        // build a simple geometry using the "eb2." parameters in the inputs file
-        EB2::Build(geom, required_coarsening_level, max_coarsening_level);
+        EB2::SphereIF sphere[9];
+
+        sphere[0].define(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
+        sphere[1].define(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
+        sphere[2].define(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
+
+        sphere[3].define(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
+        sphere[4].define(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
+        sphere[5].define(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
+
+        sphere[6].define(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
+        sphere[7].define(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
+        sphere[8].define(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
+
+        bool is_true[9];
+        is_true = true;
+
+        int first_i;
+        int  next_i;
+
+        for (int i = 0; i < 9; i++) 
+           if (is_true[i]) { first_i = i; break;}
+
+        for (int i = first_i+1; i < 9; i++) 
+           if (is_true[i]) { next_i = i; break;}
+
+        auto all = EB2::makeUnion(sphere[first_i], sphere[next_i]);
 #else
-        int n_sphere = 2;
-        if (n_sphere == 1)
-            {
-                EB2::SphereIF sphere_0(0.25, {AMREX_D_DECL(0.5,0.5,0.5)}, false);
-                auto gshop = EB2::makeShop(sphere_0);
-                EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
 
-            } else {
+        EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
+        EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
+        EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
 
-            EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
-            EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
-            EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
-            auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
+        EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
+        EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
+        EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
 
-            EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
-            EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
-            EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
-            auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
+        EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
+        EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
+        EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
 
-            EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
-            EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
-            EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
-            auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
+        auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
+        auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
+        auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
 
-            auto all = EB2::makeUnion(column_1,column_2,column_3);
-
-            auto gshop  = EB2::makeShop(all);
-            EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
-        }
+        auto all = EB2::makeUnion(column_1,column_2,column_3);
 #endif
+
+        auto gshop  = EB2::makeShop(all);
+        EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+
         const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
         const EB2::Level& eb_level = eb_is.getLevel(geom);
 
@@ -137,8 +154,8 @@ int main (int argc, char* argv[])
 
 
         // Initialize Particles
-        TracerParticleContainer TracerPC(geom, dmap, grids);
-        TracerPC.InitFromAsciiFile(initial_tracer_file, 0);
+        MyParticleContainer MyPC(geom, dmap, grids);
+        MyPC.InitFromAsciiFile(initial_tracer_file, 0);
 
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
         MultiFab plotfile_mf;
@@ -208,19 +225,33 @@ int main (int argc, char* argv[])
                 amrex::Print() << "\nTimestep " << i << ", Time = " << time << std::endl;
                 amrex::Print() << "Advecting particles with Umac for timestep " << time_step << std::endl;
                 // Step Particles
-                TracerPC.AdvectWithUmac(vel.data(), 0, time_step);
+                MyPC.AdvectWithUmac(vel.data(), 0, time_step);
 
-                TracerPC.Redistribute();
+                MyPC.Redistribute();
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
-                   write_plotfile(i, geom, plotfile_mf, TracerPC);
+                   write_plotfile(i, geom, plotfile_mf, MyPC);
 
                 // Increment time
                 time += time_step;
+
+                Real x;
+                MyPC.FindWinner(0,x);
+                amrex::Print() << " ********************************************** " << std::endl;
+                amrex::Print() << "Furthest particle is now at " << x << std::endl;
+                amrex::Print() << " ********************************************** " << std::endl;
+
+                if (x > 1.5) 
+                {
+                   amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;
+                   write_plotfile(i, geom, plotfile_mf, MyPC);
+                   break;
+                }
+
             } else {
                 // Write to a plotfile
-                write_plotfile(i, geom, plotfile_mf, TracerPC);
+                write_plotfile(i, geom, plotfile_mf, MyPC);
                 break;
             }
         }

@@ -27,4 +27,4 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 movie:
 	parallel --keep-order --tag "./plot.py {}" ::: `ls -d plt*`
-	ffmpeg -framerate 240 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 macproj.gif
+	ffmpeg -framerate 80 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 macproj.gif
