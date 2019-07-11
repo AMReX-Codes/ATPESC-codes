@@ -52,7 +52,7 @@ clean:
 	$(RM) *.o shared/*.o
 
 realclean: clean
-	$(RM) *.exe
+	$(RM) *~ *.exe
 
 pltclean:
-	$(RM) -rf plt*/
+	$(RM) -rf plt*/ *.png __pycache__

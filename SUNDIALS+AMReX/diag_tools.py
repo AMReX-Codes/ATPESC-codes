@@ -12,7 +12,7 @@
 #### Data Structures ####
 
 class ErrorTest:
-    """ 
+    """
     An ErrorTest object stores, for each error test performed:
         index    -- the time step index
         h        -- the time step size
@@ -30,11 +30,11 @@ class ErrorTest:
         if (dsm > 1.0):
             self.errfail = 1
     def Write(self):
-        print '  ErrorTest: index =',self.index,', h =',self.h,', estimate =',self.estimate,', errfail =',self.errfail
+        print('  ErrorTest: index =',self.index,', h =',self.h,', estimate =',self.estimate,', errfail =',self.errfail)
 
 ##########
 class AdaptH:
-    """ 
+    """
     An AdaptH object stores, for each time step adaptivity calculation:
         eh[0,1,2]        -- the biased error history array
         hh[0,1,2]        -- the time step history array
@@ -43,7 +43,7 @@ class AdaptH:
         h_stability[0,1] -- the stability step estimates, before
                             and after applying cfl & stability bounds
         stab_restrict    -- flag whether step was stability-limited
-        eta              -- the final time step growth factor 
+        eta              -- the final time step growth factor
     """
     def __init__(self, eh0, eh1, eh2, hh0, hh1, hh2, ha0, hs0, ha1, hs1, eta):
         self.eh0 = eh0
@@ -62,11 +62,11 @@ class AdaptH:
         else:
             self.stab_restrict = 0
     def Write(self):
-        print '  AdaptH: errhist =',self.eh0,self.eh1,self.eh2,', stephist =',self.hh0,self.hh1,self.hh2,', ha0 =',self.h_accuracy0,', hs0 =',self.h_stability0,', ha1 =',self.h_accuracy1,', hs1 =',self.h_stability1,', stabrestrict =',self.stabrestrict,', eta =',self.eta
+        print('  AdaptH: errhist =',self.eh0,self.eh1,self.eh2,', stephist =',self.hh0,self.hh1,self.hh2,', ha0 =',self.h_accuracy0,', hs0 =',self.h_stability0,', ha1 =',self.h_accuracy1,', hs1 =',self.h_stability1,', stabrestrict =',self.stabrestrict,', eta =',self.eta)
 
 ##########
 class StageStep:
-    """ 
+    """
     A StageStep object stores, for each RK stage of every time step:
         step         -- the time step index
         h            -- the time step size
@@ -79,12 +79,12 @@ class StageStep:
         self.stage = stage
         self.tn    = tn
     def Write(self):
-        print '  StageStep: step =',self.step,', stage =',self.stage
-        print '    h =',self.h,', tn =',self.tn
+        print('  StageStep: step =',self.step,', stage =',self.stage)
+        print('    h =',self.h,', tn =',self.tn)
 
 ##########
 class TimeStep:
-    """ 
+    """
     A TimeStep object stores, for every time step:
         StageSteps  -- array of StageStep objects comprising the step
         h_attempts  -- array of step sizes attempted (typically only one,
@@ -115,10 +115,10 @@ class TimeStep:
     def AddHAdapt(self, HAdapt):
         self.HAdapt = HAdapt
     def Write(self):
-        print 'TimeStep: step =',self.step,', tn =',self.tn
-        print '  h_attempts =',self.h_attempts
-        print '  h_final =',self.h_final
-        print '  err_fails =',self.err_fails
+        print('TimeStep: step =',self.step,', tn =',self.tn)
+        print('  h_attempts =',self.h_attempts)
+        print('  h_final =',self.h_final)
+        print('  err_fails =',self.err_fails)
         for i in range(len(self.StageSteps)):
             self.StageSteps[i].Write()
 
@@ -126,12 +126,12 @@ class TimeStep:
 #### Utility functions ####
 
 def load_line(line):
-    """ 
+    """
     This routine parses a line of the diagnostics output file to
-    determine what type of data it contains (an RK stage step, 
-    an error test, or a time step adaptivity calculation), and 
-    creates the relevant object for that data line.  Each of 
-    these output types are indexed by a specific linetype for 
+    determine what type of data it contains (an RK stage step,
+    an error test, or a time step adaptivity calculation), and
+    creates the relevant object for that data line.  Each of
+    these output types are indexed by a specific linetype for
     use by the calling routine.
 
     The function returns [linetype, entry].
@@ -172,7 +172,7 @@ def load_line(line):
 
 ##########
 def load_diags(fname):
-    """ 
+    """
     This routine opens the diagnostics output file, loads all lines
     to create an array of TimeSteps with all of the relevant data
     contained therein.
@@ -198,18 +198,18 @@ def load_diags(fname):
 
 ##########
 def write_diags(TimeSteps):
-    """ 
+    """
     This routine takes in the array of TimeSteps (returned from
     load_diags), and writes out the internal representation of
     the time step history to stdout.
     """
     for i in range(len(TimeSteps)):
-        print '  '
+        print('  ')
         TimeSteps[i].Write()
 
 ##########
 def plot_h_vs_t(TimeSteps,fname):
-    """ 
+    """
     This routine takes in the array of TimeSteps (returned from
     load_diags), and plots the time step sizes h as a function
     of the simulation time t.  Failed time steps are marked on
@@ -261,7 +261,7 @@ def plot_h_vs_t(TimeSteps,fname):
 
 ##########
 def plot_h_vs_tstep(TimeSteps,fname):
-    """ 
+    """
     This routine takes in the array of TimeSteps (returned from
     load_diags), and plots the time step sizes h as a function
     of the time step iteration index.  Failed time steps are
@@ -310,7 +310,7 @@ def plot_h_vs_tstep(TimeSteps,fname):
 
 ##########
 def plot_oversolve_vs_t(TimeSteps,fname):
-    """ 
+    """
     This routine takes in the array of TimeSteps (returned from
     load_diags), and plots the oversolve as a function of the
     simulation time t. We cap the computed oversolve value at
@@ -347,7 +347,7 @@ def plot_oversolve_vs_t(TimeSteps,fname):
 
 ##########
 def etest_stats(TimeSteps,fptr):
-    """ 
+    """
     This routine takes in the array of TimeSteps (returned from
     load_diags), and computes statistics on how well the time
     step adaptivity estimations predicted step values that met
@@ -355,7 +355,7 @@ def etest_stats(TimeSteps,fptr):
 
     Note: we ignore steps immediately following an
     error test failure, since etamax is bounded above by 1.
-    
+
     The resulting data is appended to the stream corresponding
     to fptr (either the result of 'open' or sys.stdout).
     """
@@ -372,7 +372,7 @@ def etest_stats(TimeSteps,fptr):
         if (TimeSteps[istep].err_fails > 0):
             errfails += 1
         hvals.append(TimeSteps[istep].h_final)
-            
+
         # if this or previous step had an error test failure, skip oversolve results
         ignore = 0
         if (istep > 0):
@@ -381,7 +381,7 @@ def etest_stats(TimeSteps,fptr):
         else:
             if(TimeSteps[istep].err_fails > 0):
                 ignore = 1
-            
+
         if (ignore == 0):
             over = 1.0 / TimeSteps[istep].ErrTest.estimate
             oversolves.append(over)
@@ -417,6 +417,6 @@ def etest_stats(TimeSteps,fptr):
     fptr.write("           max = %.3g\n" % (oversolve_max))
     fptr.write("          mean = %.3g\n" % (oversolve_mean))
     fptr.write("\n")
-    
+
 
 ##########
