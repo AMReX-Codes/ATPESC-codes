@@ -684,7 +684,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    }
    else
    {
-      // Create and attach GMRES linear solver (if implicit and using Newton)
+      // Create and attach accelerated fixed-point nonlinear solver
       SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
       ier = ARKStepSetNonlinearSolver(arkode_mem, NLS);
       if (ier != ARK_SUCCESS)
@@ -736,9 +736,42 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       if (tout > tfinal) tout = tfinal;
    }
 
+   // Output final solution statistics
+   long int nst, nst_a, nfe, nfi, nsetups, nli, nJv, nlcf, nni, ncfn, netf, npe, nps;
+   nst = nst_a = nfe = nfi = nsetups = nli = nJv = nlcf = nni = ncfn = netf = npe = nps = 0;
+   ARKStepGetNumSteps(arkode_mem, &nst);
+   ARKStepGetNumStepAttempts(arkode_mem, &nst_a);
+   ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
+   ARKStepGetNumErrTestFails(arkode_mem, &netf);
+   ARKStepGetNumNonlinSolvIters(arkode_mem, &nni);
+   ARKStepGetNumNonlinSolvConvFails(arkode_mem, &ncfn);
+   if (nls_method == 0) {
+     ARKStepGetNumLinSolvSetups(arkode_mem, &nsetups);
+     ARKStepGetNumLinIters(arkode_mem, &nli);
+     ARKStepGetNumJtimesEvals(arkode_mem, &nJv);
+     ARKStepGetNumLinConvFails(arkode_mem, &nlcf);
+     ARKStepGetNumPrecEvals(arkode_mem, &npe);
+     ARKStepGetNumPrecSolves(arkode_mem, &nps);
+   }
+   amrex::Print() << "\nFinal Solver Statistics:\n"
+                  << "   Internal solver steps = " << nst << " (attempted = " << nst_a << ")\n"
+                  << "   Total RHS evals:  Fe = " << nfe << ",  Fi = " << nfi << "\n"
+                  << "   Total number of nonlinear iterations = " << nni << "\n"
+                  << "   Total number of nonlinear solver convergence failures = " << ncfn << "\n"
+                  << "   Total number of error test failures = " << netf << "\n";
+   if (nls_method == 0) {
+     amrex::Print() << "   Total linear solver setups = " << nsetups << "\n"
+                    << "   Total linear iterations = " << nli << "\n"
+                    << "   Total number of Jacobian-vector products = " << nJv << "\n"
+                    << "   Total number of linear solver convergence failures = " << nlcf << "\n";
+     if ((npe != 0) || (nps != 0)) 
+       amrex::Print() << "   Total number of Preconditioner setups = " << npe << "\n"
+                      << "   Total number of Preconditioner solves = " << nps << "\n";
+   }
+   
    // Close diagnostics file
    if (write_diag)
-      fclose(diagfp);
+     fclose(diagfp);
 }
 
 void ComputeSolutionMRI(N_Vector nv_sol, ProblemOpt* prob_opt,
