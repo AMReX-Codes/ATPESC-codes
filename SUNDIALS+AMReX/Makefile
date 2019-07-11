@@ -11,7 +11,7 @@
 
 # set default values for any unset environment variables
 ifeq ($(AMREX_INSTALL_DIR),)
-  AMREX_INSTALL_DIR = /projects/ATPESC2019/FASTMath/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/amrex-develop-q5fijdqesb6xxwuyw6n4nuvnqhe7i5rs
+  AMREX_INSTALL_DIR = /projects/ATPESC2019/FASTMath/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/amrex-develop-fvkknjb363aqxpt6zu2tt6oojixnlnex
 endif
 ifeq ($(SUNDIALS_INSTALL_DIR),)
   SUNDIALS_INSTALL_DIR = /projects/ATPESC2019/FASTMath/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/sundials-4.1.0-s7aljoyz5e53teghcs4miobyqszrphtt
