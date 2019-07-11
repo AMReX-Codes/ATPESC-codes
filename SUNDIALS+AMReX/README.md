@@ -66,7 +66,7 @@ the `MLMG` solver for descriptions):
 
 The programs in this repository require at least SUNDIALS version 4.0, and AMReX version X.  These
 can be installed locally via Spack using the commands
-```
+```bash
 spack install sundials
 spack install amrex@develop dimensions=2
 ```
@@ -77,13 +77,13 @@ variable `MPICXX` to the MPI C++ wrapper to use for compilation.  For
 example, if AMReX was installed in `~/apps/amrex` and and Sundials in
 `~/apps/sundials`, and the MPI C++ wrapper is just `mpicxx`, then the required
 environment variables can be set with the commands
-```
+```bash
 export AMREX_INSTALL_DIR=~/apps/amrex
 export SUNDIALS_INSTALL_DIR=~/apps/sundials
 export MPICXX=mpicxx
 ```
 for sh/bash/ksh/zsh shells, or with
-```
+```tcsh
 set AMREX_INSTALL_DIR ~/apps/amrex
 set SUNDIALS_INSTALL_DIR ~/apps/sundials
 set MPICXX mpicxx
