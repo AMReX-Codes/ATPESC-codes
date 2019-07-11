@@ -8,7 +8,7 @@
 #include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 
 #include "Advection-Diffusion.h"
-#include "DiffOp.h"
+#include "RhsOp.h"
 
 #include "NVector_Multifab.h"
 
@@ -227,7 +227,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    // Specify which integration method to use
    // 0 = CVODE
    // 1 = ARKStep
-   int stepper = 0;
+   int stepper = 1;
    pp.query("stepper", stepper);
    prob_opt.stepper = stepper;
 
@@ -252,7 +252,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    prob_opt.nls_max_iter = nls_max_iter;
 
    // Specify the number of fixed point acceleration vectors
-   int nls_fp_acc = 0; // no acceleration
+   int nls_fp_acc = 3; // no acceleration
    pp.query("nls_fp_acc", nls_fp_acc);
    prob_opt.nls_fp_acc = nls_fp_acc;
 
@@ -308,15 +308,15 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
 
    // Advection coefficients
    Real advCoeffx = 5.0e-4;
-   Real advCoeffy = 5.0e-4;
+   Real advCoeffy = 2.5e-4;
    pp.query("advCoeffx", advCoeffx);
    pp.query("advCoeffy", advCoeffy);
    prob_data.advCoeffx = advCoeffx;
    prob_data.advCoeffy = advCoeffy;
 
    // Diffusion coefficients
-   Real diffCoeffx = 2.0e-5;
-   Real diffCoeffy = 2.0e-5;
+   Real diffCoeffx = 1.0e-6;
+   Real diffCoeffy = 1.0e-6;
    pp.query("diffCoeffx", diffCoeffx);
    pp.query("diffCoeffy", diffCoeffy);
    prob_data.diffCoeffx = diffCoeffx;

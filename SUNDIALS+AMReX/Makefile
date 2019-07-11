@@ -29,27 +29,18 @@ LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode
 
 LIBRARIES += -lgfortran
 
-default: Advection-Diffusion.exe GrayScott.exe
+default: Advection-Diffusion.exe
 
-Advection-Diffusion.exe: Advection-Diffusion/Advection-Diffusion.o shared/NVector_Multifab.o shared/DiffOp2D.o
+Advection-Diffusion.exe: Advection-Diffusion.o shared/NVector_Multifab.o shared/RhsOp.o
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-Advection-Diffusion/Advection-Diffusion.o: Advection-Diffusion/Advection-Diffusion.cpp Advection-Diffusion/Advection-Diffusion.h
-	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
-
-GrayScott.exe: GrayScott/GrayScott.o shared/NVector_Multifab.o shared/DiffOp2D.o shared/Reactions.o
-	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
-
-GrayScott/GrayScott.o: GrayScott/GrayScott.cpp GrayScott/GrayScott.h
+Advection-Diffusion.o: Advection-Diffusion.cpp Advection-Diffusion.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 shared/NVector_Multifab.o: shared/NVector_Multifab.cpp shared/NVector_Multifab.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
-shared/DiffOp2D.o: shared/DiffOp2D.cpp shared/DiffOp.h
-	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
-
-shared/Reactions.o: shared/Reactions.cpp shared/Reactions.h
+shared/RhsOp.o: shared/RhsOp.cpp shared/RhsOp.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 .PHONY: movie clean realclean pltclean
@@ -58,7 +49,7 @@ movie:
 	ls -1 plt*/Header | tee movie.visit
 
 clean:
-	$(RM) Advection-Diffusion/*.o GrayScott/*.o shared/*.o
+	$(RM) *.o shared/*.o
 
 realclean: clean
 	$(RM) *.exe
