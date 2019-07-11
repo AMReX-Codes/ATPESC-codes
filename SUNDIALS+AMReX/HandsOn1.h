@@ -1,5 +1,5 @@
-#ifndef ADVECTIONDIFFUSION_H
-#define ADVECTIONDIFFUSION_H
+#ifndef HANDSON1_H
+#define HANDSON1_H
 
 #include <AMReX_Geometry.H>
 #include <AMReX_MultiFab.H>
@@ -10,15 +10,7 @@
 struct ProblemOpt
 {
    int plot_int;
-   int stepper;
-   int cvode_method;
    int arkode_order;
-   int nls_method;
-   int nls_max_iter;
-   int nls_fp_acc;
-   int ls_max_iter;
-   int rhs_adv;
-   int rhs_diff;
    amrex::Real rtol;
    amrex::Real atol;
    amrex::Real fixed_dt;
@@ -26,7 +18,6 @@ struct ProblemOpt
    amrex::Real dtout;
    int max_steps;
    int write_diag;
-   int use_preconditioner;
 };
 
 // Run problem
@@ -38,9 +29,5 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data);
 // Advance the solution in time with ARKode ARKStep
 void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
                         ProblemData* prob_data);
-
-// Advance the solution in time with CVODE
-void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
-                       ProblemData* prob_data);
 
 #endif

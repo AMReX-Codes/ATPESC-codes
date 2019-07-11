@@ -2,169 +2,16 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Print.H>
 
-#include <cvode/cvode.h>
 #include <arkode/arkode_arkstep.h>
 #include <sunlinsol/sunlinsol_spgmr.h>
 #include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 
-#include "Advection-Diffusion.h"
+#include "HandsOn3.h"
 #include "Utilities.h"
 
 #include "NVector_Multifab.h"
 
 using namespace amrex;
-
-
-void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
-                       ProblemData* prob_data)
-{
-   // Extract problem data and options
-   Geometry* geom         = prob_data->geom;
-   int       plot_int     = prob_opt->plot_int;
-   int       cvode_method = prob_opt->cvode_method;
-   int       nls_method   = prob_opt->nls_method;
-   int       nls_max_iter = prob_opt->nls_max_iter;
-   int       nls_fp_acc   = prob_opt->nls_fp_acc;
-   int       ls_max_iter  = prob_opt->ls_max_iter;
-   int       rhs_adv      = prob_opt->rhs_adv;
-   int       rhs_diff     = prob_opt->rhs_diff;
-   Real      rtol         = prob_opt->rtol;
-   Real      atol         = prob_opt->atol;
-   Real      tfinal       = prob_opt->tfinal;
-   Real      dtout        = prob_opt->dtout;
-   int       max_steps    = prob_opt->max_steps;
-   int use_preconditioner = prob_opt->use_preconditioner;
-
-   // initial time, number of outputs, and error flag
-   Real time = 0.0;
-   int  nout = ceil(tfinal/dtout);
-   int  ier  = 0;
-
-   // Write a plotfile of the initial data
-   if (plot_int > 0)
-   {
-      const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
-      MultiFab* sol = NV_MFAB(nv_sol);
-      WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, time, 0);
-   }
-
-   // Create CVODE memory
-   void* cvode_mem = NULL;
-   if (cvode_method == 0)
-      cvode_mem = CVodeCreate(CV_BDF);
-   else
-      cvode_mem = CVodeCreate(CV_ADAMS);
-
-   // Initialize CVODE
-   if (rhs_adv > 0 && rhs_diff > 0)
-   {
-      // implicit Advection and Diffusion
-      CVodeInit(cvode_mem, ComputeRhsAdvDiff, time, nv_sol);
-   }
-   else if (rhs_adv > 0)
-   {
-      // implicit Advection
-      CVodeInit(cvode_mem, ComputeRhsAdv, time, nv_sol);
-   }
-   else if (rhs_diff > 0)
-   {
-      // implicit Diffusion
-      CVodeInit(cvode_mem, ComputeRhsDiff, time, nv_sol);
-   }
-   else
-   {
-      amrex::Print() << "Invalid RHS options for CVODE" << std::endl;
-      return;
-   }
-
-   // Attach the user data structure to CVODE
-   CVodeSetUserData(cvode_mem, prob_data);
-
-   // Set integration tolerances
-   CVodeSStolerances(cvode_mem, atol, rtol);
-
-   // Set the max number of steps between outputs
-   CVodeSetMaxNumSteps(cvode_mem, max_steps);
-
-   // Attach nonlinear/linear solvers as needed
-   if (nls_method == 0)
-   {
-      // Create and attach GMRES linear solver for Newton
-      SUNLinearSolver LS;
-      if (use_preconditioner)
-         LS = SUNLinSol_SPGMR(nv_sol, PREC_LEFT, ls_max_iter);
-      else
-         LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
-
-      ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
-      if (ier != CVLS_SUCCESS)
-      {
-         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
-         return;
-      }
-
-      if (use_preconditioner) {
-         // Attach preconditioner setup/solve functions
-         ier = CVodeSetPreconditioner(cvode_mem, precondition_setup, precondition_solve);
-         if (ier != CVLS_SUCCESS)
-         {
-            amrex::Print() << "Attachment of preconditioner unsuccessful" << std::endl;
-            return;
-         }
-      }
-   }
-   else
-   {
-      // Create and attach fixed point solver
-      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
-      ier = CVodeSetNonlinearSolver(cvode_mem, NLS);
-      if (ier != CV_SUCCESS)
-      {
-         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
-         return;
-      }
-   }
-
-   // Set max number of nonlinear iterations
-   ier = CVodeSetMaxNonlinIters(cvode_mem, nls_max_iter);
-   if (ier != CV_SUCCESS)
-   {
-      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
-      return;
-   }
-
-   // Advance the solution in time
-   Real tout = time + dtout; // first output time
-   Real tret;                // return time
-   for (int iout=0; iout < nout; iout++)
-   {
-      ier = CVode(cvode_mem, tout, nv_sol, &tret, CV_NORMAL);
-      if (ier < 0)
-      {
-         amrex::Print() << "Error in CVODE" << std::endl;
-         return;
-      }
-
-      // Get integration stats
-      long nf_evals;
-      CVodeGetNumRhsEvals(cvode_mem, &nf_evals);
-      amrex::Print() << "t = " << std::setw(5) << tret
-                     << "  rhs evals = " << std::setw(7) << nf_evals
-                     << std::endl;
-
-      // Write output
-      if (plot_int > 0)
-      {
-         const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
-         MultiFab* sol = NV_MFAB(nv_sol);
-         WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, tret, iout+1);
-      }
-
-      // Update output time
-      tout += dtout;
-      if (tout > tfinal) tout = tfinal;
-   }
-}
 
 
 void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
@@ -179,7 +26,6 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    int       nls_fp_acc   = prob_opt->nls_fp_acc;
    int       ls_max_iter  = prob_opt->ls_max_iter;
    int       rhs_adv      = prob_opt->rhs_adv;
-   int       rhs_diff     = prob_opt->rhs_diff;
    Real      rtol         = prob_opt->rtol;
    Real      atol         = prob_opt->atol;
    Real      fixed_dt     = prob_opt->fixed_dt;
@@ -195,8 +41,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    int  ier  = 0;
 
    // Write a plotfile of the initial data
-   if (plot_int > 0)
-   {
+   if (plot_int > 0) {
       const std::string& pltfile = amrex::Concatenate("plt", 0, 5);
       MultiFab* sol = NV_MFAB(nv_sol);
       WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, time, 0);
@@ -204,68 +49,12 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
 
    // Create the ARK stepper
    void* arkode_mem = NULL;
-
-   if (rhs_adv > 0 && rhs_diff > 0)
-   {
-      if (rhs_adv > 1 && rhs_diff > 1)
-      {
-         // explicit advection and diffusion
-         arkode_mem = ARKStepCreate(ComputeRhsAdvDiff, NULL,
-                                    time, nv_sol);
-      }
-      else if (rhs_adv > 1)
-      {
-         // explicit advection and implicit diffusion
-         arkode_mem = ARKStepCreate(ComputeRhsAdv, ComputeRhsDiff,
-                                    time, nv_sol);
-      }
-      else if (rhs_diff > 1)
-      {
-         // implicit advection and explicit diffusion
-         arkode_mem = ARKStepCreate(ComputeRhsDiff, ComputeRhsAdv,
-                                    time, nv_sol);
-      }
-      else
-      {
-         // implicit advection and diffusion
-         arkode_mem = ARKStepCreate(NULL, ComputeRhsAdvDiff,
-                                    time, nv_sol);
-      }
-   }
-   else if (rhs_adv > 0)
-   {
-      if (rhs_adv > 1)
-      {
-         // explicit advection
-         arkode_mem = ARKStepCreate(ComputeRhsAdv, NULL,
-                                    time, nv_sol);
-      }
-      else
-      {
-         // implicit advection
-         arkode_mem = ARKStepCreate(NULL, ComputeRhsAdv,
-                                    time, nv_sol);
-      }
-   }
-   else if (rhs_diff > 0)
-   {
-      if (rhs_diff > 1)
-      {
-         // explicit diffusion
-         arkode_mem = ARKStepCreate(ComputeRhsDiff, NULL,
-                                    time, nv_sol);
-      }
-      else
-      {
-         // implicit diffusion
-         arkode_mem = ARKStepCreate(NULL, ComputeRhsDiff,
-                                    time, nv_sol);
-      }
-   }
-   else
-   {
-      amrex::Print() << "Invalid RHS options for ARKode" << std::endl;
-      return;
+   if (rhs_adv > 1) {
+      // explicit advection and implicit diffusion
+      arkode_mem = ARKStepCreate(ComputeRhsAdv, ComputeRhsDiff, time, nv_sol);
+   } else {
+      // implicit advection and diffusion
+      arkode_mem = ARKStepCreate(NULL, ComputeRhsAdvDiff, time, nv_sol);
    }
 
    // Attach the user data structure to ARKStep
@@ -286,68 +75,56 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    // Set file for writing ARKStep diagnostics
    FILE* diagfp = NULL;
    if (write_diag) {
-      diagfp = fopen("ARKStep_diagnostics.txt", "w");
+      diagfp = fopen("HandsOn3_diagnostics.txt", "w");
       ARKStepSetDiagnostics(arkode_mem, diagfp);
    }
 
    // Attach nonlinear/linear solvers as needed
-   if (rhs_adv == 1 || rhs_diff == 1)
-   {
-      if (nls_method == 0)
-      {
-         // Create and attach GMRES linear solver for Newton
-         SUNLinearSolver LS;
-         if (use_preconditioner)
-            LS = SUNLinSol_SPGMR(nv_sol, PREC_LEFT, ls_max_iter);
-         else
-            LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
-
-         ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
-         if (ier != ARKLS_SUCCESS)
-         {
-            amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
-            return;
-         }
-
-         if (use_preconditioner) {
-            // Attach preconditioner setup/solve functions
-            ier = ARKStepSetPreconditioner(arkode_mem, precondition_setup, precondition_solve);
-            if (ier != ARKLS_SUCCESS)
-            {
-               amrex::Print() << "Attachment of preconditioner unsuccessful" << std::endl;
-               return;
-            }
-         }
-      }
+   if (nls_method == 0) {
+      // Create and attach GMRES linear solver for Newton     ***** UPDATED FROM HandsOn2 *****
+      SUNLinearSolver LS;
+      if (use_preconditioner)
+         LS = SUNLinSol_SPGMR(nv_sol, PREC_LEFT, ls_max_iter);
       else
-      {
-         // Create and attach GMRES linear solver (if implicit and using Newton)
-         SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
-         ier = ARKStepSetNonlinearSolver(arkode_mem, NLS);
-         if (ier != ARK_SUCCESS)
-         {
-            amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
-            return;
-         }
-      }
+         LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
 
-      // Set max number of nonlinear iterations
-      ier = ARKStepSetMaxNonlinIters(arkode_mem, nls_max_iter);
-      if (ier != ARK_SUCCESS)
-      {
-         amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
+      ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
+      if (ier != ARKLS_SUCCESS) {
+         amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
          return;
       }
+
+      if (use_preconditioner) {
+         // Attach preconditioner setup/solve functions     ***** UPDATED FROM HandsOn2 *****
+         ier = ARKStepSetPreconditioner(arkode_mem, precondition_setup, precondition_solve);
+         if (ier != ARKLS_SUCCESS) {
+            amrex::Print() << "Attachment of preconditioner unsuccessful" << std::endl;
+            return;
+         }
+      }
+   } else {
+      // Create and attach fixed-point nonlinear solver
+      SUNNonlinearSolver NLS = SUNNonlinSol_FixedPoint(nv_sol, nls_fp_acc);
+      ier = ARKStepSetNonlinearSolver(arkode_mem, NLS);
+      if (ier != ARK_SUCCESS) {
+         amrex::Print() << "Creation of nonlinear solver unsuccessful" << std::endl;
+         return;
+      }
+   }
+
+   // Set max number of nonlinear iterations
+   ier = ARKStepSetMaxNonlinIters(arkode_mem, nls_max_iter);
+   if (ier != ARK_SUCCESS) {
+      amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
+      return;
    }
 
    // Advance the solution in time
    Real tout = time + dtout; // first output time
    Real tret;                // return time
-   for (int iout=0; iout < nout; iout++)
-   {
+   for (int iout=0; iout < nout; iout++) {
       ier = ARKStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
-      if (ier < 0)
-      {
+      if (ier < 0) {
          amrex::Print() << "Error in ARKStepEvolve" << std::endl;
          return;
       }
@@ -355,14 +132,18 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       // Get integration stats
       long nfe_evals, nfi_evals;
       ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
-      amrex::Print() << "t = " << std::setw(5) << tret
-                     << "  explicit evals = " << std::setw(7) << nfe_evals
-                     << "  implicit evals = " << std::setw(7) << nfi_evals
-                     << std::endl;
+      if (nfe_evals > 0)
+         amrex::Print() << "t = " << std::setw(5) << tret
+                        << "  explicit evals = " << std::setw(7) << nfe_evals
+                        << "  implicit evals = " << std::setw(7) << nfi_evals
+                        << std::endl;
+      else
+         amrex::Print() << "t = " << std::setw(5) << tret
+                        << "  RHS evals = " << std::setw(7) << nfi_evals
+                        << std::endl;
 
       // Write output
-      if (plot_int > 0)
-      {
+      if (plot_int > 0) {
          const std::string& pltfile = amrex::Concatenate("plt", iout+1, 5);
          MultiFab* sol = NV_MFAB(nv_sol);
          WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, tret, iout+1);
@@ -373,7 +154,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       if (tout > tfinal) tout = tfinal;
    }
 
-   // Output final solution statistics
+   // Output final solution statistics     ***** UPDATED FROM HandsOn2 *****
    long int nst, nst_a, nfe, nfi, nsetups, nli, nJv, nlcf, nni, ncfn, netf, npe, nps;
    nst = nst_a = nfe = nfi = nsetups = nli = nJv = nlcf = nni = ncfn = netf = npe = nps = 0;
    ARKStepGetNumSteps(arkode_mem, &nst);
@@ -391,9 +172,12 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       ARKStepGetNumPrecSolves(arkode_mem, &nps);
    }
    amrex::Print() << "\nFinal Solver Statistics:\n"
-                  << "   Internal solver steps = " << nst << " (attempted = " << nst_a << ")\n"
-                  << "   Total RHS evals:  Fe = " << nfe << ",  Fi = " << nfi << "\n"
-                  << "   Total number of nonlinear iterations = " << nni << "\n"
+                  << "   Internal solver steps = " << nst << " (attempted = " << nst_a << ")\n";
+   if (nfe > 0)
+      amrex::Print() << "   Total RHS evals:  Fe = " << nfe << ",  Fi = " << nfi << "\n";
+   else
+      amrex::Print() << "   Total RHS evals = " << nfi << "\n";
+   amrex::Print() << "   Total number of nonlinear iterations = " << nni << "\n"
                   << "   Total number of nonlinear solver convergence failures = " << ncfn << "\n"
                   << "   Total number of error test failures = " << netf << "\n";
    if (nls_method == 0) {
@@ -406,38 +190,24 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
                       << "   Total number of Preconditioner solves = " << nps << "\n";
    }
 
-
    // Close diagnostics file
-   if (write_diag)
-      fclose(diagfp);
+   if (write_diag)  fclose(diagfp);
 }
 
 
-void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
-{
+void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
+
    // ParmParse is way of reading inputs from the inputs file
    ParmParse pp;
 
    // --------------------------------------------------------------------------
-   // Problem options
+   // Problem options     ***** UPDATED FROM HandsOn2 *****
    // --------------------------------------------------------------------------
 
    // Enable (>0) or disable (<0) writing output files
    int plot_int = -1; // plots off
    pp.query("plot_int", plot_int);
    prob_opt.plot_int = plot_int;
-
-   // Specify which integration method to use
-   // 0 = CVODE
-   // 1 = ARKStep
-   int stepper = 1;
-   pp.query("stepper", stepper);
-   prob_opt.stepper = stepper;
-
-   // Specify which CVODE method to use
-   int cvode_method = 0; // BDF
-   pp.query("cvode_method", cvode_method);
-   prob_opt.cvode_method = cvode_method;
 
    // Specify the ARKode method order
    int arkode_order = 4; // 4th order
@@ -464,13 +234,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("ls_max_iter", ls_max_iter);
    prob_opt.ls_max_iter = ls_max_iter;
 
-   // Specify RHS functions/splitting
-   int rhs_adv  = 1; // implicit advection
-   int rhs_diff = 1; // implicit diffusion
+   // Specify RHS splitting (diffusion is always implicit)
+   int rhs_adv  = 1;        // implicit advection
    pp.query("rhs_adv", rhs_adv);
-   pp.query("rhs_diff", rhs_diff);
-   prob_opt.rhs_adv  = rhs_adv;
-   prob_opt.rhs_diff = rhs_diff;
+   if (rhs_adv > 0)
+      prob_opt.rhs_adv = rhs_adv;
 
    // Specify relative and absolute tolerances
    Real rtol = 1.0e-4;
@@ -496,7 +264,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    prob_opt.dtout = dtout;
 
    // Specify maximum number of steps between outputs
-   int max_steps = 1000;
+   int max_steps = 10000;
    pp.query("max_steps", max_steps);
    prob_opt.max_steps = max_steps;
 
@@ -512,7 +280,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
      prob_opt.use_preconditioner = use_preconditioner;
 
    // --------------------------------------------------------------------------
-   // Problem data
+   // Problem data     ***** UPDATED FROM HandsOn2 *****
    // --------------------------------------------------------------------------
 
    // The number of cells on each side of a square domain.
@@ -573,16 +341,13 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
       << "n_cell        = " << n_cell        << std::endl
       << "max_grid_size = " << max_grid_size << std::endl
       << "plot_int      = " << plot_int      << std::endl
-      << "stepper       = " << stepper       << std::endl;
-   if (stepper == 0)
+      << "arkode_order  = " << arkode_order  << std::endl;
+   if (rhs_adv != 1)
       amrex::Print()
-         << "cvode_method  = " << cvode_method  << std::endl;
+         << "ImEx treatment (implicit diffusion, explicit advection)" << std::endl;
    else
       amrex::Print()
-         << "arkode_order  = " << arkode_order << std::endl;
-   amrex::Print()
-      << "rhs_adv       = " << rhs_adv  << std::endl
-      << "rhs_diff      = " << rhs_diff << std::endl;
+         << "fully implicit treatment" << std::endl;
    if (fixed_dt > 0.0)
       amrex::Print()
          << "fixed_dt      = " << fixed_dt << std::endl;
@@ -591,23 +356,23 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
          << "rtol          = " << rtol << std::endl
          << "atol          = " << atol << std::endl;
    amrex::Print()
-      << "tfinal        = " << tfinal        << std::endl
-      << "dtout         = " << dtout         << std::endl
-      << "write_diag    = " << write_diag    << std::endl;
-   if (rhs_adv > 0)
+      << "tfinal        = " << tfinal     << std::endl
+      << "dtout         = " << dtout      << std::endl
+      << "write_diag    = " << write_diag << std::endl
+      << "advCoeffx     = " << advCoeffx  << std::endl
+      << "advCoeffy     = " << advCoeffy  << std::endl
+      << "diffCoeffx    = " << diffCoeffx << std::endl
+      << "diffCoeffy    = " << diffCoeffy << std::endl;
+   if (nls_method == 0)
       amrex::Print()
-         << "advCoeffx     = " << advCoeffx << std::endl
-         << "advCoeffy     = " << advCoeffy << std::endl;
-   if (rhs_diff > 0)
+         << "Newton nonlinear solver:" << std::endl
+         << "  max_iter    = " << nls_max_iter << std::endl
+         << "  ls_max_iter = " << ls_max_iter << std::endl;
+   else
       amrex::Print()
-         << "diffCoeffx    = " << diffCoeffx << std::endl
-         << "diffCoeffy    = " << diffCoeffy << std::endl;
-   if ((rhs_adv > 0) && (rhs_diff > 0) && (rhs_adv != rhs_diff))
-     if (rhs_diff > 1) {
-      amrex::Print() << "ImEx treatment: implicit advection and explicit diffusion" << std::endl;
-     } else {
-      amrex::Print() << "ImEx treatment: implicit diffusion and explicit advection" << std::endl;
-     }
+         << "Accelerated fixed-point nonlinear solver:" << std::endl
+         << "  max_iter   = " << nls_max_iter << std::endl
+         << "  nls_fp_acc = " << nls_fp_acc << std::endl;
    if (use_preconditioner)
       amrex::Print()
         << "preconditioning enabled" << std::endl
@@ -627,8 +392,8 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
 }
 
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+
    amrex::Initialize(argc,argv);
 
    DoProblem();
@@ -637,8 +402,9 @@ int main(int argc, char* argv[])
    return 0;
 }
 
-void DoProblem()
-{
+
+void DoProblem() {
+
    // What time is it now?  We'll use this to compute total run time.
    Real strt_time = amrex::second();
 
@@ -671,8 +437,7 @@ void DoProblem()
 
    // Build the flux MultiFabs
    Array<MultiFab, AMREX_SPACEDIM> flux;
-   for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-   {
+   for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       // flux(dir) has one component, zero ghost cells, and is nodal in
       // direction dir
       BoxArray edge_ba = ba;
@@ -689,18 +454,7 @@ void DoProblem()
    FillInitConds2D(sol, geom);
 
    // Integrate in time
-   switch (prob_opt.stepper)
-   {
-   case 0:
-      ComputeSolutionCV(nv_sol, &prob_opt, &prob_data);
-      break;
-   case 1:
-      ComputeSolutionARK(nv_sol, &prob_opt, &prob_data);
-      break;
-   default:
-      amrex::Print() << "Invalid stepper option" << std::endl;
-      return;
-   }
+   ComputeSolutionARK(nv_sol, &prob_opt, &prob_data);
 
    // Call the timer again and compute the maximum difference between the start
    // time and stop time over all processors

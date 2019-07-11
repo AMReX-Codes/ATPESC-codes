@@ -29,7 +29,25 @@ LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode
 
 LIBRARIES += -lgfortran
 
-default: Advection-Diffusion.exe
+default: HandsOn1.exe HandsOn2.exe HandsOn3.exe
+
+HandsOn1.exe: HandsOn1.o shared/NVector_Multifab.o shared/Utilities.o
+	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
+
+HandsOn1.o: HandsOn1.cpp HandsOn1.h
+	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+
+HandsOn2.exe: HandsOn2.o shared/NVector_Multifab.o shared/Utilities.o
+	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
+
+HandsOn2.o: HandsOn2.cpp HandsOn2.h
+	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+
+HandsOn3.exe: HandsOn3.o shared/NVector_Multifab.o shared/Utilities.o
+	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
+
+HandsOn3.o: HandsOn3.cpp HandsOn3.h
+	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 Advection-Diffusion.exe: Advection-Diffusion.o shared/NVector_Multifab.o shared/Utilities.o
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
@@ -55,4 +73,4 @@ realclean: clean
 	$(RM) *~ *.exe
 
 pltclean:
-	$(RM) -rf plt*/ *.png __pycache__
+	$(RM) -rf plt*/ *.png *_diagnostics.txt __pycache__
