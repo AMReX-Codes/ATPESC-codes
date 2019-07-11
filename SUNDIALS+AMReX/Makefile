@@ -31,7 +31,7 @@ LIBRARIES += -lgfortran
 
 default: Advection-Diffusion.exe
 
-Advection-Diffusion.exe: Advection-Diffusion.o shared/NVector_Multifab.o shared/RhsOp.o
+Advection-Diffusion.exe: Advection-Diffusion.o shared/NVector_Multifab.o shared/Utilities.o
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
 Advection-Diffusion.o: Advection-Diffusion.cpp Advection-Diffusion.h
@@ -40,7 +40,7 @@ Advection-Diffusion.o: Advection-Diffusion.cpp Advection-Diffusion.h
 shared/NVector_Multifab.o: shared/NVector_Multifab.cpp shared/NVector_Multifab.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
-shared/RhsOp.o: shared/RhsOp.cpp shared/RhsOp.h
+shared/Utilities.o: shared/Utilities.cpp shared/Utilities.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 .PHONY: movie clean realclean pltclean

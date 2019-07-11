@@ -8,7 +8,7 @@
 #include <sunnonlinsol/sunnonlinsol_fixedpoint.h>
 
 #include "Advection-Diffusion.h"
-#include "RhsOp.h"
+#include "Utilities.h"
 
 #include "NVector_Multifab.h"
 
@@ -37,15 +37,24 @@ void DoProblem()
    // Make BoxArray and Geometry
    BoxArray ba;
    Geometry geom;
-   SetUpGeometry(ba, geom, prob_opt, prob_data);
+   SetUpGeometry(ba, geom, prob_data);
 
    // How Boxes are distrubuted among MPI processes
    DistributionMapping dm(ba);
+   prob_data.dmap = &dm;
 
    // Allocate the solution MultiFab
    int nGhost = 1;  // number of ghost cells for each array
    int nComp  = 1;  // number of components for each array
    MultiFab sol(ba, dm, nComp, nGhost);
+
+   // Allocate the linear solver coefficient MultiFabs
+   MultiFab acoef(ba, dm, nComp, nGhost);
+   MultiFab bcoef(ba, dm, nComp, nGhost);
+   acoef = 1.0;
+   bcoef = 1.0;
+   prob_data.acoef = &acoef;
+   prob_data.bcoef = &bcoef;
 
    // Build the flux MultiFabs
    Array<MultiFab, AMREX_SPACEDIM> flux;
@@ -60,7 +69,7 @@ void DoProblem()
    prob_data.flux = &flux;
 
    // Create an N_Vector wrapper for the solution MultiFab
-   sunindextype length = nComp * prob_opt.n_cell * prob_opt.n_cell;
+   sunindextype length = nComp * prob_data.n_cell * prob_data.n_cell;
    N_Vector nv_sol     = N_VMake_Multifab(length, &sol);
 
    // Set the initial condition
@@ -90,116 +99,6 @@ void DoProblem()
    amrex::Print() << "Run time = " << stop_time << std::endl;
 }
 
-int ComputeRhsAdv(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
-{
-   // extract MultiFabs
-   MultiFab* sol = NV_MFAB(nv_sol);
-   MultiFab* rhs = NV_MFAB(nv_rhs);
-
-   // extract problem data
-   ProblemData *prob_data = (ProblemData*) data;
-   Geometry* geom = prob_data->geom;
-   Real advCoeffx = prob_data->advCoeffx;
-   Real advCoeffy = prob_data->advCoeffy;
-
-   // clear the RHS
-   *rhs = 0.0;
-
-   // fill ghost cells
-   sol->FillBoundary(geom->periodicity());
-
-   // compute advection
-   ComputeAdvectionUpwind(*sol, *rhs, *geom, 0, advCoeffx, advCoeffy);
-
-   return 0;
-}
-
-int ComputeRhsDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
-{
-   // extract MultiFabs
-   MultiFab* sol = NV_MFAB(nv_sol);
-   MultiFab* rhs = NV_MFAB(nv_rhs);
-
-   // extract problem data
-   ProblemData *prob_data = (ProblemData*) data;
-   Geometry* geom = prob_data->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
-   Real diffCoeffx = prob_data->diffCoeffx;
-   Real diffCoeffy = prob_data->diffCoeffy;
-
-   // fill ghost cells
-   sol->FillBoundary(geom->periodicity());
-
-   // clear the RHS
-   *rhs = 0.0;
-
-   // compute diffusion
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
-                    diffCoeffx, diffCoeffy);
-
-   return 0;
-}
-
-int ComputeRhsAdvDiff(Real t, N_Vector nv_sol, N_Vector nv_rhs, void* data)
-{
-   // extract MultiFabs
-   MultiFab* sol = NV_MFAB(nv_sol);
-   MultiFab* rhs = NV_MFAB(nv_rhs);
-
-   // extract problem data
-   ProblemData *prob_data = (ProblemData*) data;
-   Geometry* geom = prob_data->geom;
-   Array<MultiFab, AMREX_SPACEDIM>& flux = *(prob_data->flux);
-   Real advCoeffx = prob_data->advCoeffx;
-   Real advCoeffy = prob_data->advCoeffy;
-   Real diffCoeffx = prob_data->diffCoeffx;
-   Real diffCoeffy = prob_data->diffCoeffy;
-
-   // clear the RHS
-   *rhs = 0.0;
-
-   // fill ghost cells
-   sol->FillBoundary(geom->periodicity());
-
-   // compute advection
-   ComputeAdvectionUpwind(*sol, *rhs, *geom, 0, advCoeffx, advCoeffy);
-
-   // compute diffusion
-   ComputeDiffusion(*sol, *rhs, flux[0], flux[1], *geom, 0,
-                    diffCoeffx, diffCoeffy);
-
-   return 0;
-}
-
-void FillInitConds2D(MultiFab& sol, const Geometry& geom)
-{
-   const auto dx = geom.CellSize();
-   const auto prob_lo = geom.ProbLo();
-   const auto prob_hi = geom.ProbHi();
-
-   Real sigma = 0.1;
-   Real a = 1.0/(sigma*sqrt(2*M_PI));
-   Real b = -0.5/(sigma*sigma);
-
-   for (MFIter mfi(sol); mfi.isValid(); ++mfi)
-   {
-      const Box& bx = mfi.validbox();
-      Array4<Real> const& fab = sol.array(mfi);
-      const auto lo = lbound(bx);
-      const auto hi = ubound(bx);
-      for (int j = lo.y; j <= hi.y; ++j) {
-         Real y = prob_lo[1] + (((Real) j) + 0.5) * dx[1];
-
-         for (int i = lo.x; i <= hi.x; ++i) {
-            Real x = prob_lo[0] + (((Real) i) + 0.5) * dx[0];
-
-            Real r = x*x + y*y;
-            fab(i,j,0,0) = a * exp(b*r);
-         }
-      }
-   }
-}
-
 void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
 {
    // ParmParse is way of reading inputs from the inputs file
@@ -208,16 +107,6 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    // --------------------------------------------------------------------------
    // Problem options
    // --------------------------------------------------------------------------
-
-   // The number of cells on each side of a square domain.
-   int n_cell = 256;
-   pp.query("n_cell", n_cell);
-   prob_opt.n_cell = n_cell;
-
-   // The domain is broken into boxes of size max_grid_size
-   int max_grid_size = 64;
-   pp.query("max_grid_size", max_grid_size);
-   prob_opt.max_grid_size = max_grid_size;
 
    // Enable (>0) or disable (<0) writing output files
    int plot_int = -1; // plots off
@@ -302,9 +191,24 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("write_diag", write_diag);
    prob_opt.write_diag = write_diag;
 
+   // Decide whether to use a preconditioner or not
+   int use_preconditioner = 0;
+   pp.query("use_preconditioner", use_preconditioner);
+   prob_opt.use_preconditioner = use_preconditioner;
+
    // --------------------------------------------------------------------------
    // Problem data
    // --------------------------------------------------------------------------
+
+   // The number of cells on each side of a square domain.
+   int n_cell = 256;
+   pp.query("n_cell", n_cell);
+   prob_data.n_cell = n_cell;
+
+   // The domain is broken into boxes of size max_grid_size
+   int max_grid_size = 64;
+   pp.query("max_grid_size", max_grid_size);
+   prob_data.max_grid_size = max_grid_size;
 
    // Advection coefficients
    Real advCoeffx = 5.0e-4;
@@ -321,6 +225,21 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
    pp.query("diffCoeffy", diffCoeffy);
    prob_data.diffCoeffx = diffCoeffx;
    prob_data.diffCoeffy = diffCoeffy;
+
+   // MLMG options
+   ParmParse ppmg("mlmg");
+   ppmg.query("agglomeration", prob_data.mg_agglomeration);
+   ppmg.query("consolidation", prob_data.mg_consolidation);
+   ppmg.query("max_coarsening_level", prob_data.mg_max_coarsening_level);
+   ppmg.query("linop_maxorder", prob_data.mg_linop_maxorder);
+   ppmg.query("max_iter", prob_data.mg_max_iter);
+   ppmg.query("max_fmg_iter", prob_data.mg_max_fmg_iter);
+   ppmg.query("verbose", prob_data.mg_verbose);
+   ppmg.query("bottom_verbose", prob_data.mg_bottom_verbose);
+   ppmg.query("use_hypre", prob_data.mg_use_hypre);
+   ppmg.query("hypre_interface", prob_data.mg_hypre_interface);
+   ppmg.query("use_petsc", prob_data.mg_use_petsc);
+   ppmg.query("tol_rel", prob_data.mg_tol_rel);
 
    // Ouput problem options and parameters
    amrex::Print()
@@ -356,36 +275,16 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
       amrex::Print()
          << "diffCoeffx    = " << diffCoeffx << std::endl
          << "diffCoeffy    = " << diffCoeffy << std::endl;
+   if ((rhs_adv > 0) && (rhs_diff > 0) && (rhs_adv != rhs_diff))
+     if (rhs_diff > 1) {
+      amrex::Print() << "ImEx treatment: implicit advection and explicit diffusion" << std::endl;
+     } else {
+      amrex::Print() << "ImEx treatment: implicit diffusion and explicit advection" << std::endl;
+     }
+   if (use_preconditioner && nls_method==0)
+      amrex::Print() << "preconditioning enabled" << std::endl;
 }
 
-void SetUpGeometry(BoxArray& ba, Geometry& geom,
-                   ProblemOpt& prob_opt, ProblemData& prob_data)
-{
-   // Extract problem options
-   int n_cell = prob_opt.n_cell;
-   int max_grid_size = prob_opt.max_grid_size;
-
-   IntVect dom_lo(AMREX_D_DECL(       0,        0,        0));
-   IntVect dom_hi(AMREX_D_DECL(n_cell-1, n_cell-1, n_cell-1));
-   Box domain(dom_lo, dom_hi); // cell-centered
-
-   // Initialize the boxarray "ba" from the single box "domain"
-   ba.define(domain);
-
-   // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a
-   // direction
-   ba.maxSize(max_grid_size);
-
-   // This defines the physical box, [-1,1] in each direction.
-   RealBox real_box({AMREX_D_DECL(-1.0, -1.0, -1.0)},
-                    {AMREX_D_DECL(1.0, 1.0, 1.0)});
-
-   // This defines a Geometry object
-   Vector<int> is_periodic(AMREX_SPACEDIM, 1);  // periodic in all direction
-   geom.define(domain, &real_box, CoordSys::cartesian, is_periodic.data());
-
-   prob_data.geom = &geom;
-}
 
 void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
                        ProblemData* prob_data)
@@ -405,6 +304,7 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    Real      tfinal       = prob_opt->tfinal;
    Real      dtout        = prob_opt->dtout;
    int       max_steps    = prob_opt->max_steps;
+   int use_preconditioner = prob_opt->use_preconditioner;
 
    // initial time, number of outputs, and error flag
    Real time = 0.0;
@@ -461,12 +361,27 @@ void ComputeSolutionCV(N_Vector nv_sol, ProblemOpt* prob_opt,
    if (nls_method == 0)
    {
       // Create and attach GMRES linear solver for Newton
-      SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+      SUNLinearSolver LS;
+      if (use_preconditioner)
+         LS = SUNLinSol_SPGMR(nv_sol, PREC_LEFT, ls_max_iter);
+      else
+         LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+
       ier = CVodeSetLinearSolver(cvode_mem, LS, NULL);
       if (ier != CVLS_SUCCESS)
       {
          amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
          return;
+      }
+
+      if (use_preconditioner) {
+         // Attach preconditioner setup/solve functions
+         ier = CVodeSetPreconditioner(cvode_mem, precondition_setup, precondition_solve);
+         if (ier != CVLS_SUCCESS)
+         {
+            amrex::Print() << "Attachment of preconditioner unsuccessful" << std::endl;
+            return;
+         }
       }
    }
    else
@@ -542,6 +457,7 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
    Real      dtout        = prob_opt->dtout;
    int       max_steps    = prob_opt->max_steps;
    int       write_diag   = prob_opt->write_diag;
+   int use_preconditioner = prob_opt->use_preconditioner;
 
    // initial time, number of outputs, and error flag
    Real time = 0.0;
@@ -650,12 +566,27 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       if (nls_method == 0)
       {
          // Create and attach GMRES linear solver for Newton
-         SUNLinearSolver LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+         SUNLinearSolver LS;
+         if (use_preconditioner)
+            LS = SUNLinSol_SPGMR(nv_sol, PREC_LEFT, ls_max_iter);
+         else
+            LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter);
+
          ier = ARKStepSetLinearSolver(arkode_mem, LS, NULL);
          if (ier != ARKLS_SUCCESS)
          {
             amrex::Print() << "Creation of linear solver unsuccessful" << std::endl;
             return;
+         }
+
+         if (use_preconditioner) {
+            // Attach preconditioner setup/solve functions
+            ier = ARKStepSetPreconditioner(arkode_mem, precondition_setup, precondition_solve);
+            if (ier != ARKLS_SUCCESS)
+            {
+               amrex::Print() << "Attachment of preconditioner unsuccessful" << std::endl;
+               return;
+            }
          }
       }
       else
@@ -711,6 +642,40 @@ void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
       tout += dtout;
       if (tout > tfinal) tout = tfinal;
    }
+
+   // Output final solution statistics
+   long int nst, nst_a, nfe, nfi, nsetups, nli, nJv, nlcf, nni, ncfn, netf, npe, nps;
+   nst = nst_a = nfe = nfi = nsetups = nli = nJv = nlcf = nni = ncfn = netf = npe = nps = 0;
+   ARKStepGetNumSteps(arkode_mem, &nst);
+   ARKStepGetNumStepAttempts(arkode_mem, &nst_a);
+   ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
+   ARKStepGetNumErrTestFails(arkode_mem, &netf);
+   ARKStepGetNumNonlinSolvIters(arkode_mem, &nni);
+   ARKStepGetNumNonlinSolvConvFails(arkode_mem, &ncfn);
+   if (nls_method == 0) {
+      ARKStepGetNumLinSolvSetups(arkode_mem, &nsetups);
+      ARKStepGetNumLinIters(arkode_mem, &nli);
+      ARKStepGetNumJtimesEvals(arkode_mem, &nJv);
+      ARKStepGetNumLinConvFails(arkode_mem, &nlcf);
+      ARKStepGetNumPrecEvals(arkode_mem, &npe);
+      ARKStepGetNumPrecSolves(arkode_mem, &nps);
+   }
+   amrex::Print() << "\nFinal Solver Statistics:\n"
+                  << "   Internal solver steps = " << nst << " (attempted = " << nst_a << ")\n"
+                  << "   Total RHS evals:  Fe = " << nfe << ",  Fi = " << nfi << "\n"
+                  << "   Total number of nonlinear iterations = " << nni << "\n"
+                  << "   Total number of nonlinear solver convergence failures = " << ncfn << "\n"
+                  << "   Total number of error test failures = " << netf << "\n";
+   if (nls_method == 0) {
+     amrex::Print() << "   Total linear solver setups = " << nsetups << "\n"
+                    << "   Total linear iterations = " << nli << "\n"
+                    << "   Total number of Jacobian-vector products = " << nJv << "\n"
+                    << "   Total number of linear solver convergence failures = " << nlcf << "\n";
+     if ((npe != 0) || (nps != 0))
+       amrex::Print() << "   Total number of Preconditioner setups = " << npe << "\n"
+                      << "   Total number of Preconditioner solves = " << nps << "\n";
+   }
+
 
    // Close diagnostics file
    if (write_diag)
