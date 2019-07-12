@@ -36,6 +36,7 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, cons
 #endif
                                         "divu-after"},
                                 geom, 0.0, 0);
+
     pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
 }
 
@@ -84,91 +85,184 @@ int main (int argc, char* argv[])
             dmap.define(grids);
         }
 
+        Array<MultiFab,AMREX_SPACEDIM> vel;
+        Array<MultiFab,AMREX_SPACEDIM> beta;
+        MultiFab plotfile_mf;
+        MultiFab divu;
+
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
 
-#if 0
-        EB2::SphereIF sphere[9];
-
-        sphere[0].define(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
-        sphere[1].define(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
-        sphere[2].define(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
-
-        sphere[3].define(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
-        sphere[4].define(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
-        sphere[5].define(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
-
-        sphere[6].define(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
-        sphere[7].define(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
-        sphere[8].define(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
+        Array<EB2::SphereIF,9> sphere{
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false)};
 
         bool is_true[9];
-        is_true = true;
+        is_true[0] = false;
+        is_true[1] = true;
+        is_true[2] = false;
+        is_true[3] = true;
+        is_true[4] = false;
+        is_true[5] = true;
+        is_true[6] = false;
+        is_true[7] = true;
+        is_true[8] = false;
 
-        int first_i;
-        int  next_i;
+        int first_i = 9;
+        int  next_i = 9;
+        int index[9];
 
         for (int i = 0; i < 9; i++) 
-           if (is_true[i]) { first_i = i; break;}
+           index[i] = -1;
 
-        for (int i = first_i+1; i < 9; i++) 
-           if (is_true[i]) { next_i = i; break;}
+        int num_true = 0;
+        for (int i = 0; i < 9; i++) 
+           if (is_true[i]) 
+           {
+              index[num_true] = i;
+              num_true++;
+           }
 
-        auto all = EB2::makeUnion(sphere[first_i], sphere[next_i]);
-#else
+        if (num_true < 1)
+        {
+           amrex::Print() << " ********************************************** "     << std::endl;
+           amrex::Print() << " You didn't specify any objects -- please try again " << std::endl;
+           amrex::Print() << " ********************************************** "     << std::endl;
+           exit(0);
+        }
 
-        EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
-        EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
-        EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
+        amrex::Print() << " ********************************************** "   << std::endl;
+        amrex::Print() << " There are " << num_true << " objects in the domain" << std::endl;
+        amrex::Print() << " ********************************************** "   << std::endl;
 
-        EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
-        EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
-        EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
+        switch(num_true) {
 
-        EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
-        EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
-        EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
+           case 1:
+              {
+              auto gshop1 = EB2::makeShop(sphere[index[0]]);
+              EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-        auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
-        auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
-        auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
+           case 2:
+              {
+              amrex::Print() << "Objects " << index[0] << " " << index[1] << std::endl;
+              auto all2 = EB2::makeUnion(sphere[index[0]],sphere[index[1]]);
+              auto gshop2  = EB2::makeShop(all2);
+              EB2::Build(gshop2, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-        auto all = EB2::makeUnion(column_1,column_2,column_3);
-#endif
+           case 3:
+              {
+              auto all3 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto gshop3  = EB2::makeShop(all3);
+              EB2::Build(gshop3, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-        auto gshop  = EB2::makeShop(all);
-        EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+           case 4:
+              {
+              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto all     = EB2::makeUnion(group_1,sphere[index[3]]);
+              auto gshop4  = EB2::makeShop(all);
+              EB2::Build(gshop4, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
+           case 5:
+              {
+              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]]);
+              auto all     = EB2::makeUnion(group_1,group_2);
+              auto gshop5  = EB2::makeShop(all);
+              EB2::Build(gshop5, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 6:
+              {
+              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
+              auto all     = EB2::makeUnion(group_1,group_2);
+              auto gshop6  = EB2::makeShop(all);
+              EB2::Build(gshop6, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 7:
+              {
+              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
+              auto group_3 = sphere[index[6]];
+              auto all     = EB2::makeUnion(group_1,group_2,group_3);
+              auto gshop7  = EB2::makeShop(all);
+              EB2::Build(gshop7, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 8:
+              {
+              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
+              auto group_3 = EB2::makeUnion(sphere[index[6]],sphere[index[7]]);
+              auto all     = EB2::makeUnion(group_1,group_2,group_3);
+              auto gshop8  = EB2::makeShop(all);
+              EB2::Build(gshop8, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 9:
+              {
+              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
+              auto group_3 = EB2::makeUnion(sphere[index[6]],sphere[index[7]],sphere[index[8]]);
+              auto all     = EB2::makeUnion(group_1,group_2,group_3);
+              auto gshop9  = EB2::makeShop(all);
+              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           default:;
+        }
+   
         const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
         const EB2::Level& eb_level = eb_is.getLevel(geom);
-
+   
         // options are basic, volume, or full
         EBSupport ebs = EBSupport::full;
-
+  
         // number of ghost cells for each of the 3 EBSupport types
         Vector<int> ng_ebs = {2,2,2};
-
+ 
         // This object provides access to the EB database in the format of basic AMReX objects
         // such as BaseFab, FArrayBox, FabArray, and MultiFab
         EBFArrayBoxFactory factory(eb_level, geom, grids, dmap, ng_ebs, ebs);
-
-
-        // Initialize Particles
-        MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitFromAsciiFile(initial_tracer_file, 0);
-
-        // store plotfile variables; velocity-before, div-before, velocity-after, div-after
-        MultiFab plotfile_mf;
-        plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
-
-        Array<MultiFab,AMREX_SPACEDIM> vel;
-        Array<MultiFab,AMREX_SPACEDIM> beta;
+        
+//      const FabFactory<FArrayBox>& test_factory = (num_true > 0) ? 
+//          EBFArrayBoxFactory(eb_level, geom, grids, dmap, ng_ebs, ebs): FArrayBoxFactory();
 
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
             beta[idim].define(amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 0, MFInfo(), factory);
             beta[idim].setVal(1.0);
         }
+
+        // store plotfile variables; velocity-before, div-before, velocity-after, div-after
+        plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
+
+        divu.define(grids, dmap, 1, 0, MFInfo(), factory);
+
+        // Initialize Particles
+        MyParticleContainer MyPC(geom, dmap, grids);
+        MyPC.InitFromAsciiFile(initial_tracer_file, 0);
 
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
@@ -179,7 +273,6 @@ int main (int argc, char* argv[])
         average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
         // compute and output divergence, then copy into plofile
-        MultiFab divu(grids, dmap, 1, 0, MFInfo(), factory);
         EB_computeDivergence(divu, amrex::GetArrOfConstPtrs(vel), geom);
         amrex::Print() << "\nmax-norm of divu before projection is " << divu.norm0() << "\n" << std::endl;
         plotfile_mf.copy(divu,0,AMREX_SPACEDIM,1);
@@ -224,6 +317,7 @@ int main (int argc, char* argv[])
 
                 amrex::Print() << "\nTimestep " << i << ", Time = " << time << std::endl;
                 amrex::Print() << "Advecting particles with Umac for timestep " << time_step << std::endl;
+
                 // Step Particles
                 MyPC.AdvectWithUmac(vel.data(), 0, time_step);
 
