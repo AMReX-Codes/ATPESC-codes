@@ -1,3 +1,19 @@
+/*--------------------------------------------------------------------
+  Time Integration and Nonlinear Solvers
+  Hands-on Lessons with SUNDIALS + AMReX
+  2019 Argonne Training Program in Extreme-Scale Computing
+
+  Authors (alphabetical):
+    David Gardner (gardner48@llnl.gov)
+    John Loffeld (loffeld1@llnl.gov)
+    Daniel Reynolds (reynolds@smu.edu)
+    Donald Willcox (dewillcox@lbl.gov)
+
+  --------------------------------------------------------------------
+  Header file for general utility routines shared between hands-on
+  lessons.
+  --------------------------------------------------------------------*/
+
 #ifndef UTILITIES_H
 #define UTILITIES_H
 

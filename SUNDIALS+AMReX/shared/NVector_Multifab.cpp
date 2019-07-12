@@ -1,3 +1,18 @@
+/*--------------------------------------------------------------------
+  Time Integration and Nonlinear Solvers
+  Hands-on Lessons with SUNDIALS + AMReX
+  2019 Argonne Training Program in Extreme-Scale Computing
+
+  Authors (alphabetical):
+    David Gardner (gardner48@llnl.gov)
+    John Loffeld (loffeld1@llnl.gov)
+    Daniel Reynolds (reynolds@smu.edu)
+    Donald Willcox (dewillcox@lbl.gov)
+
+  --------------------------------------------------------------------
+  Implementation file for N_Vector wrap of AMReX 'MultiFab' structure.
+  --------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 
