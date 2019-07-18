@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Input parameters see the README for parameter descriptions and defaults
 # ------------------------------------------------------------------------------
-n_cell = 256
+n_cell = 128
 max_grid_size = 64
 plot_int = 1
 stepper = 1

@@ -4,11 +4,11 @@
 # ------------------------------------------------------------------------------
 plot_int = 1
 arkode_order = 4
-fixed_dt = 1.0
+fixed_dt = 5.0
 tfinal = 1.0e4
 dtout = 1.0e4
 max_steps = 10000
-n_cell = 256
+n_cell = 128
 max_grid_size = 64
 advCoeffx = 5.0e-4
 advCoeffy = 2.5e-4

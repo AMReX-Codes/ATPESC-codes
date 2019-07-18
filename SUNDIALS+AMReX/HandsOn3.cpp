@@ -320,7 +320,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
    // --------------------------------------------------------------------------
 
    // The number of cells on each side of a square domain.
-   int n_cell = 256;
+   int n_cell = 128;
    pp.query("n_cell", n_cell);
    prob_data.n_cell = n_cell;
 
@@ -410,7 +410,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
        << "  use_preconditioner=<int>"  << std::endl
        << "    use preconditioning (1) or not (0) [default=0]." << std::endl
        << "  n_cell=<int>" << std::endl
-       << "    number of cells on each side of the square domain [default=256]." << std::endl
+       << "    number of cells on each side of the square domain [default=128]." << std::endl
        << "  max_grid_size=<int>" << std::endl
        << "    max size of boxes in box array [default=64]." << std::endl
        << "  advCoeffx=<float>" << std::endl
