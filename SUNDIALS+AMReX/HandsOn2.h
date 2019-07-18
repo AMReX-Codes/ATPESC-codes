@@ -33,6 +33,7 @@
 // user-data structure for problem options
 struct ProblemOpt
 {
+   int help;
    int plot_int;
    int arkode_order;
    int nls_method;

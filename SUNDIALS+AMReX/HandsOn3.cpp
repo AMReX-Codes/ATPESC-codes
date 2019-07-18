@@ -45,6 +45,9 @@ using namespace amrex;
 void ComputeSolutionARK(N_Vector nv_sol, ProblemOpt* prob_opt,
                         ProblemData* prob_data)
 {
+   // Exit immediately if "help" was requested
+   if (prob_opt->help > 0)  return;
+
    // Extract problem data and options
    Geometry* geom         = prob_data->geom;
    int       plot_int     = prob_opt->plot_int;
@@ -232,6 +235,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
    // Problem options     ***** UPDATED FROM HandsOn2 *****
    // --------------------------------------------------------------------------
 
+   // Store 'help' request
+   int help = 0;  // do not output help message
+   pp.query("help", help);
+   prob_opt.help = help;
+
    // Enable (>0) or disable (<0) writing output files
    int plot_int = -1; // plots off
    pp.query("plot_int", plot_int);
@@ -363,6 +371,75 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
    ppmg.query("use_petsc", prob_data.mg_use_petsc);
    prob_data.mg_tol_rel = 1.0e-6;
    ppmg.query("tol_rel", prob_data.mg_tol_rel);
+
+   // Handle 'help' request
+   if (help > 0) {
+     amrex::Print() << std:: endl
+       << "Usage: HandsOn3.exe [fname] [options]" << std::endl
+       << "Options:" << std::endl
+       << "  help=1" << std::endl
+       << "    Print this help message and exit." << std::endl
+       << "  plot_int=<int>" << std::endl
+       << "    enable (1) or disable (0) plots [default=0]." << std::endl
+       << "  arkode_order=<int>" << std::endl
+       << "    ARKStep method order [default=4]." << std::endl
+       << "  nls_method=<int>" << std::endl
+       << "    use Newton (0) or fixed-point (1) solver [default=0]." << std::endl
+       << "  nls_max_iter=<int>" << std::endl
+       << "    maximum number of nonlinear iterations [default=3]." << std::endl
+       << "  nls_fp_acc=<int>" << std::endl
+       << "    number of fixed-point acceleration vectors [default=3]." << std::endl
+       << "  ls_max_iter=<int>" << std::endl
+       << "    maximum number of linear iterations [default=5]." << std::endl
+       << "  rhs_adv=<int>" << std::endl
+       << "    treat advection implicitly (1) or explicitly (2) [default=1]." << std::endl
+       << "  fixed_dt=<float>" << std::endl
+       << "    use a fixed time step size (if value > 0.0) [default=-1.0]." << std::endl
+       << "  rtol=<float>" << std::endl
+       << "    relative tolerance for time step adaptivity [default=1e-4]." << std::endl
+       << "  atol=<float>" << std::endl
+       << "    absolute tolerance for time step adaptivity [default=1e-9]." << std::endl
+       << "  tfinal=<float>" << std::endl
+       << "    final integration time [default=1e4]." << std::endl
+       << "  dtout=<float>" << std::endl
+       << "    time between outputs [default=tfinal]." << std::endl
+       << "  max_steps=<int>" << std::endl
+       << "    maximum number of internal steps between outputs [default=10000]." << std::endl
+       << "  write_diag=<int>" << std::endl
+       << "    output ARKStep time step adaptivity diagnostics to a file [default=1]." << std::endl
+       << "  use_preconditioner=<int>"  << std::endl
+       << "    use preconditioning (1) or not (0) [default=0]." << std::endl
+       << "  n_cell=<int>" << std::endl
+       << "    number of cells on each side of the square domain [default=256]." << std::endl
+       << "  max_grid_size=<int>" << std::endl
+       << "    max size of boxes in box array [default=64]." << std::endl
+       << "  advCoeffx=<float>" << std::endl
+       << "    advection speed in the x-direction [default=5e-4]." << std::endl
+       << "  advCoeffy=<float>" << std::endl
+       << "    advection speed in the y-direction [default=2.5e-4]." << std::endl
+       << "  diffCoeffx=<float>" << std::endl
+       << "    diffusion coefficient in the x-direction [default=1e-6]." << std::endl
+       << "  diffCoeffy=<float>" << std::endl
+       << "    diffusion coefficient in the y-direction [default=1e-6]." << std::endl << std::endl
+       << "If preconditioning is enabled, then additional options may be set" << std::endl
+       << "(see AMReX documentation of the MLMG solver for descriptions)" << std::endl
+       << "  mlmg.agglomeration=<int> [default=1]" << std::endl
+       << "  mlmg.consolidation=<int> [default=1]" << std::endl
+       << "  mlmg.max_coarsening_level=<int> [default=1000]" << std::endl
+       << "  mlmg.linop_maxorder=<int> [default=2]" << std::endl
+       << "  mlmg.max_iter=<int> [default=1000]" << std::endl
+       << "  mlmg.max_fmg_iter=<int> [default=1000]" << std::endl
+       << "  mlmg.verbose=<int> [default=0]" << std::endl
+       << "  mlmg.bottom_verbose=<int> [default=0]" << std::endl
+       << "  mlmg.use_hypre=<int> [default=1]" << std::endl
+       << "  mlmg.hypre_interface=<int> [default=3]" << std::endl
+       << "  mlmg.use_petsc=<int> [default=0]" << std::endl
+       << "  mlmg.tol_rel=<float> [default=1e-6]" << std::endl << std::endl
+       << "If a file name 'fname' is provided, it will be parsed for each of the above" << std::endl
+       << "options.  If an option is specified in both the input file and on the" << std::endl
+       << "command line, then the command line option takes precedence." << std::endl << std::endl;
+     return;
+   }
 
    // Ouput problem options and parameters
    amrex::Print()
