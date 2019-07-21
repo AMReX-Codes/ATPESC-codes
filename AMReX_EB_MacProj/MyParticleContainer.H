@@ -15,14 +15,14 @@ public:
         {}
 
     MyParticleContainer (const Geometry            & geom,
-                             const DistributionMapping & dmap,
-                             const BoxArray            & ba)
+                         const DistributionMapping & dmap,
+                         const BoxArray            & ba)
         : TracerParticleContainer(geom,dmap,ba)
         {}
 
     ~MyParticleContainer () {}
 
-    void FindWinner (int level, amrex::Real& x);
+    Real FindWinner ();
 };
 
 }

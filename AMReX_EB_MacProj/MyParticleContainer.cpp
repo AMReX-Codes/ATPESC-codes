@@ -3,32 +3,19 @@
 
 namespace amrex {
 
-void
-MyParticleContainer::FindWinner (int lev, amrex::Real& x)
+Real 
+MyParticleContainer::FindWinner ()
 {
-    BL_PROFILE("TracerParticleContainer::FindWinner()");
-    BL_ASSERT(lev >= 0 && lev < GetParticles().size());
+    BL_PROFILE("MyParticleContainer::FindWinner()");
 
-    x = -1.e10;
-    auto& pmap = GetParticles(lev);
-    for (auto& kv : pmap) 
-    {
-        int grid = kv.first.first;
-        auto& pbox = kv.second.GetArrayOfStructs();
-	const int n = pbox.size();
+    using ParticleType = MyParticleContainer::ParticleType;
+    int nghost = 0;
+    Real x = amrex::ReduceMax(*this, nghost,
+       [=] AMREX_GPU_HOST_DEVICE (const ParticleType& p) noexcept -> Real
+                                  { return p.pos(0); });
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-        for (int i = 0; i < n; i++)
-        {
-            ParticleType& p = pbox[i];
-
-            x = std::max(x, p.m_rdata.pos[0]);
-
-        }
-    }
+    ParallelDescriptor::ReduceRealMax(x);
+    return x;
 }
 
 }
-

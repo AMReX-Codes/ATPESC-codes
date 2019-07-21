@@ -22,20 +22,17 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, cons
     sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
     std::string plotfile_name = sstream.str();
 
-    amrex::Print() << "Writing " << plotfile_name << std::endl;    
+    // amrex::Print() << "Writing " << plotfile_name << std::endl;    
     
+#if (AMREX_SPACEDIM == 2)
     EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                {"before-vx", "before-vy",
-#if (AMREX_SPACEDIM == 3)
-                                        "before-vz",
+                                { "xvel", "yvel" },
+                                  geom, 0.0, 0);
+#elif (AMREX_SPACEDIM == 3)
+    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                { "xvel", "yvel", "zvel" },
+                                  geom, 0.0, 0);
 #endif
-                                        "divu-before",
-                                        "xvel", "yvel",
-#if (AMREX_SPACEDIM == 3)
-                                        "after-vz",
-#endif
-                                        "divu-after"},
-                                geom, 0.0, 0);
 
     pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
 }
@@ -43,6 +40,9 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, cons
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc, argv);
+
+    // Turn off amrex-related output
+    amrex::SetVerbose(0);
 
     {
         int verbose = 0;
@@ -88,10 +88,11 @@ int main (int argc, char* argv[])
         Array<MultiFab,AMREX_SPACEDIM> vel;
         Array<MultiFab,AMREX_SPACEDIM> beta;
         MultiFab plotfile_mf;
-        MultiFab divu;
 
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
+        // The "false" below is the boolean that determines if the fluid is inside ("true") or 
+        //     outside ("false") the object(s)
 
         Array<EB2::SphereIF,9> sphere{
             EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false),
@@ -104,16 +105,16 @@ int main (int argc, char* argv[])
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false),
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false)};
 
-        bool is_true[9];
-        is_true[0] = false;
-        is_true[1] = true;
-        is_true[2] = false;
-        is_true[3] = true;
-        is_true[4] = false;
-        is_true[5] = true;
-        is_true[6] = false;
-        is_true[7] = true;
-        is_true[8] = false;
+        bool is_there[9];
+        is_there[0] = false;
+        is_there[1] = true;
+        is_there[2] = false;
+        is_there[3] = true;
+        is_there[4] = false;
+        is_there[5] = true;
+        is_there[6] = false;
+        is_there[7] = true;
+        is_there[8] = false;
 
         int first_i = 9;
         int  next_i = 9;
@@ -124,7 +125,7 @@ int main (int argc, char* argv[])
 
         int num_true = 0;
         for (int i = 0; i < 9; i++) 
-           if (is_true[i]) 
+           if (is_there[i]) 
            {
               index[num_true] = i;
               num_true++;
@@ -138,9 +139,9 @@ int main (int argc, char* argv[])
            exit(0);
         }
 
-        amrex::Print() << " ********************************************** "   << std::endl;
+        amrex::Print() << " \n********************************************************************" << std::endl; 
         amrex::Print() << " There are " << num_true << " objects in the domain" << std::endl;
-        amrex::Print() << " ********************************************** "   << std::endl;
+        amrex::Print() << " ********************************************************************" << std::endl; 
 
         switch(num_true) {
 
@@ -258,8 +259,6 @@ int main (int argc, char* argv[])
         // store plotfile variables; velocity-before, div-before, velocity-after, div-after
         plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
 
-        divu.define(grids, dmap, 1, 0, MFInfo(), factory);
-
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
         MyPC.InitFromAsciiFile(initial_tracer_file, 0);
@@ -268,14 +267,6 @@ int main (int argc, char* argv[])
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
                      vel[2].setVal(0.0););
-
-        // copy velocity into plotfile
-        average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
-
-        // compute and output divergence, then copy into plofile
-        EB_computeDivergence(divu, amrex::GetArrOfConstPtrs(vel), geom);
-        amrex::Print() << "\nmax-norm of divu before projection is " << divu.norm0() << "\n" << std::endl;
-        plotfile_mf.copy(divu,0,AMREX_SPACEDIM,1);
 
         MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
                              {amrex::GetArrOfConstPtrs(beta)}, // beta
@@ -293,9 +284,18 @@ int main (int argc, char* argv[])
 
         Real reltol = 1.e-8;
 
+        amrex::Print() << " \n********************************************************************" << std::endl; 
+        amrex::Print() << " First let's project the initial velocity to find " << std::endl;
+        amrex::Print() << "   the flow field around the obstacles ... " << std::endl;
+        amrex::Print() << "******************************************************************** \n" << std::endl; 
+
         // macproj.setBottomSolver(MLMG::BottomSolver::hypre);
         // macproj.setBottomSolver(MLMG::BottomSolver::bicgcg);
         macproj.project(reltol);
+
+        amrex::Print() << " \n********************************************************************" << std::endl; 
+        amrex::Print() << " Done!  Now let's advect the particles ... " << std::endl;
+        amrex::Print() << "******************************************************************** \n" << std::endl; 
 
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].FillBoundary(geom.periodicity());
@@ -304,19 +304,11 @@ int main (int argc, char* argv[])
         // copy velocity into plotfile
         average_face_to_cellcenter(plotfile_mf,AMREX_SPACEDIM+1,amrex::GetArrOfConstPtrs(vel));
 
-        // compute and output divergence, then copy into plofile
-        EB_computeDivergence(divu, amrex::GetArrOfConstPtrs(vel), geom);
-        amrex::Print() << "\nmax-norm of divu after projection is " << divu.norm0() << "\n" << std::endl;
-        plotfile_mf.copy(divu,0,2*AMREX_SPACEDIM+1,1);
-
         Real time = 0.0;
         for (int i = 0; i < max_steps; i++)
         {
             if (time < max_time) {
                 time_step = std::min(time_step, max_time - time);
-
-                amrex::Print() << "\nTimestep " << i << ", Time = " << time << std::endl;
-                amrex::Print() << "Advecting particles with Umac for timestep " << time_step << std::endl;
 
                 // Step Particles
                 MyPC.AdvectWithUmac(vel.data(), 0, time_step);
@@ -330,15 +322,20 @@ int main (int argc, char* argv[])
                 // Increment time
                 time += time_step;
 
-                Real x;
-                MyPC.FindWinner(0,x);
-                amrex::Print() << " ********************************************** " << std::endl;
-                amrex::Print() << "Furthest particle is now at " << x << std::endl;
-                amrex::Print() << " ********************************************** " << std::endl;
+                // Find the maximum particle position "x" to determine the winning particle
+                using ParticleType = MyParticleContainer::ParticleType;
+
+                // This finds the particle with the maximum "x"
+                Real x = MyPC.FindWinner();
+
+                if (i%100 == 0)
+                   amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << x << std::endl;
 
                 if (x > 1.5) 
                 {
+                   amrex::Print() << " \n********************************************************************" << std::endl; 
                    amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;
+                   amrex::Print() << "********************************************************************\n " << std::endl; 
                    write_plotfile(i, geom, plotfile_mf, MyPC);
                    break;
                 }
