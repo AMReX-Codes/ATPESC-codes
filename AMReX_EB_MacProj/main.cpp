@@ -26,11 +26,11 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, cons
     
 #if (AMREX_SPACEDIM == 2)
     EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                { "xvel", "yvel" },
+                                { "proc" ,"xvel", "yvel" },
                                   geom, 0.0, 0);
 #elif (AMREX_SPACEDIM == 3)
     EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                { "xvel", "yvel", "zvel" },
+                                { "proc", "xvel", "yvel", "zvel" },
                                   geom, 0.0, 0);
 #endif
 
@@ -54,6 +54,8 @@ int main (int argc, char* argv[])
         int plot_int  = 1;
         Real time_step = 0.01;
 
+        amrex::Vector<int> obstacles;
+
         // read parameters
         {
             ParmParse pp;
@@ -65,8 +67,50 @@ int main (int argc, char* argv[])
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
             pp.query("time_step", time_step);
+
+            pp.queryarr("obstacles", obstacles);
+
         }
         int n_cell_x = 2*n_cell;
+        int num_obstacles;
+
+        if (obstacles.empty())
+        {
+           amrex::Print() << " **************************************************** "     << std::endl;
+           amrex::Print() << " You didn't specify any obstacles -- please try again " << std::endl;
+           amrex::Print() << " ****************************************************\n "     << std::endl;
+           exit(0);
+
+        } else {
+
+           num_obstacles = obstacles.size();
+
+           if (num_obstacles > 9)
+           {
+              amrex::Print() << " **************************************************** "     << std::endl;
+              amrex::Print() << " We only have 9 possible obstacles " << std::endl;
+              amrex::Print() << " You specified too many -- please try again " << std::endl;
+              amrex::Print() << " ****************************************************\n "     << std::endl;
+              exit(0);
+           } 
+
+           for (int i = 0; i < num_obstacles; i++) 
+              if (obstacles[i] < 0 || obstacles[i] > 8)
+              {
+                 amrex::Print() << " **************************************************** "     << std::endl;
+                 amrex::Print() << " The obstacles must be identified using integers from 0 through 8 (inclusive) " << std::endl;
+                 amrex::Print() << " You specified an invalid obstacle -- please try again " << std::endl;
+                 amrex::Print() << " ****************************************************\n "     << std::endl;
+                 exit(0);
+              }
+
+           amrex::Print() << " \n********************************************************************" << std::endl; 
+           amrex::Print() << " You specified " << num_obstacles << " objects in the domain: ";
+              for (int i = 0; i < num_obstacles; i++) 
+                  amrex::Print() << obstacles[i] << " ";
+             amrex::Print() << std::endl;
+           amrex::Print() << " ********************************************************************" << std::endl; 
+        } 
 
         Geometry geom;
         BoxArray grids;
@@ -105,57 +149,19 @@ int main (int argc, char* argv[])
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false),
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false)};
 
-        bool is_there[9];
-        is_there[0] = false;
-        is_there[1] = true;
-        is_there[2] = false;
-        is_there[3] = true;
-        is_there[4] = false;
-        is_there[5] = true;
-        is_there[6] = false;
-        is_there[7] = true;
-        is_there[8] = false;
-
-        int first_i = 9;
-        int  next_i = 9;
-        int index[9];
-
-        for (int i = 0; i < 9; i++) 
-           index[i] = -1;
-
-        int num_true = 0;
-        for (int i = 0; i < 9; i++) 
-           if (is_there[i]) 
-           {
-              index[num_true] = i;
-              num_true++;
-           }
-
-        if (num_true < 1)
-        {
-           amrex::Print() << " ********************************************** "     << std::endl;
-           amrex::Print() << " You didn't specify any objects -- please try again " << std::endl;
-           amrex::Print() << " ********************************************** "     << std::endl;
-           exit(0);
-        }
-
-        amrex::Print() << " \n********************************************************************" << std::endl; 
-        amrex::Print() << " There are " << num_true << " objects in the domain" << std::endl;
-        amrex::Print() << " ********************************************************************" << std::endl; 
-
-        switch(num_true) {
+        switch(num_obstacles) {
 
            case 1:
               {
-              auto gshop1 = EB2::makeShop(sphere[index[0]]);
+              auto gshop1 = EB2::makeShop(sphere[obstacles[0]]);
               EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
               break;
               }
 
            case 2:
               {
-              amrex::Print() << "Objects " << index[0] << " " << index[1] << std::endl;
-              auto all2 = EB2::makeUnion(sphere[index[0]],sphere[index[1]]);
+              amrex::Print() << "Objects " << obstacles[0] << " " << obstacles[1] << std::endl;
+              auto all2 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]]);
               auto gshop2  = EB2::makeShop(all2);
               EB2::Build(gshop2, geom, required_coarsening_level, max_coarsening_level);
               break;
@@ -163,7 +169,7 @@ int main (int argc, char* argv[])
 
            case 3:
               {
-              auto all3 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
+              auto all3 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
               auto gshop3  = EB2::makeShop(all3);
               EB2::Build(gshop3, geom, required_coarsening_level, max_coarsening_level);
               break;
@@ -171,8 +177,8 @@ int main (int argc, char* argv[])
 
            case 4:
               {
-              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
-              auto all     = EB2::makeUnion(group_1,sphere[index[3]]);
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto all     = EB2::makeUnion(group_1,sphere[obstacles[3]]);
               auto gshop4  = EB2::makeShop(all);
               EB2::Build(gshop4, geom, required_coarsening_level, max_coarsening_level);
               break;
@@ -180,8 +186,8 @@ int main (int argc, char* argv[])
 
            case 5:
               {
-              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
-              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]]);
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]]);
               auto all     = EB2::makeUnion(group_1,group_2);
               auto gshop5  = EB2::makeShop(all);
               EB2::Build(gshop5, geom, required_coarsening_level, max_coarsening_level);
@@ -190,8 +196,8 @@ int main (int argc, char* argv[])
 
            case 6:
               {
-              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
-              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
               auto all     = EB2::makeUnion(group_1,group_2);
               auto gshop6  = EB2::makeShop(all);
               EB2::Build(gshop6, geom, required_coarsening_level, max_coarsening_level);
@@ -200,9 +206,9 @@ int main (int argc, char* argv[])
 
            case 7:
               {
-              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
-              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
-              auto group_3 = sphere[index[6]];
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = sphere[obstacles[6]];
               auto all     = EB2::makeUnion(group_1,group_2,group_3);
               auto gshop7  = EB2::makeShop(all);
               EB2::Build(gshop7, geom, required_coarsening_level, max_coarsening_level);
@@ -211,9 +217,9 @@ int main (int argc, char* argv[])
 
            case 8:
               {
-              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
-              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
-              auto group_3 = EB2::makeUnion(sphere[index[6]],sphere[index[7]]);
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]]);
               auto all     = EB2::makeUnion(group_1,group_2,group_3);
               auto gshop8  = EB2::makeShop(all);
               EB2::Build(gshop8, geom, required_coarsening_level, max_coarsening_level);
@@ -222,9 +228,9 @@ int main (int argc, char* argv[])
 
            case 9:
               {
-              auto group_1 = EB2::makeUnion(sphere[index[0]],sphere[index[1]],sphere[index[2]]);
-              auto group_2 = EB2::makeUnion(sphere[index[3]],sphere[index[4]],sphere[index[5]]);
-              auto group_3 = EB2::makeUnion(sphere[index[6]],sphere[index[7]],sphere[index[8]]);
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
               auto all     = EB2::makeUnion(group_1,group_2,group_3);
               auto gshop9  = EB2::makeShop(all);
               EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
@@ -247,7 +253,7 @@ int main (int argc, char* argv[])
         // such as BaseFab, FArrayBox, FabArray, and MultiFab
         EBFArrayBoxFactory factory(eb_level, geom, grids, dmap, ng_ebs, ebs);
         
-//      const FabFactory<FArrayBox>& test_factory = (num_true > 0) ? 
+//      const FabFactory<FArrayBox>& test_factory = (num_obstacles > 0) ? 
 //          EBFArrayBoxFactory(eb_level, geom, grids, dmap, ng_ebs, ebs): FArrayBoxFactory();
 
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -256,8 +262,8 @@ int main (int argc, char* argv[])
             beta[idim].setVal(1.0);
         }
 
-        // store plotfile variables; velocity-before, div-before, velocity-after, div-after
-        plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
+        // store plotfile variables; velocity and processor id
+        plotfile_mf.define(grids, dmap, AMREX_SPACEDIM+1, 0, MFInfo(), factory);
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
@@ -301,8 +307,16 @@ int main (int argc, char* argv[])
             vel[idim].FillBoundary(geom.periodicity());
         }
 
+        // copy processor id into plotfile_mf
+        for (MFIter mfi(vel[0]); mfi.isValid(); ++mfi)
+            plotfile_mf[mfi].setVal(ParallelDescriptor::MyProc());
+
         // copy velocity into plotfile
-        average_face_to_cellcenter(plotfile_mf,AMREX_SPACEDIM+1,amrex::GetArrOfConstPtrs(vel));
+        average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
 
         Real time = 0.0;
         for (int i = 0; i < max_steps; i++)
