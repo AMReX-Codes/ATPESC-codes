@@ -1,0 +1,40 @@
+#ifndef BL_MYPARTICLES_H_
+#define BL_MYPARTICLES_H_
+
+#include <AMReX_TracerParticles.H>
+
+namespace amrex {
+
+struct PIdx
+{
+    enum {
+        vx = 0, vy, 
+        ncomps
+    };
+};
+
+class MyParticleContainer
+    : public amrex::ParticleContainer<PIdx::ncomps, 1>
+{
+
+public:
+
+    MyParticleContainer (const amrex::Geometry            & a_geom,
+                         const amrex::DistributionMapping & a_dmap,
+                         const amrex::BoxArray            & a_ba)
+        : ParticleContainer<PIdx::ncomps, 1>(a_geom, a_dmap, a_ba)
+    {}
+
+    ~MyParticleContainer () {};
+
+    void InitPachinko (std::string initial_tracer_file);
+
+    void AdvectPachinko (Real dt);
+
+    Real FindWinner ();
+};
+
+}
+
+#endif
+
