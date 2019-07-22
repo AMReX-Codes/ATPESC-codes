@@ -9,6 +9,6 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     ds = AMReXDataset(args.infile)
-    s = yt.SlicePlot(ds, 'z', 'after-vx')
+    s = yt.SlicePlot(ds, 'z', 'proc', origin="native")
     s.annotate_particles(1.0)
     s.save("{}.png".format(args.infile))
