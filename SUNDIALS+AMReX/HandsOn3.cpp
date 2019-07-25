@@ -386,11 +386,11 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
        << "  nls_method=<int>" << std::endl
        << "    use Newton (0) or fixed-point (1) solver [default=0]." << std::endl
        << "  nls_max_iter=<int>" << std::endl
-       << "    maximum number of nonlinear iterations [default=100]." << std::endl
+       << "    maximum number of nonlinear iterations [default=3]." << std::endl
        << "  nls_fp_acc=<int>" << std::endl
        << "    number of fixed-point acceleration vectors [default=3]." << std::endl
        << "  ls_max_iter=<int>" << std::endl
-       << "    maximum number of linear iterations [default=5]." << std::endl
+       << "    maximum number of linear iterations [default=100]." << std::endl
        << "  rhs_adv=<int>" << std::endl
        << "    treat advection implicitly (1) or explicitly (2) [default=1]." << std::endl
        << "  fixed_dt=<float>" << std::endl
