@@ -266,7 +266,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
    prob_opt.nls_fp_acc = nls_fp_acc;
 
    // Specify the max number of linear iterations
-   int ls_max_iter = 5;
+   int ls_max_iter = 100;
    pp.query("ls_max_iter", ls_max_iter);
    prob_opt.ls_max_iter = ls_max_iter;
 
@@ -386,7 +386,7 @@ void ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data) {
        << "  nls_method=<int>" << std::endl
        << "    use Newton (0) or fixed-point (1) solver [default=0]." << std::endl
        << "  nls_max_iter=<int>" << std::endl
-       << "    maximum number of nonlinear iterations [default=3]." << std::endl
+       << "    maximum number of nonlinear iterations [default=100]." << std::endl
        << "  nls_fp_acc=<int>" << std::endl
        << "    number of fixed-point acceleration vectors [default=3]." << std::endl
        << "  ls_max_iter=<int>" << std::endl
