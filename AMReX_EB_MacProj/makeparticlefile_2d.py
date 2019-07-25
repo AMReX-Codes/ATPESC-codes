@@ -6,13 +6,13 @@
 import numpy as np
 
 NX = 5
-NY = 100
+NY = 50
 
 dimx = [0,0.1]  #They'll start evenly close to the edge/source and flow through
 dimy = [0,1]
 
-dx = (dimx[1] - dimx[0]) / NX
-dy = (dimy[1] - dimy[0]) / NY
+dx = (dimx[1] - dimx[0]) / NX 
+dy = (dimy[1] - dimy[0]) / NY 
 
 f = open("tracers_file_2d", "w")
 

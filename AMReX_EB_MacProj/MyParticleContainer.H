@@ -23,6 +23,8 @@ public:
     ~MyParticleContainer () {}
 
     Real FindWinner ();
+
+//  void WriteAsciiFile (std::stream& filename);
 };
 
 }

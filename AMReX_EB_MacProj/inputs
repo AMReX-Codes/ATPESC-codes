@@ -11,3 +11,5 @@ initial_tracer_file = tracers_file_2d
 max_time = 10.0
 max_steps = 10000
 time_step = 0.001
+
+write_ascii = 1

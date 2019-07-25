@@ -16,7 +16,7 @@
 
 using namespace amrex;
 
-void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, const auto& pc)
+void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto& pc, int write_ascii)
 {
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
@@ -35,6 +35,14 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, cons
 #endif
 
     pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
+
+    std::stringstream pstream;
+    pstream << "part" << std::setw(5) << std::setfill('0') << step_counter;
+    const std::string ascii_filename = pstream.str();
+
+    if (write_ascii)
+       pc.WriteAsciiFile(ascii_filename);
+
 }
 
 int main (int argc, char* argv[])
@@ -52,6 +60,7 @@ int main (int argc, char* argv[])
         Real max_time = 1.0;
         int max_steps = 100;
         int plot_int  = 1;
+        int write_ascii  = 0;
         Real time_step = 0.01;
 
         amrex::Vector<int> obstacles;
@@ -66,6 +75,7 @@ int main (int argc, char* argv[])
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
+            pp.query("write_ascii", write_ascii);
             pp.query("time_step", time_step);
 
             pp.queryarr("obstacles", obstacles);
@@ -331,7 +341,7 @@ int main (int argc, char* argv[])
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
-                   write_plotfile(i, geom, plotfile_mf, MyPC);
+                   write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
 
                 // Increment time
                 time += time_step;
@@ -345,18 +355,18 @@ int main (int argc, char* argv[])
                 if (i%100 == 0)
                    amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << x << std::endl;
 
-                if (x > 1.5) 
+                if (x > 2.0) 
                 {
                    amrex::Print() << " \n********************************************************************" << std::endl; 
                    amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;
                    amrex::Print() << "********************************************************************\n " << std::endl; 
-                   write_plotfile(i, geom, plotfile_mf, MyPC);
+                   write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
                    break;
                 }
 
             } else {
                 // Write to a plotfile
-                write_plotfile(i, geom, plotfile_mf, MyPC);
+                write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
                 break;
             }
         }
