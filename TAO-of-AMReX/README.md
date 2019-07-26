@@ -9,4 +9,4 @@ TODO:
 - fill BC, Neumann along right edge
 
 - Alp to give u_target function defined in physical coordinates
-- Don to define u_target from the function^
+- Don to define u_target from the function
