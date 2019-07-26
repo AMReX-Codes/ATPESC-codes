@@ -7,6 +7,11 @@
 
 using namespace amrex;
 
+namespace ExtTaoBC 
+{
+    amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
+}
+
 MyTest::MyTest ()
 {
     readParameters();
@@ -22,8 +27,12 @@ MyTest::solve ()
 void
 MyTest::update_boundary_values()
 {
-    // arguments: values along each boundary of the domain
-    // todo - apply bc args to the state
+    // convert TAO bcs to ExtTaoBC::ext_dir_bcs
+    // TODO ...
+
+    const int lev = 0;
+    solution[lev].FillBoundary(geom[lev].periodicity());
+    FillDomainBoundary(solution[lev], geom[lev], {bcs});
 }
 
 void
@@ -363,6 +372,22 @@ MyTest::initData ()
         rhs           [ilev].define(grids[ilev], dmap[ilev], 1, 0);
         exact_solution[ilev].define(grids[ilev], dmap[ilev], 1, 0);
     }
+
+    // set up boundary conditions:
+    // - first set all boundary conditions to external Dirichlet
+    for (int i = 0; i < AMREX_SPACEDIM; ++i)
+    {
+        bcs.setLo(i, BCType::ext_dir);
+        bcs.setHi(i, BCType::ext_dir);
+    }
+
+    // - then set outflow to right = first order extrapolation
+    bcs.setHi(0, BCType::foextrap);
+
+    ExtTaoBC::ext_dir_bcs.resize(3);
+    ExtTaoBC::ext_dir_bcs[0].resize(n_cell+2);
+    ExtTaoBC::ext_dir_bcs[1].resize(n_cell+2);
+    ExtTaoBC::ext_dir_bcs[2].resize(n_cell+2);
 
     initProbPoisson();
 }
