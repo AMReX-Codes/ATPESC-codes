@@ -17,7 +17,6 @@ include ./Make.package
 
 Pdirs := Base Boundary AmrCore Particle
 Pdirs += EB
-Pdirs += LinearSolvers/C_CellMG LinearSolvers/MLMG
 
 Ppack	+= $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 
@@ -27,4 +26,4 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 movie:
 	parallel --keep-order --tag "./plot.py {}" ::: `ls -d plt*`
-	ffmpeg -framerate 240 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 pachinko.gif
+	ffmpeg -framerate 10 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 pachinko.gif

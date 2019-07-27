@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #------------------------------------------------------------
 # Programmer(s):  Daniel R. Reynolds @ SMU
 #------------------------------------------------------------
@@ -19,11 +19,11 @@ if (len(sys.argv) == 1):
 # load the diagnostics output file (passed on the command line)
 fname = sys.argv[len(sys.argv)-1]
 
-# load the time step data 
+# load the time step data
 Tdiags = diags.load_diags(fname)
 
 # generate plots
-print '\nGenerating plots h_vs_t.png, h_vs_iter.png, and oversolve_vs_t.png'
+print('\nGenerating plots h_vs_t.png, h_vs_iter.png, and oversolve_vs_t.png')
 diags.plot_h_vs_t(Tdiags,'h_vs_t.png')
 diags.plot_h_vs_tstep(Tdiags,'h_vs_iter.png')
 diags.plot_oversolve_vs_t(Tdiags,'oversolve_vs_t.png')

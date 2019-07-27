@@ -7,6 +7,14 @@
 #include <AMReX_Hypre.H>
 #endif
 
+namespace ExtTaoBC 
+{
+   extern amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
+   const int lower_boundary = 0;
+   const int left_boundary = 1;
+   const int upper_boundary = 2;
+}
+
 class MyTest
 {
 public:
@@ -52,6 +60,8 @@ private:
     int hypre_interface_i = 1;  // 1. structed, 2. semi-structed, 3. ij
     amrex::Hypre::Interface hypre_interface = amrex::Hypre::Interface::structed;
 #endif
+
+    amrex::BCRec bcs; // BCs for 1 component
 
     amrex::Vector<amrex::Geometry> geom;
     amrex::Vector<amrex::BoxArray> grids;

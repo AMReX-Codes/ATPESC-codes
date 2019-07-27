@@ -29,27 +29,36 @@ LIBRARIES = -lamrex -lsundials_cvode -lsundials_arkode
 
 LIBRARIES += -lgfortran
 
-default: Advection-Diffusion.exe GrayScott.exe
+default: HandsOn1.exe HandsOn2.exe HandsOn3.exe
 
-Advection-Diffusion.exe: Advection-Diffusion/Advection-Diffusion.o shared/NVector_Multifab.o shared/DiffOp2D.o
+HandsOn1.exe: HandsOn1.o shared/NVector_Multifab.o shared/Utilities.o
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-Advection-Diffusion/Advection-Diffusion.o: Advection-Diffusion/Advection-Diffusion.cpp Advection-Diffusion/Advection-Diffusion.h
+HandsOn1.o: HandsOn1.cpp HandsOn1.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
-GrayScott.exe: GrayScott/GrayScott.o shared/NVector_Multifab.o shared/DiffOp2D.o shared/Reactions.o
+HandsOn2.exe: HandsOn2.o shared/NVector_Multifab.o shared/Utilities.o
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-GrayScott/GrayScott.o: GrayScott/GrayScott.cpp GrayScott/GrayScott.h
+HandsOn2.o: HandsOn2.cpp HandsOn2.h
+	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+
+HandsOn3.exe: HandsOn3.o shared/NVector_Multifab.o shared/Utilities.o
+	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
+
+HandsOn3.o: HandsOn3.cpp HandsOn3.h
+	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
+
+Advection-Diffusion.exe: Advection-Diffusion.o shared/NVector_Multifab.o shared/Utilities.o
+	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
+
+Advection-Diffusion.o: Advection-Diffusion.cpp Advection-Diffusion.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 shared/NVector_Multifab.o: shared/NVector_Multifab.cpp shared/NVector_Multifab.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
-shared/DiffOp2D.o: shared/DiffOp2D.cpp shared/DiffOp.h
-	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
-
-shared/Reactions.o: shared/Reactions.cpp shared/Reactions.h
+shared/Utilities.o: shared/Utilities.cpp shared/Utilities.h
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 .PHONY: movie clean realclean pltclean
@@ -58,10 +67,10 @@ movie:
 	ls -1 plt*/Header | tee movie.visit
 
 clean:
-	$(RM) Advection-Diffusion/*.o GrayScott/*.o shared/*.o
+	$(RM) *.o shared/*.o
 
 realclean: clean
-	$(RM) *.exe
+	$(RM) *~ *.exe
 
 pltclean:
-	$(RM) -rf plt*/
+	$(RM) -rf plt*/ *.png *_diagnostics.txt __pycache__

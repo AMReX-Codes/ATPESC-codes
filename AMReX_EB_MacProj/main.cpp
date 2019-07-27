@@ -8,51 +8,62 @@
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_VisMF.H>
-#include <AMReX_TracerParticles.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_TagBox.H>
 #include <AMReX_ParmParse.H>
 
-
+#include <MyParticleContainer.H>
 
 using namespace amrex;
 
-void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, const auto& pc)
+void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto& pc, int write_ascii)
 {
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
     std::string plotfile_name = sstream.str();
 
-    amrex::Print() << "Writing " << plotfile_name << std::endl;
-
+    // amrex::Print() << "Writing " << plotfile_name << std::endl;    
+    
+#if (AMREX_SPACEDIM == 2)
     EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                {"before-vx", "before-vy",
-#if (AMREX_SPACEDIM == 3)
-                                        "before-vz",
+                                { "proc" ,"xvel", "yvel" },
+                                  geom, 0.0, 0);
+#elif (AMREX_SPACEDIM == 3)
+    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                { "proc", "xvel", "yvel", "zvel" },
+                                  geom, 0.0, 0);
 #endif
-                                        "divu-before",
-                                        "xvel", "yvel",
-#if (AMREX_SPACEDIM == 3)
-                                        "after-vz",
-#endif
-                                        "divu-after"},
-                                geom, 0.0, 0);
-    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile
+
+    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
+
+    std::stringstream pstream;
+    pstream << "part" << std::setw(5) << std::setfill('0') << step_counter;
+    const std::string ascii_filename = pstream.str();
+
+    if (write_ascii)
+       pc.WriteAsciiFile(ascii_filename);
+
 }
 
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc, argv);
 
+    // Turn off amrex-related output
+    amrex::SetVerbose(0);
+
     {
-        int verbose = 1;
+        int verbose = 0;
         int n_cell = 128;
         int max_grid_size = 32;
         std::string initial_tracer_file = "";
         Real max_time = 1.0;
         int max_steps = 100;
         int plot_int  = 1;
+        int write_ascii  = 0;
         Real time_step = 0.01;
+
+        amrex::Vector<int> obstacles;
 
         // read parameters
         {
@@ -64,9 +75,52 @@ int main (int argc, char* argv[])
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
+            pp.query("write_ascii", write_ascii);
             pp.query("time_step", time_step);
+
+            pp.queryarr("obstacles", obstacles);
+
         }
         int n_cell_x = 2*n_cell;
+        int num_obstacles;
+
+        if (obstacles.empty())
+        {
+           amrex::Print() << " **************************************************** "     << std::endl;
+           amrex::Print() << " You didn't specify any obstacles -- please try again " << std::endl;
+           amrex::Print() << " ****************************************************\n "     << std::endl;
+           exit(0);
+
+        } else {
+
+           num_obstacles = obstacles.size();
+
+           if (num_obstacles > 9)
+           {
+              amrex::Print() << " **************************************************** "     << std::endl;
+              amrex::Print() << " We only have 9 possible obstacles " << std::endl;
+              amrex::Print() << " You specified too many -- please try again " << std::endl;
+              amrex::Print() << " ****************************************************\n "     << std::endl;
+              exit(0);
+           } 
+
+           for (int i = 0; i < num_obstacles; i++) 
+              if (obstacles[i] < 0 || obstacles[i] > 8)
+              {
+                 amrex::Print() << " **************************************************** "     << std::endl;
+                 amrex::Print() << " The obstacles must be identified using integers from 0 through 8 (inclusive) " << std::endl;
+                 amrex::Print() << " You specified an invalid obstacle -- please try again " << std::endl;
+                 amrex::Print() << " ****************************************************\n "     << std::endl;
+                 exit(0);
+              }
+
+           amrex::Print() << " \n********************************************************************" << std::endl; 
+           amrex::Print() << " You specified " << num_obstacles << " objects in the domain: ";
+              for (int i = 0; i < num_obstacles; i++) 
+                  amrex::Print() << obstacles[i] << " ";
+             amrex::Print() << std::endl;
+           amrex::Print() << " ********************************************************************" << std::endl; 
+        } 
 
         Geometry geom;
         BoxArray grids;
@@ -85,68 +139,132 @@ int main (int argc, char* argv[])
             dmap.define(grids);
         }
 
+        Array<MultiFab,AMREX_SPACEDIM> vel;
+        Array<MultiFab,AMREX_SPACEDIM> beta;
+        MultiFab plotfile_mf;
+
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
+        // The "false" below is the boolean that determines if the fluid is inside ("true") or 
+        //     outside ("false") the object(s)
 
-#if 0
-        // build a simple geometry using the "eb2." parameters in the inputs file
-        EB2::Build(geom, required_coarsening_level, max_coarsening_level);
-#else
-        int n_sphere = 2;
-        if (n_sphere == 1)
-            {
-                EB2::SphereIF sphere_0(0.25, {AMREX_D_DECL(0.5,0.5,0.5)}, false);
-                auto gshop = EB2::makeShop(sphere_0);
-                EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+        Array<EB2::SphereIF,9> sphere{
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false)};
 
-            } else {
+        switch(num_obstacles) {
 
-            EB2::SphereIF sphere_11(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false);
-            EB2::SphereIF sphere_12(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false);
-            EB2::SphereIF sphere_13(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false);
-            auto column_1 = EB2::makeUnion(sphere_11, sphere_12,sphere_13);
+           case 1:
+              {
+              auto gshop1 = EB2::makeShop(sphere[obstacles[0]]);
+              EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-            EB2::SphereIF sphere_21(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false);
-            EB2::SphereIF sphere_22(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false);
-            EB2::SphereIF sphere_23(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false);
-            auto column_2 = EB2::makeUnion(sphere_21, sphere_22,sphere_23);
+           case 2:
+              {
+              amrex::Print() << "Objects " << obstacles[0] << " " << obstacles[1] << std::endl;
+              auto all2 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]]);
+              auto gshop2  = EB2::makeShop(all2);
+              EB2::Build(gshop2, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-            EB2::SphereIF sphere_31(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false);
-            EB2::SphereIF sphere_32(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false);
-            EB2::SphereIF sphere_33(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false);
-            auto column_3 = EB2::makeUnion(sphere_31, sphere_32,sphere_33);
+           case 3:
+              {
+              auto all3 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto gshop3  = EB2::makeShop(all3);
+              EB2::Build(gshop3, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-            auto all = EB2::makeUnion(column_1,column_2,column_3);
+           case 4:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto all     = EB2::makeUnion(group_1,sphere[obstacles[3]]);
+              auto gshop4  = EB2::makeShop(all);
+              EB2::Build(gshop4, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
 
-            auto gshop  = EB2::makeShop(all);
-            EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+           case 5:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]]);
+              auto all     = EB2::makeUnion(group_1,group_2);
+              auto gshop5  = EB2::makeShop(all);
+              EB2::Build(gshop5, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 6:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto all     = EB2::makeUnion(group_1,group_2);
+              auto gshop6  = EB2::makeShop(all);
+              EB2::Build(gshop6, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 7:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = sphere[obstacles[6]];
+              auto all     = EB2::makeUnion(group_1,group_2,group_3);
+              auto gshop7  = EB2::makeShop(all);
+              EB2::Build(gshop7, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 8:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]]);
+              auto all     = EB2::makeUnion(group_1,group_2,group_3);
+              auto gshop8  = EB2::makeShop(all);
+              EB2::Build(gshop8, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 9:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
+              auto all     = EB2::makeUnion(group_1,group_2,group_3);
+              auto gshop9  = EB2::makeShop(all);
+              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           default:;
         }
-#endif
+   
         const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
         const EB2::Level& eb_level = eb_is.getLevel(geom);
-
+   
         // options are basic, volume, or full
         EBSupport ebs = EBSupport::full;
-
+  
         // number of ghost cells for each of the 3 EBSupport types
         Vector<int> ng_ebs = {2,2,2};
-
+ 
         // This object provides access to the EB database in the format of basic AMReX objects
         // such as BaseFab, FArrayBox, FabArray, and MultiFab
         EBFArrayBoxFactory factory(eb_level, geom, grids, dmap, ng_ebs, ebs);
-
-
-        // Initialize Particles
-        TracerParticleContainer TracerPC(geom, dmap, grids);
-        TracerPC.InitFromAsciiFile(initial_tracer_file, 0);
-
-
-        // store plotfile variables; velocity-before, div-before, velocity-after, div-after
-        MultiFab plotfile_mf;
-        plotfile_mf.define(grids, dmap, 2*AMREX_SPACEDIM+2, 0, MFInfo(), factory);
-
-        Array<MultiFab,AMREX_SPACEDIM> vel;
-        Array<MultiFab,AMREX_SPACEDIM> beta;
+        
+//      const FabFactory<FArrayBox>& test_factory = (num_obstacles > 0) ? 
+//          EBFArrayBoxFactory(eb_level, geom, grids, dmap, ng_ebs, ebs): FArrayBoxFactory();
 
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
@@ -154,26 +272,24 @@ int main (int argc, char* argv[])
             beta[idim].setVal(1.0);
         }
 
+        // store plotfile variables; velocity and processor id
+        plotfile_mf.define(grids, dmap, AMREX_SPACEDIM+1, 0, MFInfo(), factory);
+
+        // Initialize Particles
+        MyParticleContainer MyPC(geom, dmap, grids);
+        MyPC.InitFromAsciiFile(initial_tracer_file, 0);
+
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
                      vel[2].setVal(0.0););
-
-        // copy velocity into plotfile
-        average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
-
-        // compute and output divergence, then copy into plofile
-        MultiFab divu(grids, dmap, 1, 0, MFInfo(), factory);
-        EB_computeDivergence(divu, amrex::GetArrOfConstPtrs(vel), geom);
-        amrex::Print() << "\nmax-norm of divu before projection is " << divu.norm0() << "\n" << std::endl;
-        plotfile_mf.copy(divu,0,AMREX_SPACEDIM,1);
 
         MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
                              {amrex::GetArrOfConstPtrs(beta)}, // beta
                              {geom});                          // Geometry
 
         macproj.setVerbose(verbose);
-        macproj.setCGVerbose(verbose);
+        macproj.setCGVerbose(0);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Periodic,
@@ -184,21 +300,33 @@ int main (int argc, char* argv[])
 
         Real reltol = 1.e-8;
 
+        amrex::Print() << " \n********************************************************************" << std::endl; 
+        amrex::Print() << " First let's project the initial velocity to find " << std::endl;
+        amrex::Print() << "   the flow field around the obstacles ... " << std::endl;
+        amrex::Print() << "******************************************************************** \n" << std::endl; 
+
         // macproj.setBottomSolver(MLMG::BottomSolver::hypre);
         // macproj.setBottomSolver(MLMG::BottomSolver::bicgcg);
         macproj.project(reltol);
+
+        amrex::Print() << " \n********************************************************************" << std::endl; 
+        amrex::Print() << " Done!  Now let's advect the particles ... " << std::endl;
+        amrex::Print() << "******************************************************************** \n" << std::endl; 
 
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].FillBoundary(geom.periodicity());
         }
 
-        // copy velocity into plotfile
-        average_face_to_cellcenter(plotfile_mf,AMREX_SPACEDIM+1,amrex::GetArrOfConstPtrs(vel));
+        // copy processor id into plotfile_mf
+        for (MFIter mfi(vel[0]); mfi.isValid(); ++mfi)
+            plotfile_mf[mfi].setVal(ParallelDescriptor::MyProc());
 
-        // compute and output divergence, then copy into plofile
-        EB_computeDivergence(divu, amrex::GetArrOfConstPtrs(vel), geom);
-        amrex::Print() << "\nmax-norm of divu after projection is " << divu.norm0() << "\n" << std::endl;
-        plotfile_mf.copy(divu,0,2*AMREX_SPACEDIM+1,1);
+        // copy velocity into plotfile
+        average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
 
         // get max velocity on grid vx_max, vy_max
         Real vx_max = vel[0].max(0, 0);
@@ -216,20 +344,39 @@ int main (int argc, char* argv[])
             if (time < max_time) {
                 time_step = std::min(time_step, max_time - time);
 
-                amrex::Print() << "\nTimestep " << i << ", Time = " << time << std::endl;
-                amrex::Print() << "Advecting particles with Umac for timestep " << time_step << std::endl;
                 // Step Particles
-                TracerPC.AdvectWithUmac(vel.data(), 0, time_step);
+                MyPC.AdvectWithUmac(vel.data(), 0, time_step);
+
+                MyPC.Redistribute();
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
-                   write_plotfile(i, geom, plotfile_mf, TracerPC);
+                   write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
 
                 // Increment time
                 time += time_step;
+
+                // Find the maximum particle position "x" to determine the winning particle
+                using ParticleType = MyParticleContainer::ParticleType;
+
+                // This finds the particle with the maximum "x"
+                Real x = MyPC.FindWinner(0);
+
+                if (i%100 == 0)
+                   amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << x << std::endl;
+
+                if (x > 1.99) 
+                {
+                   amrex::Print() << " \n********************************************************************" << std::endl; 
+                   amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;
+                   amrex::Print() << "********************************************************************\n " << std::endl; 
+                   write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
+                   break;
+                }
+
             } else {
                 // Write to a plotfile
-                write_plotfile(i, geom, plotfile_mf, TracerPC);
+                write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
                 break;
             }
         }
