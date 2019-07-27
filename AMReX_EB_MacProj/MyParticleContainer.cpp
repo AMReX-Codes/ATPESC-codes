@@ -4,7 +4,7 @@
 namespace amrex {
 
 Real 
-MyParticleContainer::FindWinner ()
+MyParticleContainer::FindWinner (int n)
 {
     BL_PROFILE("MyParticleContainer::FindWinner()");
 
@@ -12,7 +12,7 @@ MyParticleContainer::FindWinner ()
     int nghost = 0;
     Real x = amrex::ReduceMax(*this, nghost,
        [=] AMREX_GPU_HOST_DEVICE (const ParticleType& p) noexcept -> Real
-                                  { return p.pos(0); });
+                                  { return p.pos(n); });
 
     ParallelDescriptor::ReduceRealMax(x);
     return x;

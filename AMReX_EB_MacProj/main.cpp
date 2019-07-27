@@ -350,12 +350,12 @@ int main (int argc, char* argv[])
                 using ParticleType = MyParticleContainer::ParticleType;
 
                 // This finds the particle with the maximum "x"
-                Real x = MyPC.FindWinner();
+                Real x = MyPC.FindWinner(0);
 
                 if (i%100 == 0)
                    amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << x << std::endl;
 
-                if (x > 2.0) 
+                if (x > 1.99) 
                 {
                    amrex::Print() << " \n********************************************************************" << std::endl; 
                    amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;
