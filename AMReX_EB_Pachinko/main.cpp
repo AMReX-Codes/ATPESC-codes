@@ -308,32 +308,14 @@ int main (int argc, char* argv[])
                 if (i%plot_int == 0)
                    write_plotfile(i, geom, plotfile_mf, MyPC);
 
+                if (i%100 == 0)
+                   amrex::Print() << "Step " << i << ", Time = " << time << std::endl;
+
                 // Increment time
                 time += time_step;
 
-                // Find the maximum particle position "x" to determine the winning particle
-                using ParticleType = MyParticleContainer::ParticleType;
-
-                // This finds the particle with the maximum "x"
-                Real y = MyPC.FindWinner(1);
-
-                if (i%100 == 0)
-                   amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << y << std::endl;
-
-                if (y < 1.0) 
-                {
-                   amrex::Print() << " \n********************************************************************" << std::endl; 
-                   amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;
-                   amrex::Print() << "********************************************************************\n " << std::endl; 
-                   write_plotfile(i, geom, plotfile_mf, MyPC);
-                   break;
-                }
-
-            } else {
-                // Write to a plotfile
-                write_plotfile(i, geom, plotfile_mf, MyPC);
+            } else 
                 break;
-            }
         }
     }
 

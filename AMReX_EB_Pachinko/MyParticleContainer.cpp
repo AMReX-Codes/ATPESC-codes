@@ -87,7 +87,9 @@ MyParticleContainer::AdvectPachinko (Real dt)
 
     Real rad_squared = (prad+crad)*(prad+crad);
 
-    Real grav = -10.;
+    Real grav = -40.;
+
+    Real restitution_coeff = 0.9;
 
     const auto prob_lo = Geom(0).ProbLoArray();
     const auto prob_hi = Geom(0).ProbHiArray();
@@ -124,10 +126,11 @@ MyParticleContainer::AdvectPachinko (Real dt)
                Real x_diff = p.pos(0) - xcent[ind];
                Real y_diff = p.pos(1) - ycent[ind];
                Real diff_sq = x_diff * x_diff + y_diff * y_diff;
-               Real diff    = std::sqrt(diff_sq);
 
                if ( diff_sq < rad_squared )
                {
+                 Real diff      = std::sqrt(diff_sq);
+                 Real overshoot = (prad+crad) - diff;
 
                  Real norm_x = x_diff / diff;
                  Real norm_y = y_diff / diff;
@@ -152,29 +155,35 @@ MyParticleContainer::AdvectPachinko (Real dt)
                  p.rdata(PIdx::vx) = -vel_norm * norm_x + vel_tang * tang_x;
                  p.rdata(PIdx::vy) = -vel_norm * norm_y + vel_tang * tang_y;
 
+                 p.rdata(PIdx::vx) *= restitution_coeff;
+                 p.rdata(PIdx::vy) *= restitution_coeff;
+
+                 // Reflect particle position as well
+                 Real ref_pos_x = xcent[ind] + (prad+crad)*norm_x;
+                 Real ref_pos_y = ycent[ind] + (prad+crad)*norm_y;
+
+                 p.pos(0) = ref_pos_x + overshoot * norm_x;
+                 p.pos(1) = ref_pos_y + overshoot * norm_y;
                }
             }
 
             // Bounce off left wall
             if (p.pos(0) < prob_lo[0]) 
             {
-               p.pos(0) = -p.pos(0);
+               p.pos(0) = 2.0*prob_lo[0] - p.pos(0);
                p.rdata(PIdx::vx) = -p.rdata(PIdx::vx);
+               p.rdata(PIdx::vx) *= restitution_coeff;
+               p.rdata(PIdx::vy) *= restitution_coeff;
             }
 
             // Bounce off right wall
             if (p.pos(0) > prob_hi[0]) 
             {
-               p.pos(0) = -p.pos(0);
-               p.rdata(PIdx::vx) = -p.rdata(PIdx::vx);
+               p.pos(0) = 2.0*prob_hi[0] - p.pos(0);
+               p.rdata(PIdx::vx) = -0.9*p.rdata(PIdx::vx);
+               p.rdata(PIdx::vx) *= restitution_coeff;
+               p.rdata(PIdx::vy) *= restitution_coeff;
             }
-
-            // Stick to bottom wall
-            // if (p.pos(1) < 0.05) 
-            // {
-            //    p.rdata(PIDx::vx) = 0.0;
-            //    p.rdata(PIDx::vy) = 0.0;
-            // }
          }
        }
     }
