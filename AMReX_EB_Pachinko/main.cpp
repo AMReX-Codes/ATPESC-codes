@@ -62,8 +62,8 @@ int main (int argc, char* argv[])
             pp.queryarr("obstacles", obstacles);
 
         }
-        int n_cell_x =   n_cell;
-        int n_cell_y = 2*n_cell;
+        int n_cell_x = n_cell;
+        int n_cell_y = n_cell * 8/5;
         int num_obstacles;
 
         if (obstacles.empty())
@@ -77,20 +77,20 @@ int main (int argc, char* argv[])
 
            num_obstacles = obstacles.size();
 
-           if (num_obstacles > 9)
+           if (num_obstacles > 14)
            {
               amrex::Print() << " **************************************************** "     << std::endl;
-              amrex::Print() << " We only have 9 possible obstacles " << std::endl;
+              amrex::Print() << " We only have 14 possible obstacles " << std::endl;
               amrex::Print() << " You specified too many -- please try again " << std::endl;
               amrex::Print() << " ****************************************************\n "     << std::endl;
               exit(0);
            } 
 
            for (int i = 0; i < num_obstacles; i++) 
-              if (obstacles[i] < 0 || obstacles[i] > 8)
+              if (obstacles[i] < 0 || obstacles[i] > 13)
               {
                  amrex::Print() << " **************************************************** "     << std::endl;
-                 amrex::Print() << " The obstacles must be identified using integers from 0 through 8 (inclusive) " << std::endl;
+                 amrex::Print() << " The obstacles must be identified using integers from 0 through 13 (inclusive) " << std::endl;
                  amrex::Print() << " You specified an invalid obstacle -- please try again " << std::endl;
                  amrex::Print() << " ****************************************************\n "     << std::endl;
                  exit(0);
@@ -108,7 +108,7 @@ int main (int argc, char* argv[])
         BoxArray grids;
         DistributionMapping dmap;
         {
-            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.,2.,1.)});
+            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.25,2.,1.)});
             Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
@@ -128,16 +128,21 @@ int main (int argc, char* argv[])
         // The "false" below is the boolean that determines if the fluid is inside ("true") or 
         //     outside ("false") the object(s)
 
-        Array<EB2::SphereIF,9> sphere{
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.2,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.5,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.8,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.6,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.9,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.2,1.1,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.5,1.1,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.8,1.1,0.5)}, false)};
+        Array<EB2::SphereIF,14> sphere{
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.30,0.3,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.60,0.3,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.90,0.3,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.15,0.7,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.45,0.7,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.75,0.7,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.05,0.7,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.30,1.1,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.60,1.1,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.90,1.1,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.15,1.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.45,1.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(0.75,1.5,0.5)}, false),
+            EB2::SphereIF(0.1, {AMREX_D_DECL(1.05,1.5,0.5)}, false)};
 
         switch(num_obstacles) {
 
@@ -227,6 +232,31 @@ int main (int argc, char* argv[])
               break;
               }
 
+           case 12:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
+              auto group_4 = EB2::makeUnion(sphere[obstacles[9]],sphere[obstacles[10]],sphere[obstacles[11]]);
+              auto all     = EB2::makeUnion(group_1,group_2,group_3,group_4);
+              auto gshop9  = EB2::makeShop(all);
+              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
+           case 14:
+              {
+              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
+              auto group_4 = EB2::makeUnion(sphere[obstacles[9]],sphere[obstacles[10]],sphere[obstacles[11]]);
+              auto group_5 = EB2::makeUnion(sphere[obstacles[12]],sphere[obstacles[13]]);
+              auto all     = EB2::makeUnion(group_1,group_2,group_3,group_4,group_5);
+              auto gshop9  = EB2::makeShop(all);
+              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
+              break;
+              }
+
            default:;
         }
    
@@ -285,12 +315,12 @@ int main (int argc, char* argv[])
                 using ParticleType = MyParticleContainer::ParticleType;
 
                 // This finds the particle with the maximum "x"
-                Real x = MyPC.FindWinner();
+                Real y = MyPC.FindWinner(1);
 
                 if (i%100 == 0)
-                   amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << x << std::endl;
+                   amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << y << std::endl;
 
-                if (x > 1.5) 
+                if (y < 1.0) 
                 {
                    amrex::Print() << " \n********************************************************************" << std::endl; 
                    amrex::Print() << "We have a winner...and the winning time is " << time << std::endl;

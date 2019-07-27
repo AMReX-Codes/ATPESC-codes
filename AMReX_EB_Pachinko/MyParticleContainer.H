@@ -31,7 +31,7 @@ public:
 
     void AdvectPachinko (Real dt);
 
-    Real FindWinner ();
+    Real FindWinner (int n);
 };
 
 }
