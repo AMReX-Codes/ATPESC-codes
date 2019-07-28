@@ -51,7 +51,8 @@ int main (int argc, char* argv[])
     amrex::Initialize(argc, argv);
 
     {
-        int verbose = 0;
+        int mg_verbose = 0;
+        int cg_verbose = 0;
         int n_cell = 128;
         int max_grid_size = 32;
         std::string initial_tracer_file = "";
@@ -59,6 +60,7 @@ int main (int argc, char* argv[])
         int max_steps = 100;
         int plot_int  = 1;
         int write_ascii  = 0;
+        int use_hypre  = 0;
         Real time_step = 0.01;
 
         amrex::Vector<int> obstacles;
@@ -66,19 +68,27 @@ int main (int argc, char* argv[])
         // read parameters
         {
             ParmParse pp;
-            pp.query("verbose", verbose);
+            pp.query("mg_verbose", mg_verbose);
+            pp.query("cg_verbose", cg_verbose);
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
             pp.query("initial_tracer_file", initial_tracer_file);
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
+            pp.query("use_hypre", use_hypre);
             pp.query("write_ascii", write_ascii);
             pp.query("time_step", time_step);
 
             pp.queryarr("obstacles", obstacles);
 
         }
+
+#ifndef AMREX_USE_HYPRE
+        if (use_hypre == 1) 
+           amrex::Abort("Cant use hypre if we dont build with USE_HYPRE=TRUE");
+#endif
+
         int n_cell_x = 2*n_cell;
         int num_obstacles;
 
@@ -282,12 +292,20 @@ int main (int argc, char* argv[])
                      vel[1].setVal(0.0);,
                      vel[2].setVal(0.0););
 
+        LPInfo lp_info;
+
+        // If we want to use hypre to solve the full problem we need to not coarsen inside AMReX
+        if (use_hypre) 
+            lp_info.setMaxCoarseningLevel(0);
+
         MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
                              {amrex::GetArrOfConstPtrs(beta)}, // beta
-                             {geom});                          // Geometry
+                             {geom},
+                             lp_info);                          // structure for passing info to the operator
 
-        macproj.setVerbose(verbose);
-        macproj.setCGVerbose(0);
+        // Set bottom-solver to use hypre instead of native BiCGStab 
+        if (use_hypre) 
+           macproj.setBottomSolver(MLMG::BottomSolver::hypre);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Periodic,
@@ -295,6 +313,9 @@ int main (int argc, char* argv[])
             {AMREX_D_DECL(LinOpBCType::Dirichlet,
                           LinOpBCType::Periodic,
                           LinOpBCType::Periodic)});
+
+        macproj.setVerbose(mg_verbose);
+        macproj.setCGVerbose(cg_verbose);
 
         Real reltol = 1.e-8;
 

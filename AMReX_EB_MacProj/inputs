@@ -12,3 +12,6 @@ max_time = 10.0                          # the final time (if max_time < max_ste
 max_steps = 10000                        # the maximum number of steps (if max_steps * time_step < max_time))
 
 obstacles = 0 1 2 3 4 5 6 7 8            # this is how we choose which obstacles to include 
+
+mg_verbose = 2
+cg_verbose = 2
