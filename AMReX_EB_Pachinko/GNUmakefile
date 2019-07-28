@@ -29,5 +29,5 @@ include $(Ppack)
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 movie:
-	parallel --keep-order --tag "./plot.py {}" ::: `ls -d plt*`
+	./plot.py
 	ffmpeg -framerate 10 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 pachinko.gif
