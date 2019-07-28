@@ -28,62 +28,18 @@ MyParticleContainer::InitPachinko (std::string initial_tracer_file)
 }
 
 void 
-MyParticleContainer::AdvectPachinko (Real dt)
+MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& obstacle_center,
+                                     Real obstacle_radius, Real particle_radius)
 {
     BL_PROFILE("MyParticleContainer::AdvectPachinko()");
 
     int lev = 0;
 
-    Real xcent[14];
-    Real ycent[14];
-
-    xcent[0] = 0.3;
-    ycent[0] = 0.3;
-
-    xcent[1] = 0.6;
-    ycent[1] = 0.3;
-
-    xcent[2] = 0.9;
-    ycent[2] = 0.3;
-
-    xcent[3] = 0.15;
-    ycent[3] = 0.7;
-
-    xcent[4] = 0.45;
-    ycent[4] = 0.7;
-
-    xcent[5] = 0.75;
-    ycent[5] = 0.7;
-
-    xcent[6] = 1.05;
-    ycent[6] = 0.7;
-
-    xcent[7] = 0.3;
-    ycent[7] = 1.1;
-
-    xcent[8] = 0.6;
-    ycent[8] = 1.1;
-
-    xcent[9] = 0.9;
-    ycent[9] = 1.1;
-
-    xcent[10] = 0.15;
-    ycent[10] = 1.5;
-
-    xcent[11] = 0.45;
-    ycent[11] = 1.5;
-
-    xcent[12] = 0.75;
-    ycent[12] = 1.5;
-
-    xcent[13] = 1.05;
-    ycent[13] = 1.5;
-
     // Particle radius
-    Real prad = 0.02 ;
+    Real prad = particle_radius;
 
     // Obstracle radiu
-    Real crad = 0.10 ;
+    Real crad = obstacle_radius;
 
     Real rad_squared = (prad+crad)*(prad+crad);
 
@@ -123,8 +79,8 @@ MyParticleContainer::AdvectPachinko (Real dt)
 
             for (int ind = 0; ind < 14; ind++)
             {
-               Real x_diff = p.pos(0) - xcent[ind];
-               Real y_diff = p.pos(1) - ycent[ind];
+               Real x_diff = p.pos(0) - obstacle_center[ind][0];
+               Real y_diff = p.pos(1) - obstacle_center[ind][1];
                Real diff_sq = x_diff * x_diff + y_diff * y_diff;
 
                if ( diff_sq < rad_squared )
@@ -159,8 +115,8 @@ MyParticleContainer::AdvectPachinko (Real dt)
                  p.rdata(PIdx::vy) *= restitution_coeff;
 
                  // Reflect particle position as well
-                 Real ref_pos_x = xcent[ind] + (prad+crad)*norm_x;
-                 Real ref_pos_y = ycent[ind] + (prad+crad)*norm_y;
+                 Real ref_pos_x = obstacle_center[ind][0] + (prad+crad)*norm_x;
+                 Real ref_pos_y = obstacle_center[ind][1] + (prad+crad)*norm_y;
 
                  p.pos(0) = ref_pos_x + overshoot * norm_x;
                  p.pos(1) = ref_pos_y + overshoot * norm_y;
@@ -188,22 +144,4 @@ MyParticleContainer::AdvectPachinko (Real dt)
        }
     }
 }
-
-Real 
-MyParticleContainer::FindWinner (int n)
-{
-    BL_PROFILE("MyParticleContainer::FindWinner()");
-
-//  using ParticleType = MyParticleContainer::ParticleType;
-    int nghost = 0;
-    if (n != 0 && n != 1) amrex::Abort("Must specify 0 or 1 in FindWinner");
-
-    Real x = amrex::ReduceMax(*this, nghost,
-       [=] AMREX_GPU_HOST_DEVICE (const ParticleType& p) noexcept -> Real
-                                  { return p.pos(n); });
-
-    ParallelDescriptor::ReduceRealMax(x);
-    return x;
-}
-
 }

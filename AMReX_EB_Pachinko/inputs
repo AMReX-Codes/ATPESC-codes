@@ -1,10 +1,5 @@
-amrex.fpe_trap_invalid=1
-
-verbose = 2
 n_cell = 125
 max_grid_size = 25
-max_grid_size = 250
-is_periodic = 1
 
 obstacles = 0 1 2 3 4 5 6 7 8 9 10 11 12 13
 
@@ -12,7 +7,8 @@ plot_int = 10
 
 initial_tracer_file = tracers_file_2d
 
-max_time = 3.0
+max_time  = 3.0
 max_steps = 100000
+
 time_step = 0.001
 
