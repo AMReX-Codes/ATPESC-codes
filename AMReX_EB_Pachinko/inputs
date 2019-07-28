@@ -1,14 +1,11 @@
-n_cell = 125
-max_grid_size = 25
+n_cell = 125                             # number of cells in x-direction; we double this in the y-direction
+max_grid_size = 25                       # the maximum number of cells in any direction in a single grid
 
-obstacles = 0 1 2 3 4 5 6 7 8 9 10 11 12 13
+plot_int = 10                            # frequency of writing plotfiles
 
-plot_int = 10
+initial_tracer_file = tracers_file_2d    # name of file where we specify the input positions of the particles
 
-initial_tracer_file = tracers_file_2d
+time_step = 0.001                        # we take a fixed time step of this size
 
-max_time  = 3.0
-max_steps = 100000
-
-time_step = 0.001
-
+max_time  = 3.0                          # the final time (if max_time < max_steps * time_step)
+max_steps = 100000                       # the maximum number of steps (if max_steps * time_step < max_time))
