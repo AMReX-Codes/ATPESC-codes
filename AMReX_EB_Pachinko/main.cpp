@@ -30,10 +30,11 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, cons
 
 int main (int argc, char* argv[])
 {
+    amrex::SetVerbose(0);
+
     amrex::Initialize(argc, argv);
 
     // Turn off amrex-related output
-    amrex::SetVerbose(0);
 
     {
         int verbose = 0;
@@ -154,12 +155,16 @@ int main (int argc, char* argv[])
 
         amrex::Print() << " \n********************************************************************" << std::endl; 
         amrex::Print() << " Let's advect the particles ... " << std::endl;
+        amrex::Print() << "   We'll print a dot every 10 time steps." << std::endl;
         amrex::Print() << "******************************************************************** \n" << std::endl; 
 
         // copy processor id into plotfile_mf
         int lev = 0;
         for (MFIter mfi = MyPC.MakeMFIter(lev); mfi.isValid(); ++mfi)
             plotfile_mf[mfi].setVal(ParallelDescriptor::MyProc());
+
+        // wallclock time
+        Real strt_total = amrex::second();
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -180,8 +185,8 @@ int main (int argc, char* argv[])
                 if (i%plot_int == 0)
                    write_plotfile(i, geom, plotfile_mf, MyPC);
 
-                if (i%100 == 0)
-                   amrex::Print() << "Step " << i << ", Time = " << time << std::endl;
+                if (i%10 == 0)
+                   amrex::Print() << ".";
 
                 // Increment time
                 time += time_step;
@@ -189,6 +194,16 @@ int main (int argc, char* argv[])
             } else 
                 break;
         }
+
+        amrex::Print() << "\n" << std::endl;
+        amrex::Print() << "********************************************************************" << std::endl; 
+        amrex::Print() << "We've finished moving the particles to time " << time << std::endl;
+
+        // wallclock time
+        Real end_total = amrex::second() - strt_total;
+
+        amrex::Print() << "That took " << end_total << " seconds." << std::endl;
+        amrex::Print() << "******************************************************************** \n" << std::endl; 
     }
 
     amrex::Finalize();

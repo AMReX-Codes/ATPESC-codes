@@ -1,22 +1,26 @@
-USE_EB = TRUE
-DEBUG = FALSE
+
 USE_MPI  = TRUE
 USE_OMP  = FALSE
-
-USE_HYPRE = FALSE
 
 COMP = gnu
 
 DIM = 2
 
+DEBUG = FALSE
+
 AMREX_HOME ?= ../../..
+
+USE_EB = TRUE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ./Make.package
 
-Pdirs := Base Boundary AmrCore Particle
+Pdirs := AmrCore 
+Pdirs += Base 
+Pdirs += Boundary 
 Pdirs += EB
+Pdirs += Particle
 
 Ppack	+= $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 
