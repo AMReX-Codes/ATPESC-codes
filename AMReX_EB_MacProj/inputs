@@ -1,15 +1,14 @@
-verbose = 2
-n_cell = 128
-max_grid_size = 64
+n_cell = 128                             # number of cells in x-direction; we double this in the y-direction
+max_grid_size = 64                       # the maximum number of cells in any direction in a single grid
 
-plot_int = 10
+plot_int = 10                            # frequency of writing plotfiles
 
-initial_tracer_file = tracers_file_2d
+initial_tracer_file = tracers_file_2d    # name of file where we specify the input positions of the particles
 
-max_time = 10.0
-max_steps = 10000
-time_step = 0.001
+time_step = 0.001                        # we advance the particles with a fixed time step of this size
 
-write_ascii = 0
+max_time = 10.0                          # the final time (if max_time < max_steps * time_step)
 
-obstacles = 0 1 2 3 4 5 6 7 8 
+max_steps = 10000                        # the maximum number of steps (if max_steps * time_step < max_time))
+
+obstacles = 0 1 2 3 4 5 6 7 8            # this is how we choose which obstacles to include 

@@ -29,9 +29,8 @@ public:
 
     void InitPachinko (std::string initial_tracer_file);
 
-    void AdvectPachinko (Real dt);
-
-    Real FindWinner (int n);
+    void AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& obstacle_center,
+                         Real obstacle_radius, Real particle_radius); 
 };
 
 }
