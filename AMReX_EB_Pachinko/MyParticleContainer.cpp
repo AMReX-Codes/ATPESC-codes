@@ -23,6 +23,9 @@ MyParticleContainer::InitPachinko (std::string initial_tracer_file)
 
             p.rdata(PIdx::vx) =  0.0;
             p.rdata(PIdx::vy) = -1.0;
+#if (AMREX_SPACEDIM == 3)
+            p.rdata(PIdx::vz) =  0.0;
+#endif
        }
     }
 }
@@ -50,6 +53,8 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
     const auto prob_lo = Geom(0).ProbLoArray();
     const auto prob_hi = Geom(0).ProbHiArray();
 
+    int num_obstacles = obstacle_center.size();
+
     auto& pmap = GetParticles(lev);
     for (auto& kv : pmap) {
        int grid = kv.first.first;
@@ -57,6 +62,9 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
        const int n = pbox.size();
 
        // std::cout << "Number of particles: " << n << std::endl;
+
+       // NOTE: we assume that all particle motion occurs in a plane!
+       // Even if we run in 3-d we assume no motion in the z-direction
 
        for (int i = 0; i < n; i++)
        {
@@ -77,7 +85,7 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
             p.pos(0) += dt * p.rdata(PIdx::vx);
             p.pos(1) += dt * p.rdata(PIdx::vy);
 
-            for (int ind = 0; ind < 14; ind++)
+            for (int ind = 0; ind < num_obstacles; ind++)
             {
                Real x_diff = p.pos(0) - obstacle_center[ind][0];
                Real y_diff = p.pos(1) - obstacle_center[ind][1];

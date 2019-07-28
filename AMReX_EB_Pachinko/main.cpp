@@ -76,6 +76,7 @@ int main (int argc, char* argv[])
 
         int n_cell_x = n_cell;
         int n_cell_y = n_cell * 8/5;
+        int n_cell_z = 4;
 
         Geometry geom;
         BoxArray grids;
@@ -85,7 +86,7 @@ int main (int argc, char* argv[])
             Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
-                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell_y-1,n_cell-1)});
+                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell_y-1,n_cell_z-1)});
             geom.define(domain);
 
             grids.define(domain);
@@ -114,27 +115,29 @@ int main (int argc, char* argv[])
 
         // The "false" below is the boolean that determines if the fluid is inside ("true") or 
         //     outside ("false") the object(s)
-        Array<EB2::SphereIF,14> sphere{
-            EB2::SphereIF(0.1, obstacle_center[0], false),
-            EB2::SphereIF(0.1, obstacle_center[1], false),
-            EB2::SphereIF(0.1, obstacle_center[2], false),
-            EB2::SphereIF(0.1, obstacle_center[3], false),
-            EB2::SphereIF(0.1, obstacle_center[4], false),
-            EB2::SphereIF(0.1, obstacle_center[5], false),
-            EB2::SphereIF(0.1, obstacle_center[6], false),
-            EB2::SphereIF(0.1, obstacle_center[7], false),
-            EB2::SphereIF(0.1, obstacle_center[8], false),
-            EB2::SphereIF(0.1, obstacle_center[9], false),
-            EB2::SphereIF(0.1, obstacle_center[10], false),
-            EB2::SphereIF(0.1, obstacle_center[11], false),
-            EB2::SphereIF(0.1, obstacle_center[12], false),
-            EB2::SphereIF(0.1, obstacle_center[13], false)};
+        int direction =  2;
+        Real height   = -1.0;  // Putting a negative number for height means it extends beyond the domain
+        Array<EB2::CylinderIF,14> obstacles{
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 0], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 1], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 2], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 3], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 4], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 5], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 6], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 7], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 8], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 9], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[10], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[11], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[12], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[13], false)};
 
-        auto group_1 = EB2::makeUnion(sphere[0],sphere[1],sphere[2]);
-        auto group_2 = EB2::makeUnion(sphere[3],sphere[4],sphere[5]);
-        auto group_3 = EB2::makeUnion(sphere[6],sphere[7],sphere[8]);
-        auto group_4 = EB2::makeUnion(sphere[9],sphere[10],sphere[11]);
-        auto group_5 = EB2::makeUnion(sphere[12],sphere[13]);
+        auto group_1 = EB2::makeUnion(obstacles[0],obstacles[1],obstacles[2]);
+        auto group_2 = EB2::makeUnion(obstacles[3],obstacles[4],obstacles[5]);
+        auto group_3 = EB2::makeUnion(obstacles[6],obstacles[7],obstacles[8]);
+        auto group_4 = EB2::makeUnion(obstacles[9],obstacles[10],obstacles[11]);
+        auto group_5 = EB2::makeUnion(obstacles[12],obstacles[13]);
         auto all     = EB2::makeUnion(group_1,group_2,group_3,group_4,group_5);
         auto gshop9  = EB2::makeShop(all);
 
