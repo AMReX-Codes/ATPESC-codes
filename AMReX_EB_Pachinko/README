@@ -42,7 +42,7 @@ max_steps = 100000                       # the maximum number of steps (if max_s
 
 For example, 
 ```
-mpirun -n 4 ./main2d.gnu.MPI.ex inputs initial_tracer_file=my_file
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs_2d initial_tracer_file=my_file
 ```
 
 will read the particles from a file called "my_file"
@@ -52,8 +52,6 @@ will read the particles from a file called "my_file"
 The output from your run should look something like this:
 
 ```
-mpirun -n 4 ./main2d.gnu.MPI.ex inputs
-
 ********************************************************************
  Let's advect the particles ...
    We'll print a dot every 10 time steps.
