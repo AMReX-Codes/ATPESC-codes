@@ -9,6 +9,9 @@ struct PIdx
 {
     enum {
         vx = 0, vy, 
+#if (AMREX_SPACEDIM == 3)
+        vz,
+#endif
         ncomps
     };
 };

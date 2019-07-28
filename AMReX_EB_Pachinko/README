@@ -3,20 +3,28 @@
 This tutorial demonstrates particles accelerating downward with
 gravity and bouncing off the side walls and off the solid obstacles.
 
+We can build the executable in 2-d or 3-d.  In this example the problem
+is the same in both cases since we assume the particles never move in the z-direction.
+
 ****************************************************************************************************
 
 In this example we freeze the obstacles but can change the initial particle locations.
 
 To run it in serial, 
 
-./main2d.gnu.MPI.ex inputs
+./main2d.gnu.MPI.ex inputs_2d
+or
+./main3d.gnu.MPI.ex inputs_3d
 
 To run it in parallel, for example on 4 ranks:
 
-mpirun -n 4 ./main2d.gnu.MPI.ex inputs
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs_2d
+or
+mpirun -n 4 ./main3d.gnu.MPI.ex inputs_3d
 
-The following parameters can be set at run-time -- these are currently set in the inputs
-file but you can also set them on the command line.  
+The following parameters can be set at run-time -- these are currently set in the inputs_2d
+file but you can also set them on the command line.  In this specific example we use only 4
+cells in the z-direction (if in 3-d) regardless of n_cell.
 
 ```
 n_cell = 125                             # number of cells in x-direction; we double this in the y-direction
@@ -34,7 +42,7 @@ max_steps = 100000                       # the maximum number of steps (if max_s
 
 For example, 
 ```
-mpirun -n 4 ./main2d.gnu.MPI.ex inputs initial_tracer_file=my_file
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs_2d initial_tracer_file=my_file
 ```
 
 will read the particles from a file called "my_file"
@@ -44,8 +52,6 @@ will read the particles from a file called "my_file"
 The output from your run should look something like this:
 
 ```
-mpirun -n 4 ./main2d.gnu.MPI.ex inputs
-
 ********************************************************************
  Let's advect the particles ...
    We'll print a dot every 10 time steps.
