@@ -1,13 +1,37 @@
-Advection_AmrCore: This tutorial contains an AMR advection code that advects a single 
+"Advection_AmrCore"
+
+This tutorial contains an AMR advection code that advects a single 
 scalar field with a velocity field that is specified on faces.
 
-It is an AMReX based code designed to run in parallel using MPI/OMP.
+The directory Exec/SingleVortex includes a GNUmakefile and a sample inputs file.  
 
-This example uses source code from the amrex/Src/Base, Boundary, and AmrCore directories.
-Notably, this example does not use source code from amrex/Src/Amr
-(see the tutorial Advection_AmrLevel).
+****************************************************************************************************
 
-The directory Exec/SingleVortex includes a makefile and a sample inputs file.  
-Plotfiles are generated that can be viewed with amrvis2d / amrvis3d
-(CCSE's native vis / spreadsheet tool, downloadable separately from ccse.lbl.gov)
-or with VisIt.
+To run it in serial,
+
+./main2d.gnu.MPI.ex inputs
+
+To run it in parallel, for example on 4 ranks:
+
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs
+
+The following parameters can be set at run-time -- these are currently set in the inputs
+file but you can also set them on the command line.
+
+
+n_cell = 128                             # number of cells in x-direction; we double this in the y-direction
+max_grid_size = 64                       # the maximum number of cells in any direction in a single grid
+
+plot_int = 10                            # frequency of writing plotfiles
+
+initial_tracer_file = tracers_file_2d    # name of file where we specify the input positions of the particles
+
+time_step = 0.001                        # we advance the particles with a fixed time step of this size
+
+max_time = 10.0                          # the final time (if max_time < max_steps * time_step)
+
+max_steps = 10000                        # the maximum number of steps (if max_steps * time_step < max_time))
+
+obstacles = 0 1 2 3 4 5 6 7 8            # this is how we choose which obstacles to include
+
+****************************************************************************************************

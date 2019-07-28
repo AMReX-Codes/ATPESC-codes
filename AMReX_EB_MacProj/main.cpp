@@ -1,15 +1,13 @@
 #include <AMReX_Particles.H>
 #include <AMReX.H>
-#include <AMReX_ParmParse.H>
 #include <AMReX_EBMultiFabUtil.H>
 #include <AMReX_EB2.H>
 #include <AMReX_EB2_IF.H>
 #include <AMReX_MacProjector.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
-#include <AMReX_VisMF.H>
-#include <AMReX_VisMF.H>
 #include <AMReX_TagBox.H>
+#include <AMReX_VisMF.H>
 #include <AMReX_ParmParse.H>
 
 #include <MyParticleContainer.H>
@@ -47,10 +45,10 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
 
 int main (int argc, char* argv[])
 {
-    amrex::Initialize(argc, argv);
-
     // Turn off amrex-related output
     amrex::SetVerbose(0);
+
+    amrex::Initialize(argc, argv);
 
     {
         int verbose = 0;
@@ -305,8 +303,6 @@ int main (int argc, char* argv[])
         amrex::Print() << "   the flow field around the obstacles ... " << std::endl;
         amrex::Print() << "******************************************************************** \n" << std::endl; 
 
-        // macproj.setBottomSolver(MLMG::BottomSolver::hypre);
-        // macproj.setBottomSolver(MLMG::BottomSolver::bicgcg);
         macproj.project(reltol);
 
         amrex::Print() << " \n********************************************************************" << std::endl; 
@@ -327,6 +323,16 @@ int main (int argc, char* argv[])
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
+
+        // get max velocity on grid vx_max, vy_max
+        Real vx_max = vel[0].max(0, 0);
+        Real vy_max = vel[1].max(0, 0);
+        // calculate dt_x = dx/vx_max and dt_y
+        Real dt_x = geom.CellSize(0)/vx_max;
+        Real dt_y = geom.CellSize(1)/vy_max;
+        // dt_limit = min(dt_x, dt_y)
+        Real dt_limit = std::min(dt_x, dt_y);
+        time_step = 0.1 * dt_limit;
 
         Real time = 0.0;
         for (int i = 0; i < max_steps; i++)

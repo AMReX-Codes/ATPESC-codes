@@ -605,8 +605,8 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
             // compute velocities on faces (prescribed function of space and time)
 	    get_face_velocity(&lev, &ctr_time,
 			      AMREX_D_DECL(BL_TO_FORTRAN(uface[0]),
-				     BL_TO_FORTRAN(uface[1]),
-				     BL_TO_FORTRAN(uface[2])),
+				           BL_TO_FORTRAN(uface[1]),
+				           BL_TO_FORTRAN(uface[2])),
 			      dx, prob_lo);
 
             // compute new state (stateout) and fluxes.
@@ -614,11 +614,11 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
 		   BL_TO_FORTRAN_3D(statein),
 		   BL_TO_FORTRAN_3D(stateout),
 		   AMREX_D_DECL(BL_TO_FORTRAN_3D(uface[0]),
-			  BL_TO_FORTRAN_3D(uface[1]),
-			  BL_TO_FORTRAN_3D(uface[2])),
+			        BL_TO_FORTRAN_3D(uface[1]),
+			        BL_TO_FORTRAN_3D(uface[2])),
 		   AMREX_D_DECL(BL_TO_FORTRAN_3D(flux[0]),
-			  BL_TO_FORTRAN_3D(flux[1]),
-			  BL_TO_FORTRAN_3D(flux[2])),
+			        BL_TO_FORTRAN_3D(flux[1]),
+			        BL_TO_FORTRAN_3D(flux[2])),
 		   dx, &dt_lev);
 
 	    if (do_reflux) {

@@ -6,13 +6,15 @@ import re
 import os
 
 parser = argparse.ArgumentParser()
+
 parser.add_argument('-i', '--infiles', type=str, default="\Aplt[0-9]*\Z", help='Regex for input files to plot.')
+parser.add_argument('-f', '--field', type=str, default='vfrac', help='Name of field to plot.')
 args = parser.parse_args()
 
 def doit(filename):
     ds = AMReXDataset(filename)
-    s = yt.SlicePlot(ds, 'z', 'vfrac',origin="native")
-    s.set_log("vfrac", 0)
+    s = yt.SlicePlot(ds, 'z', args.field, origin="native")
+    s.set_log(args.field, 0)
     s.annotate_particles(1.0, p_size = 10.0)
     s.save("{}.png".format(filename))
 

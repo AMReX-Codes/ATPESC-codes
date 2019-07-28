@@ -1,0 +1,59 @@
+"AMReX-Pachinko"
+
+This tutorial demonstrates particles accelerating downward with
+gravity and bouncing off the side walls and off the solid obstacles.
+
+****************************************************************************************************
+
+In this example we freeze the obstacles but can change the initial particle locations.
+
+To run it in serial, 
+
+./main2d.gnu.MPI.ex inputs
+
+To run it in parallel, for example on 4 ranks:
+
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs
+
+The following parameters can be set at run-time -- these are currently set in the inputs
+file but you can also set them on the command line.  
+
+```
+n_cell = 125                             # number of cells in x-direction; we double this in the y-direction
+max_grid_size = 25                       # the maximum number of cells in any direction in a single grid
+
+plot_int = 10                            # frequency of writing plotfiles
+
+initial_tracer_file = tracers_file_2d    # name of file where we specify the input positions of the particles
+
+time_step = 0.001                        # we take a fixed time step of this size
+
+max_time  = 3.0                          # the final time (if max_time < max_steps * time_step)
+max_steps = 100000                       # the maximum number of steps (if max_steps * time_step < max_time))
+```
+
+For example, 
+```
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs initial_tracer_file=my_file
+```
+
+will read the particles from a file called "my_file"
+
+****************************************************************************************************
+
+The output from your run should look something like this:
+
+```
+mpirun -n 4 ./main2d.gnu.MPI.ex inputs
+
+********************************************************************
+ Let's advect the particles ...
+   We'll print a dot every 10 time steps.
+********************************************************************
+
+.............................................................................................................................................................................................................................................................................................................
+
+********************************************************************
+We've finished moving the particles to time 3
+That took 1.145916707 seconds.
+********************************************************************

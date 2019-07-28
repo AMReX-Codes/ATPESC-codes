@@ -37,10 +37,11 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
 
 int main (int argc, char* argv[])
 {
+    amrex::SetVerbose(0);
+
     amrex::Initialize(argc, argv);
 
     // Turn off amrex-related output
-    amrex::SetVerbose(0);
 
     {
         int verbose = 0;
@@ -53,7 +54,8 @@ int main (int argc, char* argv[])
         Real time_step = 0.01;
         int ascii_tracer_output = 0;
 
-        amrex::Vector<int> obstacles;
+        Real obstacle_radius = 0.10;
+        Real particle_radius = 0.02;
 
         // read parameters
         {
@@ -68,50 +70,12 @@ int main (int argc, char* argv[])
             pp.query("time_step", time_step);
             pp.query("ascii_tracer_output", ascii_tracer_output);
 
-            pp.queryarr("obstacles", obstacles);
-
+            pp.query("obstacle_radius", obstacle_radius);
+            pp.query("particle_radius", particle_radius);
         }
+
         int n_cell_x = n_cell;
         int n_cell_y = n_cell * 8/5;
-        int num_obstacles;
-
-        if (obstacles.empty())
-        {
-           amrex::Print() << " **************************************************** "     << std::endl;
-           amrex::Print() << " You didn't specify any obstacles -- please try again " << std::endl;
-           amrex::Print() << " ****************************************************\n "     << std::endl;
-           exit(0);
-
-        } else {
-
-           num_obstacles = obstacles.size();
-
-           if (num_obstacles > 14)
-           {
-              amrex::Print() << " **************************************************** "     << std::endl;
-              amrex::Print() << " We only have 14 possible obstacles " << std::endl;
-              amrex::Print() << " You specified too many -- please try again " << std::endl;
-              amrex::Print() << " ****************************************************\n "     << std::endl;
-              exit(0);
-           } 
-
-           for (int i = 0; i < num_obstacles; i++) 
-              if (obstacles[i] < 0 || obstacles[i] > 13)
-              {
-                 amrex::Print() << " **************************************************** "     << std::endl;
-                 amrex::Print() << " The obstacles must be identified using integers from 0 through 13 (inclusive) " << std::endl;
-                 amrex::Print() << " You specified an invalid obstacle -- please try again " << std::endl;
-                 amrex::Print() << " ****************************************************\n "     << std::endl;
-                 exit(0);
-              }
-
-           amrex::Print() << " \n********************************************************************" << std::endl; 
-           amrex::Print() << " You specified " << num_obstacles << " objects in the domain: ";
-              for (int i = 0; i < num_obstacles; i++) 
-                  amrex::Print() << obstacles[i] << " ";
-             amrex::Print() << std::endl;
-           amrex::Print() << " ********************************************************************" << std::endl; 
-        } 
 
         Geometry geom;
         BoxArray grids;
@@ -132,142 +96,51 @@ int main (int argc, char* argv[])
 
         MultiFab plotfile_mf;
 
-        int required_coarsening_level = 0; // typically the same as the max AMR level index
-        int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
+        amrex::Vector<amrex::RealArray> obstacle_center = {
+            {AMREX_D_DECL(0.30,0.3,0.5)},
+            {AMREX_D_DECL(0.60,0.3,0.5)},
+            {AMREX_D_DECL(0.90,0.3,0.5)},
+            {AMREX_D_DECL(0.15,0.7,0.5)},
+            {AMREX_D_DECL(0.45,0.7,0.5)},
+            {AMREX_D_DECL(0.75,0.7,0.5)},
+            {AMREX_D_DECL(1.05,0.7,0.5)},
+            {AMREX_D_DECL(0.30,1.1,0.5)}, 
+            {AMREX_D_DECL(0.60,1.1,0.5)}, 
+            {AMREX_D_DECL(0.90,1.1,0.5)}, 
+            {AMREX_D_DECL(0.15,1.5,0.5)},
+            {AMREX_D_DECL(0.45,1.5,0.5)},
+            {AMREX_D_DECL(0.75,1.5,0.5)},
+            {AMREX_D_DECL(1.05,1.5,0.5)}};
+
         // The "false" below is the boolean that determines if the fluid is inside ("true") or 
         //     outside ("false") the object(s)
-
         Array<EB2::SphereIF,14> sphere{
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.30,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.60,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.90,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.15,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.45,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.75,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(1.05,0.7,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.30,1.1,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.60,1.1,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.90,1.1,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.15,1.5,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.45,1.5,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.75,1.5,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(1.05,1.5,0.5)}, false)};
+            EB2::SphereIF(0.1, obstacle_center[0], false),
+            EB2::SphereIF(0.1, obstacle_center[1], false),
+            EB2::SphereIF(0.1, obstacle_center[2], false),
+            EB2::SphereIF(0.1, obstacle_center[3], false),
+            EB2::SphereIF(0.1, obstacle_center[4], false),
+            EB2::SphereIF(0.1, obstacle_center[5], false),
+            EB2::SphereIF(0.1, obstacle_center[6], false),
+            EB2::SphereIF(0.1, obstacle_center[7], false),
+            EB2::SphereIF(0.1, obstacle_center[8], false),
+            EB2::SphereIF(0.1, obstacle_center[9], false),
+            EB2::SphereIF(0.1, obstacle_center[10], false),
+            EB2::SphereIF(0.1, obstacle_center[11], false),
+            EB2::SphereIF(0.1, obstacle_center[12], false),
+            EB2::SphereIF(0.1, obstacle_center[13], false)};
 
-        switch(num_obstacles) {
+        auto group_1 = EB2::makeUnion(sphere[0],sphere[1],sphere[2]);
+        auto group_2 = EB2::makeUnion(sphere[3],sphere[4],sphere[5]);
+        auto group_3 = EB2::makeUnion(sphere[6],sphere[7],sphere[8]);
+        auto group_4 = EB2::makeUnion(sphere[9],sphere[10],sphere[11]);
+        auto group_5 = EB2::makeUnion(sphere[12],sphere[13]);
+        auto all     = EB2::makeUnion(group_1,group_2,group_3,group_4,group_5);
+        auto gshop9  = EB2::makeShop(all);
 
-           case 1:
-              {
-              auto gshop1 = EB2::makeShop(sphere[obstacles[0]]);
-              EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 2:
-              {
-              amrex::Print() << "Objects " << obstacles[0] << " " << obstacles[1] << std::endl;
-              auto all2 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]]);
-              auto gshop2  = EB2::makeShop(all2);
-              EB2::Build(gshop2, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 3:
-              {
-              auto all3 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto gshop3  = EB2::makeShop(all3);
-              EB2::Build(gshop3, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 4:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto all     = EB2::makeUnion(group_1,sphere[obstacles[3]]);
-              auto gshop4  = EB2::makeShop(all);
-              EB2::Build(gshop4, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 5:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]]);
-              auto all     = EB2::makeUnion(group_1,group_2);
-              auto gshop5  = EB2::makeShop(all);
-              EB2::Build(gshop5, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 6:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto all     = EB2::makeUnion(group_1,group_2);
-              auto gshop6  = EB2::makeShop(all);
-              EB2::Build(gshop6, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 7:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = sphere[obstacles[6]];
-              auto all     = EB2::makeUnion(group_1,group_2,group_3);
-              auto gshop7  = EB2::makeShop(all);
-              EB2::Build(gshop7, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 8:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]]);
-              auto all     = EB2::makeUnion(group_1,group_2,group_3);
-              auto gshop8  = EB2::makeShop(all);
-              EB2::Build(gshop8, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 9:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
-              auto all     = EB2::makeUnion(group_1,group_2,group_3);
-              auto gshop9  = EB2::makeShop(all);
-              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 12:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
-              auto group_4 = EB2::makeUnion(sphere[obstacles[9]],sphere[obstacles[10]],sphere[obstacles[11]]);
-              auto all     = EB2::makeUnion(group_1,group_2,group_3,group_4);
-              auto gshop9  = EB2::makeShop(all);
-              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           case 14:
-              {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
-              auto group_4 = EB2::makeUnion(sphere[obstacles[9]],sphere[obstacles[10]],sphere[obstacles[11]]);
-              auto group_5 = EB2::makeUnion(sphere[obstacles[12]],sphere[obstacles[13]]);
-              auto all     = EB2::makeUnion(group_1,group_2,group_3,group_4,group_5);
-              auto gshop9  = EB2::makeShop(all);
-              EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
-              break;
-              }
-
-           default:;
-        }
+        int required_coarsening_level = 0; // typically the same as the max AMR level index
+        int max_coarsening_level      = 0;    // typically a huge number so MG coarsens as much as possible
+        EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
    
         const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
         const EB2::Level& eb_level = eb_is.getLevel(geom);
@@ -291,12 +164,16 @@ int main (int argc, char* argv[])
 
         amrex::Print() << " \n********************************************************************" << std::endl; 
         amrex::Print() << " Let's advect the particles ... " << std::endl;
+        amrex::Print() << "   We'll print a dot every 10 time steps." << std::endl;
         amrex::Print() << "******************************************************************** \n" << std::endl; 
 
         // copy processor id into plotfile_mf
         int lev = 0;
         for (MFIter mfi = MyPC.MakeMFIter(lev); mfi.isValid(); ++mfi)
             plotfile_mf[mfi].setVal(ParallelDescriptor::MyProc());
+
+        // wallclock time
+        Real strt_total = amrex::second();
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -309,7 +186,7 @@ int main (int argc, char* argv[])
                 time_step = std::min(time_step, max_time - time);
 
                 // Step Particles
-                MyPC.AdvectPachinko(time_step);
+                MyPC.AdvectPachinko(time_step,obstacle_center,obstacle_radius,particle_radius);
 
                 MyPC.Redistribute();
 
@@ -317,8 +194,8 @@ int main (int argc, char* argv[])
                 if (i%plot_int == 0)
                    write_plotfile(i, geom, plotfile_mf, MyPC, ascii_tracer_output);
 
-                if (i%100 == 0)
-                   amrex::Print() << "Step " << i << ", Time = " << time << std::endl;
+                if (i%10 == 0)
+                   amrex::Print() << ".";
 
                 // Increment time
                 time += time_step;
@@ -326,6 +203,16 @@ int main (int argc, char* argv[])
             } else 
                 break;
         }
+
+        amrex::Print() << "\n" << std::endl;
+        amrex::Print() << "********************************************************************" << std::endl; 
+        amrex::Print() << "We've finished moving the particles to time " << time << std::endl;
+
+        // wallclock time
+        Real end_total = amrex::second() - strt_total;
+
+        amrex::Print() << "That took " << end_total << " seconds." << std::endl;
+        amrex::Print() << "******************************************************************** \n" << std::endl; 
     }
 
     amrex::Finalize();
