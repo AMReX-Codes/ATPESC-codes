@@ -32,7 +32,7 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
       const std::string tracerfile_name = sstream.str();
       pc.WriteAsciiFile(tracerfile_name);
    }
-   pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile
+   pc.Checkpoint(plotfile_name, "particles", true); // Write particles to plotfile
 }
 
 int main (int argc, char* argv[])
