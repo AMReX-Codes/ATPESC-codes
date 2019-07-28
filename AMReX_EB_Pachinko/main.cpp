@@ -15,17 +15,24 @@
 
 using namespace amrex;
 
-void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, const auto& pc)
+void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto& pc,
+                    const int ascii_tracer_output)
 {
-    std::stringstream sstream;
-    sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
-    std::string plotfile_name = sstream.str();
+   std::stringstream sstream;
+   sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
+   std::string plotfile_name = sstream.str();
     
-    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+   EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
                                 { "proc" },
                                   geom, 0.0, 0);
 
-    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
+   if (ascii_tracer_output)
+   {
+      sstream << "_tracers";
+      const std::string tracerfile_name = sstream.str();
+      pc.WriteAsciiFile(tracerfile_name);
+   }
+   pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile
 }
 
 int main (int argc, char* argv[])
@@ -44,6 +51,7 @@ int main (int argc, char* argv[])
         int max_steps = 100;
         int plot_int  = 1;
         Real time_step = 0.01;
+        int ascii_tracer_output = 0;
 
         amrex::Vector<int> obstacles;
 
@@ -58,6 +66,7 @@ int main (int argc, char* argv[])
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
             pp.query("time_step", time_step);
+            pp.query("ascii_tracer_output", ascii_tracer_output);
 
             pp.queryarr("obstacles", obstacles);
 
@@ -306,7 +315,7 @@ int main (int argc, char* argv[])
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
-                   write_plotfile(i, geom, plotfile_mf, MyPC);
+                   write_plotfile(i, geom, plotfile_mf, MyPC, ascii_tracer_output);
 
                 if (i%100 == 0)
                    amrex::Print() << "Step " << i << ", Time = " << time << std::endl;
