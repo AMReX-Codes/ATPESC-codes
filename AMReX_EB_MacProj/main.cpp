@@ -34,7 +34,7 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
                                   geom, 0.0, 0);
 #endif
 
-    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile 
+    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile
 
     std::stringstream pstream;
     pstream << "part" << std::setw(5) << std::setfill('0') << step_counter;
