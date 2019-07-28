@@ -324,6 +324,16 @@ int main (int argc, char* argv[])
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
 
+        // get max velocity on grid vx_max, vy_max
+        Real vx_max = vel[0].max(0, 0);
+        Real vy_max = vel[1].max(0, 0);
+        // calculate dt_x = dx/vx_max and dt_y
+        Real dt_x = geom.CellSize(0)/vx_max;
+        Real dt_y = geom.CellSize(1)/vy_max;
+        // dt_limit = min(dt_x, dt_y)
+        Real dt_limit = std::min(dt_x, dt_y);
+        time_step = 0.1 * dt_limit;
+
         Real time = 0.0;
         for (int i = 0; i < max_steps; i++)
         {
