@@ -174,8 +174,8 @@ int main (int argc, char* argv[])
             {AMREX_D_DECL(0.7,0.6,0.5)},
             {AMREX_D_DECL(0.7,0.9,0.5)},
             {AMREX_D_DECL(1.1,0.2,0.5)},
-            {AMREX_D_DECL(1.1,1.5,0.5)},
-            {AMREX_D_DECL(1.1,1.8,0.5)}};
+            {AMREX_D_DECL(1.1,0.5,0.5)},
+            {AMREX_D_DECL(1.1,0.8,0.5)}};
 
         int direction =  2;
         Real height   = -1.0;  // Putting a negative number for height means it extends beyond the domain
@@ -193,19 +193,6 @@ int main (int argc, char* argv[])
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 6], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 7], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 8], false)};
-
-#if 0
-        Array<EB2::SphereIF,9> sphere{
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.8,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.3,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.6,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(0.7,0.9,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false),
-            EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false)};
-#endif
 
         switch(num_obstacles) {
 
@@ -394,6 +381,9 @@ int main (int argc, char* argv[])
         // dt_limit = min(dt_x, dt_y)
         Real dt_limit = std::min(dt_x, dt_y);
         time_step = 0.1 * dt_limit;
+
+        if (AMREX_SPACEDIM > 2)
+           vel[2].setVal(0.0);
 
         Real time = 0.0;
         for (int i = 0; i < max_steps; i++)

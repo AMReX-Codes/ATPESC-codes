@@ -1,35 +1,48 @@
-DEBUG = FALSE
-USE_MPI  = TRUE
-USE_OMP  = FALSE
+# ------------------------------------------------------------------------------
+# Makefile to build examples
+# ------------------------------------------------------------------------------
+# Note the following environment variables need to be set to in order to build:
+# AMREX_INSTALL_DIR = path to AMReX installation
+# MPICXX = mpicxx wrapper
+#
+# If any are unset, they assume the default values for compilation on Cooley
+# ------------------------------------------------------------------------------
 
-COMP = gnu
+# set default values for any unset environment variables
+ifeq ($(AMREX_INSTALL_DIR),)
+  AMREX_INSTALL_DIR = /projects/ATPESC2019/FASTMath/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/amrex-develop-fvkknjb363aqxpt6zu2tt6oojixnlnex
+endif
 
-DIM = 3
+# These will only apply if they are not set as environment variables
+AMREX_INSTALL_DIR ?= /PATH/TO/AMREXLIB
+HYPRE_DIR         ?= /PATH/TO/HYPRE
 
-AMREX_HOME ?= ../../..
+ifeq ($(MPICXX),)
+  MPICXX = mpicxx
+endif
 
-USE_EB = TRUE
+CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I. -I$(HYPRE_DIR)/include
+CXXFLAGS = -O2 -std=c++14
+FFLAGS = -O2
+LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(HYPRE_DIR)/lib -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib 
 
-USE_HYPRE = TRUE
-USE_HYPRE = FALSE
+LIBRARIES = -lamrex -lHYPRE
 
-include $(AMREX_HOME)/Tools/GNUMake/Make.defs
+LIBRARIES += -lgfortran
 
-include ./Make.package
+main.exe: main.cpp MyParticleContainer.cpp
+	$(MPICXX) -o $@ $(CXXFLAGS) $(CPPFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-Pdirs := AmrCore 
-Pdirs += Base 
-Pdirs += Boundary 
-Pdirs += EB
-Pdirs += LinearSolvers/MLMG
-Pdirs += Particle
-
-Ppack	+= $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
-
-include $(Ppack)
-
-include $(AMREX_HOME)/Tools/GNUMake/Make.rules
+.PHONY: movie clean realclean pltclean
 
 movie:
-	./plot.py
-	ffmpeg -framerate 20 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 macproj.gif
+	ls -1 plt*/Header | tee movie.visit
+
+clean:
+	$(RM) *.o
+
+realclean: clean
+	$(RM) *~ *.exe
+
+pltclean:
+	$(RM) -rf plt*/ *.png *_diagnostics.txt __pycache__

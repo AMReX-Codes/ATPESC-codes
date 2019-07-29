@@ -1,34 +1,50 @@
-
-USE_MPI  = TRUE
-USE_OMP  = FALSE
-
-COMP = gnu
+# ------------------------------------------------------------------------------
+# Makefile to build examples
+# ------------------------------------------------------------------------------
+# Note the following environment variables need to be set to in order to build:
+# AMREX_INSTALL_DIR = path to AMReX installation
+# MPICXX = mpicxx wrapper
+#
+# If any are unset, they assume the default values for compilation on Cooley
+# ------------------------------------------------------------------------------
 
 DIM = 2
-#DIM = 3
 
-DEBUG = FALSE
+# set default values for any unset environment variables
+ifeq ($(AMREX_INSTALL_DIR),)
+  AMREX_INSTALL_DIR = /projects/ATPESC2019/FASTMath/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/amrex-develop-fvkknjb363aqxpt6zu2tt6oojixnlnex
+endif
 
-AMREX_HOME ?= ../../..
+# These will only apply if they are not set as environment variables
+AMREX_INSTALL_DIR ?= /PATH/TO/AMREXLIB
+HYPRE_DIR         ?= /PATH/TO/HYPRE
 
-USE_EB = TRUE
+ifeq ($(MPICXX),)
+  MPICXX = mpicxx
+endif
 
-include $(AMREX_HOME)/Tools/GNUMake/Make.defs
+CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I. -I$(HYPRE_DIR)/include
+CXXFLAGS = -O2 -std=c++14
+FFLAGS = -O2
+LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(HYPRE_DIR)/lib -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib 
 
-include ./Make.package
+LIBRARIES = -lamrex -lHYPRE
 
-Pdirs := AmrCore 
-Pdirs += Base 
-Pdirs += Boundary 
-Pdirs += EB
-Pdirs += Particle
+LIBRARIES += -lgfortran
 
-Ppack	+= $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
+main$(DIM)d.exe: main.cpp MyParticleContainer.cpp
+	$(MPICXX) -o $@ $(CXXFLAGS) $(CPPFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-include $(Ppack)
-
-include $(AMREX_HOME)/Tools/GNUMake/Make.rules
+.PHONY: movie clean realclean pltclean
 
 movie:
-	./plot.py
-	ffmpeg -framerate 10 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 pachinko.gif
+	ls -1 plt*/Header | tee movie.visit
+
+clean:
+	$(RM) *.o
+
+realclean: clean
+	$(RM) *~ *.exe
+
+pltclean:
+	$(RM) -rf plt*/ *.png *_diagnostics.txt __pycache__
