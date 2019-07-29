@@ -32,7 +32,7 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
                                   geom, 0.0, 0);
 #endif
 
-    pc.Checkpoint(plotfile_name, "Tracer", true); //Write Tracers to plotfile
+    pc.Checkpoint(plotfile_name, "particles", true); //Write Tracer particles to plotfile
 
     std::stringstream pstream;
     pstream << "part" << std::setw(5) << std::setfill('0') << step_counter;
@@ -63,7 +63,10 @@ int main (int argc, char* argv[])
         int use_hypre  = 0;
         Real time_step = 0.01;
 
-        amrex::Vector<int> obstacles;
+        Real obstacle_radius = 0.10;
+        Real particle_radius = 0.02;
+
+        amrex::Vector<int> ob_id;
 
         // read parameters
         {
@@ -80,8 +83,10 @@ int main (int argc, char* argv[])
             pp.query("write_ascii", write_ascii);
             pp.query("time_step", time_step);
 
-            pp.queryarr("obstacles", obstacles);
+            pp.queryarr("obstacles", ob_id);
 
+            pp.query("obstacle_radius", obstacle_radius);
+            pp.query("particle_radius", particle_radius);
         }
 
 #ifndef AMREX_USE_HYPRE
@@ -89,10 +94,14 @@ int main (int argc, char* argv[])
            amrex::Abort("Cant use hypre if we dont build with USE_HYPRE=TRUE");
 #endif
 
+        if (n_cell%16 != 0)
+           amrex::Abort("n_cell must be a multiple of 16");
+
         int n_cell_x = 2*n_cell;
+        int n_cell_z = 16;
         int num_obstacles;
 
-        if (obstacles.empty())
+        if (ob_id.empty())
         {
            amrex::Print() << " **************************************************** "     << std::endl;
            amrex::Print() << " You didn't specify any obstacles -- please try again " << std::endl;
@@ -101,7 +110,7 @@ int main (int argc, char* argv[])
 
         } else {
 
-           num_obstacles = obstacles.size();
+           num_obstacles = ob_id.size();
 
            if (num_obstacles > 9)
            {
@@ -113,7 +122,7 @@ int main (int argc, char* argv[])
            } 
 
            for (int i = 0; i < num_obstacles; i++) 
-              if (obstacles[i] < 0 || obstacles[i] > 8)
+              if (ob_id[i] < 0 || ob_id[i] > 8)
               {
                  amrex::Print() << " **************************************************** "     << std::endl;
                  amrex::Print() << " The obstacles must be identified using integers from 0 through 8 (inclusive) " << std::endl;
@@ -125,7 +134,7 @@ int main (int argc, char* argv[])
            amrex::Print() << " \n********************************************************************" << std::endl; 
            amrex::Print() << " You specified " << num_obstacles << " objects in the domain: ";
               for (int i = 0; i < num_obstacles; i++) 
-                  amrex::Print() << obstacles[i] << " ";
+                  amrex::Print() << ob_id[i] << " ";
              amrex::Print() << std::endl;
            amrex::Print() << " ********************************************************************" << std::endl; 
         } 
@@ -134,11 +143,14 @@ int main (int argc, char* argv[])
         BoxArray grids;
         DistributionMapping dmap;
         {
-            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.,1.,1.)});
+            int factor = n_cell / 8;
+            Real zlength = 1./factor; 
+            std::cout << "ZLEN " << zlength << std::endl;
+            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.,1.,zlength)});
             Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
-                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell-1,n_cell-1)});
+                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell-1,n_cell_z-1)});
             geom.define(domain);
 
             grids.define(domain);
@@ -153,9 +165,36 @@ int main (int argc, char* argv[])
 
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
+
+        amrex::Vector<amrex::RealArray> obstacle_center = {
+            {AMREX_D_DECL(0.3,0.2,0.5)},
+            {AMREX_D_DECL(0.3,0.5,0.5)},
+            {AMREX_D_DECL(0.3,0.8,0.5)},
+            {AMREX_D_DECL(0.7,0.3,0.5)},
+            {AMREX_D_DECL(0.7,0.6,0.5)},
+            {AMREX_D_DECL(0.7,0.9,0.5)},
+            {AMREX_D_DECL(1.1,0.2,0.5)},
+            {AMREX_D_DECL(1.1,1.5,0.5)},
+            {AMREX_D_DECL(1.1,1.8,0.5)}};
+
+        int direction =  2;
+        Real height   = -1.0;  // Putting a negative number for height means it extends beyond the domain
+
         // The "false" below is the boolean that determines if the fluid is inside ("true") or 
         //     outside ("false") the object(s)
 
+        Array<EB2::CylinderIF,9> obstacles{
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 0], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 1], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 2], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 3], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 4], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 5], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 6], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 7], false),
+            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 8], false)};
+
+#if 0
         Array<EB2::SphereIF,9> sphere{
             EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.2,0.5)}, false),
             EB2::SphereIF(0.1, {AMREX_D_DECL(0.3,0.5,0.5)}, false),
@@ -166,20 +205,21 @@ int main (int argc, char* argv[])
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.2,0.5)}, false),
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.5,0.5)}, false),
             EB2::SphereIF(0.1, {AMREX_D_DECL(1.1,0.8,0.5)}, false)};
+#endif
 
         switch(num_obstacles) {
 
            case 1:
               {
-              auto gshop1 = EB2::makeShop(sphere[obstacles[0]]);
+              auto gshop1 = EB2::makeShop(obstacles[ob_id[0]]);
               EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
               break;
               }
 
            case 2:
               {
-              amrex::Print() << "Objects " << obstacles[0] << " " << obstacles[1] << std::endl;
-              auto all2 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]]);
+              amrex::Print() << "Objects " << ob_id[0] << " " << ob_id[1] << std::endl;
+              auto all2 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]]);
               auto gshop2  = EB2::makeShop(all2);
               EB2::Build(gshop2, geom, required_coarsening_level, max_coarsening_level);
               break;
@@ -187,7 +227,7 @@ int main (int argc, char* argv[])
 
            case 3:
               {
-              auto all3 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
+              auto all3 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
               auto gshop3  = EB2::makeShop(all3);
               EB2::Build(gshop3, geom, required_coarsening_level, max_coarsening_level);
               break;
@@ -195,8 +235,8 @@ int main (int argc, char* argv[])
 
            case 4:
               {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto all     = EB2::makeUnion(group_1,sphere[obstacles[3]]);
+              auto group_1 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
+              auto all     = EB2::makeUnion(group_1,obstacles[ob_id[3]]);
               auto gshop4  = EB2::makeShop(all);
               EB2::Build(gshop4, geom, required_coarsening_level, max_coarsening_level);
               break;
@@ -204,8 +244,8 @@ int main (int argc, char* argv[])
 
            case 5:
               {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]]);
+              auto group_1 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
+              auto group_2 = EB2::makeUnion(obstacles[ob_id[3]],obstacles[ob_id[4]]);
               auto all     = EB2::makeUnion(group_1,group_2);
               auto gshop5  = EB2::makeShop(all);
               EB2::Build(gshop5, geom, required_coarsening_level, max_coarsening_level);
@@ -214,8 +254,8 @@ int main (int argc, char* argv[])
 
            case 6:
               {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
+              auto group_1 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
+              auto group_2 = EB2::makeUnion(obstacles[ob_id[3]],obstacles[ob_id[4]],obstacles[ob_id[5]]);
               auto all     = EB2::makeUnion(group_1,group_2);
               auto gshop6  = EB2::makeShop(all);
               EB2::Build(gshop6, geom, required_coarsening_level, max_coarsening_level);
@@ -224,9 +264,9 @@ int main (int argc, char* argv[])
 
            case 7:
               {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = sphere[obstacles[6]];
+              auto group_1 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
+              auto group_2 = EB2::makeUnion(obstacles[ob_id[3]],obstacles[ob_id[4]],obstacles[ob_id[5]]);
+              auto group_3 = obstacles[ob_id[6]];
               auto all     = EB2::makeUnion(group_1,group_2,group_3);
               auto gshop7  = EB2::makeShop(all);
               EB2::Build(gshop7, geom, required_coarsening_level, max_coarsening_level);
@@ -235,9 +275,9 @@ int main (int argc, char* argv[])
 
            case 8:
               {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]]);
+              auto group_1 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
+              auto group_2 = EB2::makeUnion(obstacles[ob_id[3]],obstacles[ob_id[4]],obstacles[ob_id[5]]);
+              auto group_3 = EB2::makeUnion(obstacles[ob_id[6]],obstacles[ob_id[7]]);
               auto all     = EB2::makeUnion(group_1,group_2,group_3);
               auto gshop8  = EB2::makeShop(all);
               EB2::Build(gshop8, geom, required_coarsening_level, max_coarsening_level);
@@ -246,9 +286,9 @@ int main (int argc, char* argv[])
 
            case 9:
               {
-              auto group_1 = EB2::makeUnion(sphere[obstacles[0]],sphere[obstacles[1]],sphere[obstacles[2]]);
-              auto group_2 = EB2::makeUnion(sphere[obstacles[3]],sphere[obstacles[4]],sphere[obstacles[5]]);
-              auto group_3 = EB2::makeUnion(sphere[obstacles[6]],sphere[obstacles[7]],sphere[obstacles[8]]);
+              auto group_1 = EB2::makeUnion(obstacles[ob_id[0]],obstacles[ob_id[1]],obstacles[ob_id[2]]);
+              auto group_2 = EB2::makeUnion(obstacles[ob_id[3]],obstacles[ob_id[4]],obstacles[ob_id[5]]);
+              auto group_3 = EB2::makeUnion(obstacles[ob_id[6]],obstacles[ob_id[7]],obstacles[ob_id[8]]);
               auto all     = EB2::makeUnion(group_1,group_2,group_3);
               auto gshop9  = EB2::makeShop(all);
               EB2::Build(gshop9, geom, required_coarsening_level, max_coarsening_level);
