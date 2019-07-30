@@ -8,7 +8,7 @@
 # If any are unset, they assume the default values for compilation on Cooley
 # ------------------------------------------------------------------------------
 
-DIM = 2
+DIM = 3
 
 # set default values for any unset environment variables
 ifeq ($(AMREX_INSTALL_DIR),)

@@ -132,18 +132,18 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
             }
 
             // Bounce off left wall
-            if (p.pos(0) < prob_lo[0]) 
+            if (p.pos(0) < (prob_lo[0]+prad)) 
             {
-               p.pos(0) = 2.0*prob_lo[0] - p.pos(0);
+               p.pos(0) = 2.0*(prob_lo[0]+prad) - p.pos(0);
                p.rdata(PIdx::vx) = -p.rdata(PIdx::vx);
                p.rdata(PIdx::vx) *= restitution_coeff;
                p.rdata(PIdx::vy) *= restitution_coeff;
             }
 
             // Bounce off right wall
-            if (p.pos(0) > prob_hi[0]) 
+            if (p.pos(0) > (prob_hi[0]-prad)) 
             {
-               p.pos(0) = 2.0*prob_hi[0] - p.pos(0);
+               p.pos(0) = 2.0*(prob_hi[0]-prad) - p.pos(0);
                p.rdata(PIdx::vx) = -0.9*p.rdata(PIdx::vx);
                p.rdata(PIdx::vx) *= restitution_coeff;
                p.rdata(PIdx::vy) *= restitution_coeff;
