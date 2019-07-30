@@ -30,7 +30,7 @@ public:
 
     ~MyParticleContainer () {};
 
-    void InitPachinko (std::string initial_tracer_file);
+    void InitPachinko (std::string initial_particle_file);
 
     void AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& obstacle_center,
                          Real obstacle_radius, Real particle_radius); 

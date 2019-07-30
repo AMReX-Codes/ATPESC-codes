@@ -1,4 +1,4 @@
-#This will create a tracer particle input file based on the number
+#This will create a particle input file based on the number
 #of particles in each direction (NX,NY,NZ) and the physical domain
 #boundaries (dimx,dimy,dimz). Amrex can then read this file in with
 #the function TracerParticleContainer::InitFromAsciiFile()
@@ -14,7 +14,7 @@ dimy = [0,1]
 dx = (dimx[1] - dimx[0]) / NX 
 dy = (dimy[1] - dimy[0]) / NY 
 
-f = open("tracers_file_3d", "w")
+f = open("initial_particles_3d", "w")
 
 z_loc = 0.5
 

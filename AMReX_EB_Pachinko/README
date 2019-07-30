@@ -12,17 +12,13 @@ In this example we freeze the obstacles but can change the initial particle loca
 
 To run it in serial, 
 
-./main2d.ex inputs_2d
-or
 ./main3d.ex inputs_3d
 
 To run it in parallel, for example on 4 ranks:
 
-mpirun -n 4 ./main2d.ex inputs_2d
-or
 mpirun -n 4 ./main3d.ex inputs_3d
 
-The following parameters can be set at run-time -- these are currently set in the inputs_2d
+The following parameters can be set at run-time -- these are currently set in the inputs_3d
 file but you can also set them on the command line.  In this specific example we use only 4
 cells in the z-direction (if in 3-d) regardless of n_cell.
 
@@ -32,7 +28,7 @@ max_grid_size = 25                       # the maximum number of cells in any di
 
 plot_int = 10                            # frequency of writing plotfiles
 
-initial_tracer_file = tracers_file_2d    # name of file where we specify the input positions of the particles
+particle_file = initial_particles_3d     # name of file where we specify the input positions of the particles
 
 time_step = 0.001                        # we take a fixed time step of this size
 
@@ -42,7 +38,7 @@ max_steps = 100000                       # the maximum number of steps (if max_s
 
 For example, 
 ```
-mpirun -n 4 ./main2d.ex inputs_2d initial_tracer_file=my_file
+mpirun -n 4 ./main3d.ex inputs_3d particle_file=my_file
 ```
 
 will read the particles from a file called "my_file"

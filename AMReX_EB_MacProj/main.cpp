@@ -55,7 +55,7 @@ int main (int argc, char* argv[])
         int cg_verbose = 0;
         int n_cell = 128;
         int max_grid_size = 32;
-        std::string initial_tracer_file = "";
+        std::string particle_file = "";
         Real max_time = 1.0;
         int max_steps = 100;
         int plot_int  = 1;
@@ -75,7 +75,7 @@ int main (int argc, char* argv[])
             pp.query("cg_verbose", cg_verbose);
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
-            pp.query("initial_tracer_file", initial_tracer_file);
+            pp.query("particle_file", particle_file);
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
@@ -312,7 +312,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitFromAsciiFile(initial_tracer_file, 0);
+        MyPC.InitFromAsciiFile(particle_file, 0);
 
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,

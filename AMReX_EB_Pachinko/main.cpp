@@ -16,7 +16,7 @@
 using namespace amrex;
 
 void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto& pc,
-                    const int ascii_tracer_output)
+                    const int ascii_particle_output)
 {
    std::stringstream sstream;
    sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
@@ -26,11 +26,11 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
                                 { "proc" },
                                   geom, 0.0, 0);
 
-   if (ascii_tracer_output)
+   if (ascii_particle_output)
    {
-      sstream << "_tracers";
-      const std::string tracerfile_name = sstream.str();
-      pc.WriteAsciiFile(tracerfile_name);
+      sstream << "_particles";
+      const std::string particlefile_name = sstream.str();
+      pc.WriteAsciiFile(particlefile_name);
    }
    pc.Checkpoint(plotfile_name, "particles", true); // Write particles to plotfile
 }
@@ -47,12 +47,12 @@ int main (int argc, char* argv[])
         int verbose = 0;
         int n_cell = 128;
         int max_grid_size = 32;
-        std::string initial_tracer_file = "";
+        std::string particle_file = "";
         Real max_time = 1.0;
         int max_steps = 100;
         int plot_int  = 1;
         Real time_step = 0.01;
-        int ascii_tracer_output = 0;
+        int ascii_particle_output = 0;
 
         Real obstacle_radius = 0.10;
         Real particle_radius = 0.02;
@@ -63,12 +63,12 @@ int main (int argc, char* argv[])
             pp.query("verbose", verbose);
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
-            pp.query("initial_tracer_file", initial_tracer_file);
+            pp.query("particle_file", particle_file);
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
             pp.query("time_step", time_step);
-            pp.query("ascii_tracer_output", ascii_tracer_output);
+            pp.query("ascii_particle_output", ascii_particle_output);
 
             pp.query("obstacle_radius", obstacle_radius);
             pp.query("particle_radius", particle_radius);
@@ -160,7 +160,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitPachinko(initial_tracer_file);
+        MyPC.InitPachinko(initial_particle_file);
 
         // Store processor id in the plotfile
         plotfile_mf.define(grids, dmap, 1, 0, MFInfo(), factory);
@@ -195,7 +195,7 @@ int main (int argc, char* argv[])
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
-                   write_plotfile(i, geom, plotfile_mf, MyPC, ascii_tracer_output);
+                   write_plotfile(i, geom, plotfile_mf, MyPC, ascii_particle_output);
 
                 if (i%10 == 0)
                    amrex::Print() << ".";

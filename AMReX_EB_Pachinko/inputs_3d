@@ -3,7 +3,7 @@ max_grid_size = 25                       # the maximum number of cells in any di
 
 plot_int = 10                            # frequency of writing plotfiles
 
-initial_tracer_file = tracers_file_3d    # name of file where we specify the input positions of the particles
+particle_file = initial_particles_3d     # name of file where we specify the initial positions of the particles
 
 time_step = 0.001                        # we take a fixed time step of this size
 

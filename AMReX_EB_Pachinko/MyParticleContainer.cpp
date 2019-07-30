@@ -4,11 +4,11 @@
 namespace amrex {
 
 void 
-MyParticleContainer::InitPachinko (std::string initial_tracer_file)
+MyParticleContainer::InitPachinko (std::string initial_particle_file)
 {
     BL_PROFILE("MyParticleContainer::InitPachinko()");
 
-    InitFromAsciiFile(initial_tracer_file,0);
+    InitFromAsciiFile(initial_particle_file,0);
 
     int lev = 0;
     auto& pmap = GetParticles(lev);
