@@ -160,7 +160,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitPachinko(initial_particle_file);
+        MyPC.InitPachinko(particle_file);
 
         // Store processor id in the plotfile
         plotfile_mf.define(grids, dmap, 1, 0, MFInfo(), factory);
