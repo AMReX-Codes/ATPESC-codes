@@ -27,7 +27,7 @@ public:
 public: // make these public for cuda
     void initProbPoisson ();
     void initProbABecLaplacian ();
-    void get_number_bcs(int& num_local_bcs, int& num_global_bcs);
+    void get_number_bcs(int& num_lower, int& num_left, int& num_upper, int& num_global_bcs);
 
 private:
 
@@ -36,7 +36,7 @@ private:
     void solvePoisson ();
     void solveABecLaplacian ();
 
-    int get_number_local_bcs();
+    void get_number_local_bcs(int& num_lower, int& num_left, int& num_upper);
 
     int max_level = 1;
     int ref_ratio = 2;

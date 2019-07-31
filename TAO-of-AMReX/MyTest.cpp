@@ -25,63 +25,65 @@ void MyTest::solve()
 }
 
 
-void MyTest::get_number_bcs(int& num_local_bcs, int& num_global_bcs)
+void MyTest::get_number_bcs(int& num_lower, int& num_left, int& num_upper, int& num_global_bcs)
 {
-    int local_bcs = get_number_local_bcs();
-    int global_bcs = local_bcs;
-    
-    ParallelDescriptor::ReduceIntSum(&global_bcs);
-    
-    num_local_bcs = local_bcs;
-    num_global_bcs = global_bcs;
+    get_number_local_bcs(num_lower, num_left, num_upper);
+
+    const DomainBox& domain_bx = geom.Domain();
+    const auto domain_lo = lbound(domain_bx);
+    const auto domain_hi = ubound(domain_bx);
+
+    num_global_bcs = 2 * (domain_hi.x - domain_lo.x + 1); // lower, upper edges
+    num_global_bcs += domain_hi.y - domain_lo.y + 1; // left edge
+    num_global_bcs += 2; // left/lower and left/upper corners
 }
 
-int MyTest::get_number_local_bcs()
+void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
 {
     // Get number of boundary values local to this MPI rank
     const DomainBox& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    int number_boundary_values = 0;
+    num_lower = 0;
+    num_left = 0;
+    num_upper = 0;
     
     for (MFIter mfi(solution); mfi.isValid(); ++mfi)
-    {
-      const Box& bx = mfi.validbox();
-      bx_lo = lbound(bx);
-      bx_hi = ubound(bx);
+        {
+            const Box& bx = mfi.validbox();
+            bx_lo = lbound(bx);
+            bx_hi = ubound(bx);
 
-      bool aligned_lower = false;
-      bool aligned_left  = false;
-      bool aligned_upper = false;
+            bool aligned_lower = false;
+            bool aligned_left  = false;
+            bool aligned_upper = false;
       
-      // check lower boundary
-      if (bx_lo.y == domain_lo.y) {
-        aligned_lower = true;
-        number_boundary_values += (bx_hi.x - bx_lo.x + 1);
-      }
+            // check lower boundary
+            if (bx_lo.y == domain_lo.y) {
+                aligned_lower = true;
+                num_lower += (bx_hi.x - bx_lo.x + 1);
+            }
 
-      // check left boundary
-      if (bx_lo.x == domain_lo.x) {
-        aligned_left = true;
-        number_boundary_values += (bx_hi.y - bx_lo.y + 1);
-      }
+            // check left boundary
+            if (bx_lo.x == domain_lo.x) {
+                aligned_left = true;
+                num_left += (bx_hi.y - bx_lo.y + 1);
+            }
 
-      // check upper boundary
-      if (bx_hi.y == domain_hi.y) {
-        aligned_upper = true;
-        number_boundary_values += (bx_hi.x - bx_lo.x + 1);
-      }
+            // check upper boundary
+            if (bx_hi.y == domain_hi.y) {
+                aligned_upper = true;
+                num_upper += (bx_hi.x - bx_lo.x + 1);
+            }
 
-      // avoid double counting corners
-      if (aligned_left && aligned_lower)
-        number_boundary_values--;
+            // avoid double counting corners
+            if (aligned_left && aligned_lower)
+                num_left--;
 
-      if (aligned_left && aligned_upper)
-        number_boundary_values--;
-    }
-
-    return number_boundary_values;
+            if (aligned_left && aligned_upper)
+                num_left--;
+        }
 }
 
 
