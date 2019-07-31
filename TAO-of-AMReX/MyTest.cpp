@@ -4,6 +4,7 @@
 #include <AMReX_MLPoisson.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_MultiFabUtil.H>
+#include <AMReX_ParallelDescriptor.H>
 
 using namespace amrex;
 
@@ -22,6 +23,67 @@ void MyTest::solve()
 {
     solvePoisson(solution, rhs);
 }
+
+
+void MyTest::get_number_bcs(int& num_local_bcs, int& num_global_bcs)
+{
+    int local_bcs = get_number_local_bcs();
+    int global_bcs = local_bcs;
+    
+    ParallelDescriptor::ReduceIntSum(&global_bcs);
+    
+    num_local_bcs = local_bcs;
+    num_global_bcs = global_bcs;
+}
+
+int MyTest::get_number_local_bcs()
+{
+    // Get number of boundary values local to this MPI rank
+    const DomainBox& domain_bx = geom.Domain();
+    const auto domain_lo = lbound(domain_bx);
+    const auto domain_hi = ubound(domain_bx);
+
+    int number_boundary_values = 0;
+    
+    for (MFIter mfi(solution); mfi.isValid(); ++mfi)
+    {
+      const Box& bx = mfi.validbox();
+      bx_lo = lbound(bx);
+      bx_hi = ubound(bx);
+
+      bool aligned_lower = false;
+      bool aligned_left  = false;
+      bool aligned_upper = false;
+      
+      // check lower boundary
+      if (bx_lo.y == domain_lo.y) {
+        aligned_lower = true;
+        number_boundary_values += (bx_hi.x - bx_lo.x + 1);
+      }
+
+      // check left boundary
+      if (bx_lo.x == domain_lo.x) {
+        aligned_left = true;
+        number_boundary_values += (bx_hi.y - bx_lo.y + 1);
+      }
+
+      // check upper boundary
+      if (bx_hi.y == domain_hi.y) {
+        aligned_upper = true;
+        number_boundary_values += (bx_hi.x - bx_lo.x + 1);
+      }
+
+      // avoid double counting corners
+      if (aligned_left && aligned_lower)
+        number_boundary_values--;
+
+      if (aligned_left && aligned_upper)
+        number_boundary_values--;
+    }
+
+    return number_boundary_values;
+}
+
 
 void MyTest::update_boundary_values(int nb, Real *xb,
                                     int nl, Real *xl,
