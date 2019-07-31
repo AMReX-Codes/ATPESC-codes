@@ -36,6 +36,8 @@ int main (int argc, char* argv[])
     ierr = VecCreateNest(PETSC_COMM_WORLD, 3, NULL, Plist, &P);CHKERRQ(ierr);
     ierr = VecSet(P, zero); CHKERRQ(ierr);
 
+    mytest.set_target_solution(TargetSolution);
+
     ierr = TaoCreate(PETSC_COMM_WORLD, &tao); CHKERRQ(ierr);
     ierr = TaoSetType(tao, TAOBQNLS); CHKERRQ(ierr);
     ierr = TaoSetInitialVector(tao, P); CHKERRQ(ierr);
@@ -46,6 +48,17 @@ int main (int argc, char* argv[])
     ierr = PetscFinalize();
 
     amrex::Finalize();
+}
+
+/* -------------------------------------------------------------------- */
+
+amrex::Real TargetSolution(amrex::Real* coords)
+{
+    amrex::Real x = coords[0];
+    amrex::Real y = coords[1];
+    amrex::Real z = coords[2];
+    amrex::Real utarg = -y*y + 10.0;
+    return utarg;
 }
 
 /* -------------------------------------------------------------------- */
