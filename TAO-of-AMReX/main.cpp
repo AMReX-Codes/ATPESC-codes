@@ -57,7 +57,7 @@ amrex::Real TargetSolution(amrex::Real* coords)
     amrex::Real x = coords[0];
     amrex::Real y = coords[1];
     amrex::Real z = coords[2];
-    amrex::Real utarg = -y*y + 10.0;
+    amrex::Real utarg = 10.0 - (y*y);
     return utarg;
 }
 
