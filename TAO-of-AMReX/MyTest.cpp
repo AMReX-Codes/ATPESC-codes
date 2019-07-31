@@ -113,11 +113,30 @@ void MyTest::setup_adjoint_system()
     adjoint_rhs = 0.0;
 
     // for right boundary, adjoint_rhs(cell) = -dfdu = target solution(cell) - poisson solution(cell)
+    const DomainBox& domain_bx = geom.Domain();
+    const auto domain_lo = lbound(domain_bx);
+    const auto domain_hi = ubound(domain_bx);
 
-    // AMReX-ify this...
-    for cell:
-      if cell in right boundary:
-        adjoint_rhs(cell) = (target solution(cell) - poisson solution(cell)) * AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
+    const int lev = 0;
+
+    for (MFIter mfi(solution[lev]); mfi.isValid(); ++mfi) {
+        const Box& bx = mfi.validbox();
+        bx_lo = lbound(bx);
+        bx_hi = ubound(bx);
+
+        const auto sol_arr = solution[lev][mfi].array();
+        const auto exact_sol_arr = exact_solution[lev][mfi].array();
+        auto adj_arr = adjoint_rhs[lev][mfi].array();        
+
+        // check if we have part of the right boundary
+        if (bx_hi.x == domain_hi.x) {
+            const int i = bx_hi.x;
+            for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
+                adj_arr(i,j) = exact_sol_arr(i,j) - sol_arr(i,j);
+                adj_arr(i,j) *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
+            }
+        }
+    }    
 }
 
 void MyTest::solve_adjoint_system()
@@ -130,17 +149,71 @@ void MyTest::solve_adjoint_system()
 void MyTest::set_target_solution(Real (*ftarget)(Real* coords))
 {
     target_function = ftarget;
+
+    update_target_solution();
+}
+
+void MyTest::update_target_solution()
+{
+    const DomainBox& domain_bx = geom.Domain();
+    const auto domain_lo = lbound(domain_bx);
+    const auto domain_hi = ubound(domain_bx);
+
+    const int lev = 0;
+
+    for (MFIter mfi(exact_solution[lev]); mfi.isValid(); ++mfi) {
+        const Box& bx = mfi.validbox();
+        bx_lo = lbound(bx);
+        bx_hi = ubound(bx);
+
+        auto exact_sol_arr = exact_solution[lev][mfi].array();
+
+        for (int i = bx_lo.x; i <= bx_hi.x; ++i) {
+            for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
+                IntVect cell_indices;
+                AMREX_D_TERM(cell_indices[0] = i;, cell_indices[1] = j;, cell_indices[2] = k;)
+                Vector<Real> cell_location(AMREX_SPACEDIM);
+                geom[0].CellCenter(cell_indices, cell_location);
+                exact_sol_arr(i,j) = target_function(cell_location.dataPtr());
+            }
+        }
+    }
 }
 
 Real MyTest::calculate_obj_val()
 {
-    // Return the objective function
+    const DomainBox& domain_bx = geom.Domain();
+    const auto domain_lo = lbound(domain_bx);
+    const auto domain_hi = ubound(domain_bx);
 
-    // loop over right boundary w/o corners
+    Real fobj_local = 0.0;
 
-    // sum contributions to f from processors
+    const int lev = 0;
 
-    // communicate f to processors
+    for (MFIter mfi(solution[lev]); mfi.isValid(); ++mfi) {
+        const Box& bx = mfi.validbox();
+        bx_lo = lbound(bx);
+        bx_hi = ubound(bx);
+
+        const auto sol_arr = solution[lev][mfi].array();
+        const auto exact_sol_arr = exact_solution[lev][mfi].array();
+
+        // check if we have part of the right boundary
+        if (bx_hi.x == domain_hi.x) {
+            const int i = bx_hi.x;
+            // loop over right edge, excluding corners
+            for (int j = std::max(bx_lo.y, domain_lo.y+1); j <= std::min(bx_hi.y, domain_hi.y-1); ++j) {
+                fobj_local += 0.5 * std::pow(exact_sol_arr(i,j) - sol_arr(i,j), 2.0);
+            }
+        }
+    }
+
+    fobj_local *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
+
+    Real fobj_global = fobj_local;
+    ParallelDescriptor::ReduceRealSum(&fobj_global);
+
+    return fobj_global;
 }
 
 void MyTest::calculate_opt_gradient(Real* dfdp_tao)
