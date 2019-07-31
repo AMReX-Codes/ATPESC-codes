@@ -29,7 +29,7 @@ int main (int argc, char* argv[])
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
 
     mytest.get_number_local_bcs(&nb, &nl, &nt);
-    mytest.get_number_bcs(&Nb, &Nl, &Nt);
+    mytest.get_number_global_bcs(&Nb, &Nl, &Nt);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nb, Nb, &Plist[0]);CHKERRQ(ierr);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nl, Nl, &Plist[1]);CHKERRQ(ierr);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nt, Nt, &Plist[2]);CHKERRQ(ierr);

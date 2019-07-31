@@ -25,17 +25,18 @@ void MyTest::solve()
 }
 
 
-void MyTest::get_number_bcs(int& num_lower, int& num_left, int& num_upper, int& num_global_bcs)
+void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)
 {
-    get_number_local_bcs(num_lower, num_left, num_upper);
-
     const DomainBox& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    num_global_bcs = 2 * (domain_hi.x - domain_lo.x + 1); // lower, upper edges
-    num_global_bcs += domain_hi.y - domain_lo.y + 1; // left edge
-    num_global_bcs += 2; // left/lower and left/upper corners
+    num_lower = (domain_hi.x - domain_lo.x + 1); // lower, upper edges
+
+    num_upper = (domain_hi.x - domain_lo.x + 1); // lower, upper edges
+
+    num_left = domain_hi.y - domain_lo.y + 1; // left edge
+    num_left += 2; // left/lower and left/upper corners
 }
 
 void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
