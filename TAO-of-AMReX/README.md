@@ -6,7 +6,6 @@ modified from amrex/Tutorials/LinearSolvers/ABecLaplacian_C example
 TODO:
 - modify f so u_out is the right edge of the domain, not including corners
 - write function to give degrees of freedom for each processor, cell ordering for boundary
-- fill BC, Neumann along right edge
 
 - Alp to give u_target function defined in physical coordinates
 - Don to define u_target from the function

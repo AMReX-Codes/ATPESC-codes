@@ -79,6 +79,8 @@ private:
     amrex::Real bscalar = 1.0;
 
     amrex::Vector<amrex::Real> dfdp; // {dfdp_x_lo, dfdp_x_hi, dfdp_y_lo, dfdp_y_hi, ...}
+
+    amrex::Real (*target_function)(amrex::Real* physical_coordinates);
 };
 
 #endif

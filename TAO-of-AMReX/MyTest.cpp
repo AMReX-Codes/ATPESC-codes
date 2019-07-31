@@ -7,43 +7,50 @@
 
 using namespace amrex;
 
-namespace ExtTaoBC 
+namespace ExtTaoBC
 {
-    amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
+amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
 }
 
-MyTest::MyTest ()
+MyTest::MyTest()
 {
     readParameters();
     initData();
 }
 
-void
-MyTest::solve ()
+void MyTest::solve()
 {
     solvePoisson(solution, rhs);
 }
 
-void
-MyTest::update_boundary_values()
+void MyTest::update_boundary_values(int nb, Real *xb,
+                                    int nl, Real *xl,
+                                    int nt, Real *xt)
 {
-    // convert TAO bcs to ExtTaoBC::ext_dir_bcs
-    // TODO ...
+    ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].resize(nb)
+    ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].resize(nl)
+    ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].resize(nt)
+
+    // set local vectors to the Tao values TODO
 
     const int lev = 0;
     solution[lev].FillBoundary(geom[lev].periodicity());
     FillDomainBoundary(solution[lev], geom[lev], {bcs});
 }
 
-void
-MyTest::setup_adjoint_system()
+void MyTest::setup_adjoint_system()
 {
     // setup the (dR/du)^T * lambda = - \partial f/\partial u linear system
     // by evaluating \partial f/\partial u = \int_V (u(p) - u_t) dV
-    solution.minus(exact_solution, 0, 0, 1);
-    Real dfdu = solution.sum(0, 1);
-    dfdu *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
-    adjoint_rhs = -dfdu;
+
+    adjoint_rhs = 0.0;
+
+    // for right boundary, adjoint_rhs(cell) = -dfdu = target solution(cell) - poisson solution(cell)
+
+    // AMReX-ify this...
+    for cell:
+      if cell in right boundary:
+        adjoint_rhs(cell) = (target solution(cell) - poisson solution(cell)) * AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
 }
 
 void MyTest::solve_adjoint_system()
@@ -53,8 +60,28 @@ void MyTest::solve_adjoint_system()
     solvePoisson(adjoint, adjoint_rhs);
 }
 
-void MyTest::calculate_opt_gradient()
+void MyTest::set_target_solution(Real (*ftarget)(Real* coords))
 {
+    target_function = ftarget;
+}
+
+Real MyTest::calculate_obj_val()
+{
+    // Return the objective function
+
+    // loop over right boundary w/o corners
+
+    // sum contributions to f from processors
+
+    // communicate f to processors
+}
+
+void MyTest::calculate_opt_gradient(Real* dfdp_tao)
+{
+    // Update for cellwise BCs TODO
+    // Fill dfdp_tao TODO
+
+
     // calculate df/dp - \partial f/\partial p = (dR/dp)^T * lambda
 
     // iterate over the domain and reduce sum the contributions along the inner edges
@@ -62,145 +89,162 @@ void MyTest::calculate_opt_gradient()
     const auto prob_hi = geom[0].ProbHiArray();
 
     Real dfdp_x_lo = ReduceSum(adjoint, 0,
-    [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) -> Real
-    {
-        Real redval = 0.0;
+                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
+                                   Real redval = 0.0;
 
-        const Array4<Real> fabarray = fab.array();
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+                                   const Array4<Real> fabarray = fab.array();
+                                   const auto lo = lbound(bx);
+                                   const auto hi = ubound(bx);
 
-        for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-                for (int i = lo.x; i <= hi.x; ++i) {
-                    if (i == prob_lo[0]) redval += fabarray(i, j, k);
-                }
-            }
-        }
+                                   for (int k = lo.z; k <= hi.z; ++k)
+                                   {
+                                       for (int j = lo.y; j <= hi.y; ++j)
+                                       {
+                                           for (int i = lo.x; i <= hi.x; ++i)
+                                           {
+                                               if (i == prob_lo[0])
+                                                   redval += fabarray(i, j, k);
+                                           }
+                                       }
+                                   }
 
-        return redval;
-    });
+                                   return redval;
+                               });
 
     dfdp[0] = dfdp_x_lo;
 
     Real dfdp_x_hi = ReduceSum(adjoint, 0,
-    [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) -> Real
-    {
-        Real redval = 0.0;
+                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
+                                   Real redval = 0.0;
 
-        const Array4<Real> fabarray = fab.array();
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+                                   const Array4<Real> fabarray = fab.array();
+                                   const auto lo = lbound(bx);
+                                   const auto hi = ubound(bx);
 
-        for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-                for (int i = lo.x; i <= hi.x; ++i) {
-                    if (i == prob_hi[0]) redval += fabarray(i, j, k);
-                }
-            }
-        }
+                                   for (int k = lo.z; k <= hi.z; ++k)
+                                   {
+                                       for (int j = lo.y; j <= hi.y; ++j)
+                                       {
+                                           for (int i = lo.x; i <= hi.x; ++i)
+                                           {
+                                               if (i == prob_hi[0])
+                                                   redval += fabarray(i, j, k);
+                                           }
+                                       }
+                                   }
 
-        return redval;
-    });
+                                   return redval;
+                               });
 
     dfdp[1] = dfdp_x_hi;
 
 #if (AMREX_SPACEDIM >= 2)
     Real dfdp_y_lo = ReduceSum(adjoint, 0,
-    [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) -> Real
-    {
-        Real redval = 0.0;
+                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
+                                   Real redval = 0.0;
 
-        const Array4<Real> fabarray = fab.array();
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+                                   const Array4<Real> fabarray = fab.array();
+                                   const auto lo = lbound(bx);
+                                   const auto hi = ubound(bx);
 
-        for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-                for (int i = lo.x; i <= hi.x; ++i) {
-                    if (i == prob_lo[1]) redval += fabarray(i, j, k);
-                }
-            }
-        }
+                                   for (int k = lo.z; k <= hi.z; ++k)
+                                   {
+                                       for (int j = lo.y; j <= hi.y; ++j)
+                                       {
+                                           for (int i = lo.x; i <= hi.x; ++i)
+                                           {
+                                               if (i == prob_lo[1])
+                                                   redval += fabarray(i, j, k);
+                                           }
+                                       }
+                                   }
 
-        return redval;
-    });
+                                   return redval;
+                               });
 
     dfdp[2] = dfdp_y_lo;
 
     Real dfdp_y_hi = ReduceSum(adjoint, 0,
-    [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) -> Real
-    {
-        Real redval = 0.0;
+                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
+                                   Real redval = 0.0;
 
-        const Array4<Real> fabarray = fab.array();
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+                                   const Array4<Real> fabarray = fab.array();
+                                   const auto lo = lbound(bx);
+                                   const auto hi = ubound(bx);
 
-        for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-                for (int i = lo.x; i <= hi.x; ++i) {
-                    if (i == prob_hi[1]) redval += fabarray(i, j, k);
-                }
-            }
-        }
+                                   for (int k = lo.z; k <= hi.z; ++k)
+                                   {
+                                       for (int j = lo.y; j <= hi.y; ++j)
+                                       {
+                                           for (int i = lo.x; i <= hi.x; ++i)
+                                           {
+                                               if (i == prob_hi[1])
+                                                   redval += fabarray(i, j, k);
+                                           }
+                                       }
+                                   }
 
-        return redval;
-    });
+                                   return redval;
+                               });
 
     dfdp[3] = dfdp_y_hi;
 #endif
 
 #if (AMREX_SPACEDIM == 3)
     Real dfdp_z_lo = ReduceSum(adjoint, 0,
-    [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) -> Real
-    {
-        Real redval = 0.0;
+                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
+                                   Real redval = 0.0;
 
-        const Array4<Real> fabarray = fab.array();
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+                                   const Array4<Real> fabarray = fab.array();
+                                   const auto lo = lbound(bx);
+                                   const auto hi = ubound(bx);
 
-        for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-                for (int i = lo.x; i <= hi.x; ++i) {
-                    if (i == prob_lo[2]) redval += fabarray(i, j, k);
-                }
-            }
-        }
+                                   for (int k = lo.z; k <= hi.z; ++k)
+                                   {
+                                       for (int j = lo.y; j <= hi.y; ++j)
+                                       {
+                                           for (int i = lo.x; i <= hi.x; ++i)
+                                           {
+                                               if (i == prob_lo[2])
+                                                   redval += fabarray(i, j, k);
+                                           }
+                                       }
+                                   }
 
-        return redval;
-    });
+                                   return redval;
+                               });
 
     dfdp[4] = dfdp_z_lo;
 
     Real dfdp_z_hi = ReduceSum(adjoint, 0,
-    [=] AMREX_GPU_HOST_DEVICE (Box const& bx, FArrayBox const& fab) -> Real
-    {
-        Real redval = 0.0;
+                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
+                                   Real redval = 0.0;
 
-        const Array4<Real> fabarray = fab.array();
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+                                   const Array4<Real> fabarray = fab.array();
+                                   const auto lo = lbound(bx);
+                                   const auto hi = ubound(bx);
 
-        for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-                for (int i = lo.x; i <= hi.x; ++i) {
-                    if (i == prob_hi[2]) redval += fabarray(i, j, k);
-                }
-            }
-        }
+                                   for (int k = lo.z; k <= hi.z; ++k)
+                                   {
+                                       for (int j = lo.y; j <= hi.y; ++j)
+                                       {
+                                           for (int i = lo.x; i <= hi.x; ++i)
+                                           {
+                                               if (i == prob_hi[2])
+                                                   redval += fabarray(i, j, k);
+                                           }
+                                       }
+                                   }
 
-        return redval;
-    });
+                                   return redval;
+                               });
 
     dfdp[5] = dfdp_z_hi;
 #endif
 }
 
-void
-MyTest::solvePoisson (amrex::Vector<amrex::MultiFab>& solution,
-                      amrex::Vector<amrex::MultiFab>& rhs)
+void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
+                          amrex::Vector<amrex::MultiFab> &rhs)
 {
     LPInfo info;
     info.setAgglomeration(agglomeration);
@@ -238,13 +282,15 @@ MyTest::solvePoisson (amrex::Vector<amrex::MultiFab>& solution,
         mlmg.setVerbose(verbose);
         mlmg.setBottomVerbose(bottom_verbose);
 #ifdef AMREX_USE_HYPRE
-        if (use_hypre) {
+        if (use_hypre)
+        {
             mlmg.setBottomSolver(MLMG::BottomSolver::hypre);
             mlmg.setHypreInterface(hypre_interface);
         }
 #endif
 #ifdef AMREX_USE_PETSC
-        if (use_petsc) {
+        if (use_petsc)
+        {
             mlmg.setBottomSolver(MLMG::BottomSolver::petsc);
         }
 #endif
@@ -267,8 +313,9 @@ MyTest::solvePoisson (amrex::Vector<amrex::MultiFab>& solution,
                                                 LinOpBCType::Dirichlet,
                                                 LinOpBCType::Dirichlet)});
 
-            if (ilev > 0) {
-                mlpoisson.setCoarseFineBC(&solution[ilev-1], ref_ratio);
+            if (ilev > 0)
+            {
+                mlpoisson.setCoarseFineBC(&solution[ilev - 1], ref_ratio);
             }
 
             mlpoisson.setLevelBC(0, &solution[ilev]);
@@ -279,13 +326,15 @@ MyTest::solvePoisson (amrex::Vector<amrex::MultiFab>& solution,
             mlmg.setVerbose(verbose);
             mlmg.setBottomVerbose(bottom_verbose);
 #ifdef AMREX_USE_HYPRE
-            if (use_hypre) {
+            if (use_hypre)
+            {
                 mlmg.setBottomSolver(MLMG::BottomSolver::hypre);
                 mlmg.setHypreInterface(hypre_interface);
             }
 #endif
 #ifdef AMREX_USE_PETSC
-            if (use_petsc) {
+            if (use_petsc)
+            {
                 mlmg.setBottomSolver(MLMG::BottomSolver::petsc);
             }
 #endif
@@ -295,8 +344,7 @@ MyTest::solvePoisson (amrex::Vector<amrex::MultiFab>& solution,
     }
 }
 
-void
-MyTest::readParameters ()
+void MyTest::readParameters()
 {
     ParmParse pp;
     pp.query("max_level", max_level);
@@ -318,11 +366,16 @@ MyTest::readParameters ()
 #ifdef AMREX_USE_HYPRE
     pp.query("use_hypre", use_hypre);
     pp.query("hypre_interface", hypre_interface_i);
-    if (hypre_interface_i == 1) {
+    if (hypre_interface_i == 1)
+    {
         hypre_interface = Hypre::Interface::structed;
-    } else if (hypre_interface_i == 2) {
+    }
+    else if (hypre_interface_i == 2)
+    {
         hypre_interface = Hypre::Interface::semi_structed;
-    } else {
+    }
+    else
+    {
         hypre_interface = Hypre::Interface::ij;
     }
 #endif
@@ -333,8 +386,7 @@ MyTest::readParameters ()
                                      "use_hypre & use_petsc cannot be both true");
 }
 
-void
-MyTest::initData ()
+void MyTest::initData()
 {
     int nlevels = 1;
     geom.resize(nlevels);
@@ -345,10 +397,10 @@ MyTest::initData ()
     rhs.resize(nlevels);
     exact_solution.resize(nlevels);
 
-    RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.,1.,1.)});
-    Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)};
+    RealBox rb({AMREX_D_DECL(0., 0., 0.)}, {AMREX_D_DECL(1., 1., 1.)});
+    Array<int, AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0, 0, 0)};
     Geometry::Setup(&rb, 0, is_periodic.data());
-    Box domain0(IntVect{AMREX_D_DECL(0,0,0)}, IntVect{AMREX_D_DECL(n_cell-1,n_cell-1,n_cell-1)});
+    Box domain0(IntVect{AMREX_D_DECL(0, 0, 0)}, IntVect{AMREX_D_DECL(n_cell - 1, n_cell - 1, n_cell - 1)});
     Box domain = domain0;
     for (int ilev = 0; ilev < nlevels; ++ilev)
     {
@@ -361,15 +413,15 @@ MyTest::initData ()
     {
         grids[ilev].define(domain);
         grids[ilev].maxSize(max_grid_size);
-        domain.grow(-n_cell/4);   // fine level cover the middle of the coarse domain
+        domain.grow(-n_cell / 4); // fine level cover the middle of the coarse domain
         domain.refine(ref_ratio);
     }
 
     for (int ilev = 0; ilev < nlevels; ++ilev)
     {
         dmap[ilev].define(grids[ilev]);
-        solution      [ilev].define(grids[ilev], dmap[ilev], 1, 1);
-        rhs           [ilev].define(grids[ilev], dmap[ilev], 1, 0);
+        solution[ilev].define(grids[ilev], dmap[ilev], 1, 1);
+        rhs[ilev].define(grids[ilev], dmap[ilev], 1, 0);
         exact_solution[ilev].define(grids[ilev], dmap[ilev], 1, 0);
     }
 
@@ -385,9 +437,9 @@ MyTest::initData ()
     bcs.setHi(0, BCType::foextrap);
 
     ExtTaoBC::ext_dir_bcs.resize(3);
-    ExtTaoBC::ext_dir_bcs[0].resize(n_cell+2);
-    ExtTaoBC::ext_dir_bcs[1].resize(n_cell+2);
-    ExtTaoBC::ext_dir_bcs[2].resize(n_cell+2);
+    ExtTaoBC::ext_dir_bcs[0].resize(n_cell + 2);
+    ExtTaoBC::ext_dir_bcs[1].resize(n_cell + 2);
+    ExtTaoBC::ext_dir_bcs[2].resize(n_cell + 2);
 
     initProbPoisson();
 }
