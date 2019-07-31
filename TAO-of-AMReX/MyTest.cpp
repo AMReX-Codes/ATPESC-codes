@@ -31,7 +31,9 @@ void MyTest::update_boundary_values(int nb, Real *xb,
     ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].resize(nl)
     ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].resize(nt)
 
-    // set local vectors to the Tao values TODO
+    std::copy(xb, xb + nb, ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].begin());
+    std::copy(xl, xl + nl, ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].begin());
+    std::copy(xt, xt + nt, ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].begin());
 
     const int lev = 0;
     solution[lev].FillBoundary(geom[lev].periodicity());
