@@ -77,12 +77,12 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
                 num_upper += (bx_hi.x - bx_lo.x + 1);
             }
 
-            // avoid double counting corners
+            // add corners to left edge
             if (aligned_left && aligned_lower)
-                num_left--;
+                num_left++;
 
             if (aligned_left && aligned_upper)
-                num_left--;
+                num_left++;
         }
 }
 
