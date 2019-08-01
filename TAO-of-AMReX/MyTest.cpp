@@ -6,6 +6,7 @@
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_VisMF.H>
+#include <AMReX_BCUtil.H>
 
 using namespace amrex;
 
@@ -49,7 +50,7 @@ void MyTest::write_plotfile()
 }
 void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)
 {
-    const DomainBox& domain_bx = geom.Domain();
+    const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
@@ -64,7 +65,7 @@ void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper
 void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
 {
     // Get number of boundary values local to this MPI rank
-    const DomainBox& domain_bx = geom.Domain();
+    const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
@@ -75,8 +76,8 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
     for (MFIter mfi(solution); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.validbox();
-            bx_lo = lbound(bx);
-            bx_hi = ubound(bx);
+            const auto bx_lo = lbound(bx);
+            const auto bx_hi = ubound(bx);
 
             bool aligned_lower = false;
             bool aligned_left  = false;
@@ -110,13 +111,13 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
 }
 
 
-void MyTest::update_boundary_values(int nb, Real *xb,
-                                    int nl, Real *xl,
-                                    int nt, Real *xt)
+void MyTest::update_boundary_values(int nb, const Real *xb,
+                                    int nl, const Real *xl,
+                                    int nt, const Real *xt)
 {
-    ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].resize(nb)
-    ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].resize(nl)
-    ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].resize(nt)
+    ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].resize(nb);
+    ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].resize(nl);
+    ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].resize(nt);
 
     std::copy(xb, xb + nb, ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].begin());
     std::copy(xl, xl + nl, ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].begin());
@@ -134,7 +135,7 @@ void MyTest::setup_adjoint_system()
     adjoint_rhs = 0.0;
 
     // for right boundary, adjoint_rhs(cell) = -dfdu = target solution(cell) - poisson solution(cell)
-    const DomainBox& domain_bx = geom.Domain();
+    const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
@@ -142,8 +143,8 @@ void MyTest::setup_adjoint_system()
 
     for (MFIter mfi(solution); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
-        bx_lo = lbound(bx);
-        bx_hi = ubound(bx);
+        const auto bx_lo = lbound(bx);
+        const auto bx_hi = ubound(bx);
 
         const auto sol_arr = solution[mfi].array();
         const auto exact_sol_arr = exact_solution[mfi].array();
@@ -154,7 +155,7 @@ void MyTest::setup_adjoint_system()
             const int i = bx_hi.x;
             for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
                 adj_arr(i, j, k) = exact_sol_arr(i, j, k) - sol_arr(i, j, k);
-                adj_arr(i, j, k) *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
+                adj_arr(i, j, k) *= AMREX_D_TERM(geom.CellSize(0), *geom.CellSize(1), *geom.CellSize(2));
             }
         }
     }
@@ -176,7 +177,7 @@ void MyTest::set_target_solution(Real (*ftarget)(Real* coords))
 
 void MyTest::update_target_solution()
 {
-    const DomainBox& domain_bx = geom.Domain();
+    const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
@@ -184,8 +185,8 @@ void MyTest::update_target_solution()
 
     for (MFIter mfi(exact_solution); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
-        bx_lo = lbound(bx);
-        bx_hi = ubound(bx);
+        const auto bx_lo = lbound(bx);
+        const auto bx_hi = ubound(bx);
 
         auto exact_sol_arr = exact_solution[mfi].array();
 
@@ -194,7 +195,7 @@ void MyTest::update_target_solution()
                 IntVect cell_indices;
                 AMREX_D_TERM(cell_indices[0] = i;, cell_indices[1] = j;, cell_indices[2] = k;)
                 Vector<Real> cell_location(AMREX_SPACEDIM);
-                geom[0].CellCenter(cell_indices, cell_location);
+                geom.CellCenter(cell_indices, cell_location);
                 exact_sol_arr(i, j, k) = target_function(cell_location.dataPtr());
             }
         }
@@ -203,7 +204,7 @@ void MyTest::update_target_solution()
 
 Real MyTest::calculate_obj_val()
 {
-    const DomainBox& domain_bx = geom.Domain();
+    const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
@@ -213,8 +214,8 @@ Real MyTest::calculate_obj_val()
 
     for (MFIter mfi(solution); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
-        bx_lo = lbound(bx);
-        bx_hi = ubound(bx);
+        const auto bx_lo = lbound(bx);
+        const auto bx_hi = ubound(bx);
 
         const auto sol_arr = solution[mfi].array();
         const auto exact_sol_arr = exact_solution[mfi].array();
@@ -229,10 +230,10 @@ Real MyTest::calculate_obj_val()
         }
     }
 
-    fobj_local *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
+    fobj_local *= AMREX_D_TERM(geom.CellSize(0), *geom.CellSize(1), *geom.CellSize(2));
 
     Real fobj_global = fobj_local;
-    ParallelDescriptor::ReduceRealSum(&fobj_global);
+    ParallelDescriptor::ReduceRealSum(fobj_global);
 
     return fobj_global;
 }
@@ -242,7 +243,7 @@ void MyTest::calculate_opt_gradient(int nlower, Real* glower,
                                     int nupper, Real* gupper)
 {
     // calculate df/dp - \partial f/\partial p = (dR/dp)^T * lambda
-    const DomainBox& domain_bx = geom.Domain();
+    const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
@@ -260,8 +261,8 @@ void MyTest::calculate_opt_gradient(int nlower, Real* glower,
     for (MFIter mfi(adjoint); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.validbox();
-            bx_lo = lbound(bx);
-            bx_hi = ubound(bx);
+            const auto bx_lo = lbound(bx);
+            const auto bx_hi = ubound(bx);
 
             bool aligned_lower = false;
             bool aligned_left  = false;
@@ -316,8 +317,8 @@ void MyTest::calculate_opt_gradient(int nlower, Real* glower,
         }
 }
 
-void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
-                          amrex::Vector<amrex::MultiFab> &rhs)
+void MyTest::solvePoisson(amrex::MultiFab &solution,
+                          amrex::MultiFab &rhs)
 {
     LPInfo info;
     info.setAgglomeration(agglomeration);
@@ -365,7 +366,7 @@ void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
         }
 #endif
 
-        mlmg.solve(GetVecOfPtrs({solution}), GetVecOfConstPtrs({rhs}), tol_rel, tol_abs);
+        mlmg.solve({&solution}, {&rhs}, tol_rel, tol_abs);
     }
     else
     {
@@ -451,41 +452,20 @@ void MyTest::readParameters()
 void MyTest::initData()
 {
     int nlevels = 1;
-    geom.resize(nlevels);
-    grids.resize(nlevels);
-    dmap.resize(nlevels);
-
-    solution.resize(nlevels);
-    rhs.resize(nlevels);
-    exact_solution.resize(nlevels);
 
     RealBox rb({AMREX_D_DECL(0., 0., 0.)}, {AMREX_D_DECL(1., 1., 1.)});
     Array<int, AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0, 0, 0)};
     Geometry::Setup(&rb, 0, is_periodic.data());
     Box domain0(IntVect{AMREX_D_DECL(0, 0, 0)}, IntVect{AMREX_D_DECL(n_cell - 1, n_cell - 1, n_cell - 1)});
     Box domain = domain0;
-    for (int ilev = 0; ilev < nlevels; ++ilev)
-    {
-        geom[ilev].define(domain);
-        domain.refine(ref_ratio);
-    }
+    geom.define(domain);
 
-    domain = domain0;
-    for (int ilev = 0; ilev < nlevels; ++ilev)
-    {
-        grids[ilev].define(domain);
-        grids[ilev].maxSize(max_grid_size);
-        domain.grow(-n_cell / 4); // fine level cover the middle of the coarse domain
-        domain.refine(ref_ratio);
-    }
-
-    for (int ilev = 0; ilev < nlevels; ++ilev)
-    {
-        dmap[ilev].define(grids[ilev]);
-        solution[ilev].define(grids[ilev], dmap[ilev], 1, 1);
-        rhs[ilev].define(grids[ilev], dmap[ilev], 1, 0);
-        exact_solution[ilev].define(grids[ilev], dmap[ilev], 1, 0);
-    }
+    grids.define(domain);
+    grids.maxSize(max_grid_size);
+    dmap.define(grids);
+    solution.define(grids, dmap, 1, 1);
+    rhs.define(grids, dmap, 1, 0);
+    exact_solution.define(grids, dmap, 1, 0);
 
     // set up boundary conditions:
     // - first set all boundary conditions to external Dirichlet

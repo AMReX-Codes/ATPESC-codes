@@ -24,6 +24,7 @@ void fill_extdir(Box const &bx, Array4<Real> const &dest,
     // fill left edge
     const int k = 0;
 
+    // figure out which box we are filling, since ExtTaoBC::ext_dir_bcs is ordered by the MFIter ordering
     if (box_lo.x < domain_lo.x)
     {
         const int i = box_lo.x;

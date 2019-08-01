@@ -9,80 +9,93 @@
 
 namespace ExtTaoBC
 {
-   extern amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
-   const int lower_boundary = 0;
-   const int left_boundary = 1;
-   const int upper_boundary = 2;
+    extern amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
+    const int lower_boundary = 0;
+    const int left_boundary = 1;
+    const int upper_boundary = 2;
 }
 
 class MyTest
 {
-public:
+    public:
 
-    MyTest ();
+        MyTest ();
 
-    void solve ();
-    void writePlotfile () const;
+        void solve ();
+        void writePlotfile ();
 
-public: // make these public for cuda
-    void initProbPoisson ();
-    void initProbABecLaplacian ();
-    void get_number_global_bcs(int& num_lower, int& num_left, int& num_upper);
-    void get_number_local_bcs(int& num_lower, int& num_left, int& num_upper);
+    public: // make these public for cuda
+        void initProbPoisson ();
+        void initProbABecLaplacian ();
+        void get_number_global_bcs(int& num_lower, int& num_left, int& num_upper);
+        void get_number_local_bcs(int& num_lower, int& num_left, int& num_upper);
+        void set_target_solution(amrex::Real (*ftarget)(amrex::Real* coords));
+        void update_boundary_values(int nb, const amrex::Real *xb, int nl, const amrex::Real *xl, int nt, const amrex::Real *xt);
 
-private:
+        amrex::Real calculate_obj_val();
+        void calculate_opt_gradient(int nlower, amrex::Real* glower,
+                int nleft, amrex::Real* gleft,
+                int nupper, amrex::Real* gupper);
+        void setup_adjoint_system();
+        void solve_adjoint_system();
+        void write_plotfile();
+        void update_counter();
 
-    void readParameters ();
-    void initData ();
-    void solvePoisson ();
-    void solveABecLaplacian ();
+    private:
 
-    int max_level = 1;
-    int ref_ratio = 2;
-    int n_cell = 128;
-    int max_grid_size = 64;
+        void readParameters ();
+        void initData ();
+        void solvePoisson(amrex::MultiFab &solution, amrex::MultiFab &rhs);
+        void solveABecLaplacian ();
+        std::string get_iteration_filename(std::string filename);
+        void update_target_solution();
 
-    bool composite_solve = true;
+        int max_level = 1;
+        int ref_ratio = 2;
+        int n_cell = 128;
+        int max_grid_size = 64;
 
-    int prob_type = 1;  // 1. Poisson,  2. ABecLaplacian
+        bool composite_solve = true;
 
-    int iteration_counter = 0;
+        int prob_type = 1;  // 1. Poisson,  2. ABecLaplacian
 
-    // For MLMG solver
-    int verbose = 2;
-    int bottom_verbose = 0;
-    int max_iter = 100;
-    int max_fmg_iter = 0;
-    int linop_maxorder = 2;
-    bool agglomeration = true;
-    bool consolidation = true;
-    int max_coarsening_level = 30;
-    bool use_hypre = false;
-    bool use_petsc = false;
+        int iteration_counter = 0;
+
+        // For MLMG solver
+        int verbose = 2;
+        int bottom_verbose = 0;
+        int max_iter = 100;
+        int max_fmg_iter = 0;
+        int linop_maxorder = 2;
+        bool agglomeration = true;
+        bool consolidation = true;
+        int max_coarsening_level = 30;
+        bool use_hypre = false;
+        bool use_petsc = false;
 
 #ifdef AMREX_USE_HYPRE
-    int hypre_interface_i = 1;  // 1. structed, 2. semi-structed, 3. ij
-    amrex::Hypre::Interface hypre_interface = amrex::Hypre::Interface::structed;
+        int hypre_interface_i = 1;  // 1. structed, 2. semi-structed, 3. ij
+        amrex::Hypre::Interface hypre_interface = amrex::Hypre::Interface::structed;
 #endif
 
-    amrex::BCRec bcs; // BCs for 1 component
+        amrex::BCRec bcs; // BCs for 1 component
 
-    amrex::Geometry geom;
-    amrex::BoxArray grids;
-    amrex::DistributionMapping dmap;
+        amrex::Geometry geom;
+        amrex::BoxArray grids;
+        amrex::DistributionMapping dmap;
 
-    amrex::MultiFab solution;
-    amrex::MultiFab rhs;
-    amrex::MultiFab adjoint;
-    amrex::MultiFab adjoint_rhs;
-    amrex::MultiFab exact_solution;
-    amrex::MultiFab acoef;
-    amrex::MultiFab bcoef;
+        amrex::MultiFab solution;
+        amrex::MultiFab rhs;
+        amrex::MultiFab adjoint;
+        amrex::MultiFab adjoint_rhs;
+        amrex::MultiFab exact_solution;
+        amrex::MultiFab acoef;
+        amrex::MultiFab bcoef;
 
-    amrex::Real ascalar = 1.e-3;
-    amrex::Real bscalar = 1.0;
+        amrex::Real ascalar = 1.e-3;
+        amrex::Real bscalar = 1.0;
 
-    amrex::Real (*target_function)(amrex::Real* physical_coordinates);
+        amrex::Real (*target_function)(amrex::Real* physical_coordinates);
 };
 
 #endif
