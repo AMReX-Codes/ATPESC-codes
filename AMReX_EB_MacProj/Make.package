@@ -1,5 +1,8 @@
+F90EXE_sources += eb_to_pvf.F90
 
 CEXE_sources += main.cpp
 CEXE_sources += MyParticleContainer.cpp
+CEXE_sources += writeEBsurface.cpp
 
 CEXE_headers += MyParticleContainer.H
+CEXE_headers += writeEBsurface.H

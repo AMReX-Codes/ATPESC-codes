@@ -13,6 +13,9 @@ USE_EB = TRUE
 USE_HYPRE = TRUE
 USE_HYPRE = FALSE
 
+PROFILE      = FALSE
+TINY_PROFILE = TRUE
+
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ./Make.package
@@ -29,7 +32,3 @@ Ppack	+= $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(Ppack)
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
-
-movie:
-	./plot.py
-	ffmpeg -framerate 20 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 macproj.gif

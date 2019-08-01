@@ -11,6 +11,7 @@
 #include <AMReX_ParmParse.H>
 
 #include <MyParticleContainer.H>
+#include <writeEBsurface.H>
 
 using namespace amrex;
 
@@ -22,15 +23,18 @@ void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto
 
     // amrex::Print() << "Writing " << plotfile_name << std::endl;    
     
+    if (step_counter == 0)
+    {
 #if (AMREX_SPACEDIM == 2)
-    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                { "proc" ,"xvel", "yvel" },
-                                  geom, 0.0, 0);
+       EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                   { "proc" ,"xvel", "yvel" },
+                                     geom, 0.0, 0);
 #elif (AMREX_SPACEDIM == 3)
-    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                { "proc", "xvel", "yvel", "zvel" },
-                                  geom, 0.0, 0);
+       EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                   { "proc", "xvel", "yvel", "zvel" },
+                                     geom, 0.0, 0);
 #endif
+    }
 
     pc.Checkpoint(plotfile_name, "particles", true); //Write Tracer particles to plotfile
 
@@ -50,6 +54,8 @@ int main (int argc, char* argv[])
 
     amrex::Initialize(argc, argv);
 
+    Real strt_time = amrex::second();
+    
     {
         int mg_verbose = 0;
         int cg_verbose = 0;
@@ -94,11 +100,12 @@ int main (int argc, char* argv[])
            amrex::Abort("Cant use hypre if we dont build with USE_HYPRE=TRUE");
 #endif
 
-        if (n_cell%16 != 0)
-           amrex::Abort("n_cell must be a multiple of 16");
+        if (n_cell%8 != 0)
+           amrex::Abort("n_cell must be a multiple of 8");
 
         int n_cell_x = 2*n_cell;
-        int n_cell_z = 16;
+        int n_cell_y =   n_cell;
+        int n_cell_z =   n_cell/8;
         int num_obstacles;
 
         if (ob_id.empty())
@@ -143,14 +150,12 @@ int main (int argc, char* argv[])
         BoxArray grids;
         DistributionMapping dmap;
         {
-            int factor = n_cell / 8;
-            Real zlength = 1./factor; 
-            std::cout << "ZLEN " << zlength << std::endl;
-            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.,1.,zlength)});
+            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.0,1.0,0.125)});
+
             Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
-                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell-1,n_cell_z-1)});
+                       IntVect{AMREX_D_DECL(n_cell_x-1,n_cell_y-1,n_cell_z-1)});
             geom.define(domain);
 
             grids.define(domain);
@@ -170,9 +175,9 @@ int main (int argc, char* argv[])
             {AMREX_D_DECL(0.3,0.2,0.5)},
             {AMREX_D_DECL(0.3,0.5,0.5)},
             {AMREX_D_DECL(0.3,0.8,0.5)},
-            {AMREX_D_DECL(0.7,0.3,0.5)},
-            {AMREX_D_DECL(0.7,0.6,0.5)},
-            {AMREX_D_DECL(0.7,0.9,0.5)},
+            {AMREX_D_DECL(0.7,0.25,0.5)},
+            {AMREX_D_DECL(0.7,0.60,0.5)},
+            {AMREX_D_DECL(0.7,0.85,0.5)},
             {AMREX_D_DECL(1.1,0.2,0.5)},
             {AMREX_D_DECL(1.1,0.5,0.5)},
             {AMREX_D_DECL(1.1,0.8,0.5)}};
@@ -187,9 +192,9 @@ int main (int argc, char* argv[])
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 0], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 1], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 2], false),
-            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 3], false),
-            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 4], false),
-            EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 5], false),
+            EB2::CylinderIF(0.9*obstacle_radius, height, direction, obstacle_center[ 3], false),
+            EB2::CylinderIF(0.9*obstacle_radius, height, direction, obstacle_center[ 4], false),
+            EB2::CylinderIF(0.9*obstacle_radius, height, direction, obstacle_center[ 5], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 6], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 7], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[ 8], false)};
@@ -385,6 +390,12 @@ int main (int argc, char* argv[])
         if (AMREX_SPACEDIM > 2)
            vel[2].setVal(0.0);
 
+        Real x = MyPC.FindWinner(0);
+
+        amrex::Print() << " \n********************************************************************" << std::endl; 
+        amrex::Print() << "At time = 0, the lead particles is at x = " << x << std::endl;
+        amrex::Print() << "********************************************************************\n " << std::endl; 
+
         Real time = 0.0;
         for (int i = 0; i < max_steps; i++)
         {
@@ -407,10 +418,12 @@ int main (int argc, char* argv[])
                 using ParticleType = MyParticleContainer::ParticleType;
 
                 // This finds the particle with the maximum "x"
-                Real x = MyPC.FindWinner(0);
+                x = MyPC.FindWinner(0);
 
                 if (i%100 == 0)
+                {
                    amrex::Print() << "Timestep " << i << ", Time = " << time << " and leading particle now at " << x << std::endl;
+                }
 
                 if (x > 1.99) 
                 {
@@ -427,7 +440,13 @@ int main (int argc, char* argv[])
                 break;
             }
         }
+
+        Print() << "Writing EB surface" << std::endl;
+        WriteEBSurface (grids, dmap, geom, factory);
     }
+  
+    Real stop_time = amrex::second() - strt_time;
+    amrex::Print() << "Total run time " << stop_time << std::endl;
 
     amrex::Finalize();
 }
