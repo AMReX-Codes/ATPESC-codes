@@ -10,14 +10,16 @@ int main (int argc, char* argv[])
 
     BL_PROFILE("main");
     MyTest mytest;
-    // mytest.dfdp is a vector of Reals containing the derivative of f wrt BC values p:
-    // {dfdp_x_lo, dfdp_x_hi, dfdp_y_lo, dfdp_y_hi, dfdp_z_lo, dfdp_z_hi}
-    mytest.dfdp.resize(2*AMREX_SPACEDIM);
+    mytest.readParameters()
+    mytest.initData()
 
     /* ~~~~~ PETSc/TAO code begins here ~~~~~ */
     PetscErrorCode     ierr;
     PetscReal          zero=0.0;
-    Vec                x;
+    int                nb, nl, nt;
+    int                Nb, Nl, Nt;
+    Vec                *Plist;
+    Vec                P;
     Tao                tao;
     PetscBool          flg;
     PetscMPIInt        size,rank;
@@ -25,21 +27,38 @@ int main (int argc, char* argv[])
     ierr = PetscInitialize(&argc, &argv, (char*)0, help); if (ierr) return ierr;
     ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
-    if (size >1) SETERRQ(PETSC_COMM_SELF, 1, "Incorrect number of processors");
 
-    ierr = VecCreateSeq(PETSC_COMM_SELF, mytest.boundary.max_size(), &x);CHKERRQ(ierr); // vec sizing must come from AMReX
-    ierr = TaoCreate(PETSC_COMM_SELF, &tao); CHKERRQ(ierr);
+    mytest.get_number_local_bcs(&nb, &nl, &nt);
+    mytest.get_number_global_bcs(&Nb, &Nl, &Nt);
+    ierr = VecCreateMPI(PETSC_COMM_WORLD, nb, Nb, &Plist[0]);CHKERRQ(ierr);
+    ierr = VecCreateMPI(PETSC_COMM_WORLD, nl, Nl, &Plist[1]);CHKERRQ(ierr);
+    ierr = VecCreateMPI(PETSC_COMM_WORLD, nt, Nt, &Plist[2]);CHKERRQ(ierr);
+    ierr = VecCreateNest(PETSC_COMM_WORLD, 3, NULL, Plist, &P);CHKERRQ(ierr);
+    ierr = VecSet(P, zero); CHKERRQ(ierr);
+
+    mytest.set_target_solution(TargetSolution);
+
+    ierr = TaoCreate(PETSC_COMM_WORLD, &tao); CHKERRQ(ierr);
     ierr = TaoSetType(tao, TAOBQNLS); CHKERRQ(ierr);
-    ierr = VecSet(x, zero); CHKERRQ(ierr); // starting point does not have to be zero
-    ierr = TaoSetInitialVector(tao, x); CHKERRQ(ierr);
+    ierr = TaoSetInitialVector(tao, P); CHKERRQ(ierr);
     ierr = TaoSetObjectiveAndGradientRoutine(tao, FormFunctionGradient, &mytest); CHKERRQ(ierr);
     ierr = TaoSetFromOptions(tao); CHKERRQ(ierr);
-
     ierr = TaoSolve(tao); CHKERRQ(ierr);
 
     ierr = PetscFinalize();
 
     amrex::Finalize();
+}
+
+/* -------------------------------------------------------------------- */
+
+amrex::Real TargetSolution(amrex::Real* coords)
+{
+    amrex::Real x = coords[0];
+    amrex::Real y = coords[1];
+    amrex::Real z = coords[2];
+    amrex::Real utarg = 10.0 - (y*y);
+    return utarg;
 }
 
 /* -------------------------------------------------------------------- */
@@ -60,50 +79,67 @@ int main (int argc, char* argv[])
     at the same time.  Evaluating both at once may be more efficient that
     evaluating each separately.
 */
-PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
+PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ptr)
 {
     MyTest            *mytest = (MyTest *) ptr;
     PetscInt          i;
     PetscErrorCode    ierr;
     PetscReal         ff=0;
-    PetscScalar       *gg;
-    const PetscScalar *xx;
+    Vec               *Plist, *Glist;
+    PetscInt          nb, nl, nt;
+    const PetscScalar *pb, *pl, *pt;
+    PetscScalar       *gb, *gl, *gt;
 
     PetscFunctionBeginUser;
-    /* Get pointers to PETSc vector data */
-    ierr = VecGetArrayRead(X, &xx); CHKERRQ(ierr);
-    ierr = VecGetArray(G, &gg); CHKERRQ(ierr);
-
-    /* ~~~~~~ AMReX code begins here ~~~~~~ */
 
     /* 1) get boundary values from array x and set them into AMReX */
-    // get boundary values to set from TAO (these are available in the array xx)
-    // TODO ...
-    mytest.update_boundary_values(); // set the boundary values
+    ierr = VecNestGetSubVecs(P, 3, &Plist);CHKERRQ(ierr);
 
-    /* 2) solve the nonlinar problem with AMReX */
+    ierr = VecGetArrayRead(Plist[0], &pb);CHKERRQ(ierr);
+    ierr = VecGetArrayRead(Plist[1], &pl);CHKERRQ(ierr);
+    ierr = VecGetArrayRead(Plist[2], &pt);CHKERRQ(ierr);
+
+    ierr = VecGetLocalSize(Plist[0], &nb);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(Plist[1], &nl);CHKERRQ(ierr);
+    ierr = VecGetLocalSize(Plist[2], &nt);CHKERRQ(ierr);
+
+    mytest.update_boundary_values((int)nb, (const amrex::Real*)pb,
+                                  (int)nl, (const amrex::Real*)pl,
+                                  (int)nt, (const amrex::Real*)pt);
+
+    ierr = VecRestoreArrayRead(Plist[0], &pb);CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(Plist[1], &pl);CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(Plist[2], &pt);CHKERRQ(ierr);
+
+    /* 2) solve the Poisson problem with AMReX */
     mytest.solve(); // solve the poisson problem with the boundary values
 
     /* 3) compute the objective function value using solution from AMReX and store into ff */
-    // TODO ...
+    ff = mytest.calculate_obj_val();
+    *f = ff;
 
     /* 4) solve the linearized adjoint problem with AMReX (in this case same as forward linearized problem) */
     mytest.setup_adjoint_system(); // calculate the adjoint system rhs
     mytest.solve_adjoint_system(); // solve for the adjoint
 
     /* 5) compute the gradient per the Overleaf document and store it into array g */
-    mytest.calculate_opt_gradient(); // calculate the adjoint contribution to df/dp
-    // pass the gradient to TAO (must be written into array gg)
-    // TODO ...
+    ierr = VecNestGetSubVecs(G, 3, &Glist);CHKERRQ(ierr);
+
+    ierr = VecGetArray(Glist[0], &gb);CHKERRQ(ierr);
+    ierr = VecGetArray(Glist[1], &gl);CHKERRQ(ierr);
+    ierr = VecGetArray(Glist[2], &gt);CHKERRQ(ierr);
+
+    mytest.calculate_opt_gradient((int)nb, (amrex::Real*)gb,
+                                  (int)nl, (amrex::Real*)gl,
+                                  (int)nt, (amrex::Real*)gt);
+
+    ierr = VecRestoreArray(Glist[0], &gb);CHKERRQ(ierr);
+    ierr = VecRestoreArray(Glist[1], &gl);CHKERRQ(ierr);
+    ierr = VecRestoreArray(Glist[2], &gt);CHKERRQ(ierr);
 
     /* 6) Other misc operations like generating iterative plots can be done here */
-    mytest.writePlotfile();
+    mytest.write_plotfile();
+    mytest.update_counter();
 
-    /* ~~~~~~ AMReX code ends here ~~~~~~ */
-
-    /* Restore PETSc vectors */
-    ierr = VecRestoreArrayRead(X, &xx); CHKERRQ(ierr);
-    ierr = VecRestoreArray(G, &gg); CHKERRQ(ierr);
-    *f   = ff; // return the objective function value
     PetscFunctionReturn(0);
 }
