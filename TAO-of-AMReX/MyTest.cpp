@@ -24,7 +24,6 @@ void MyTest::solve()
     solvePoisson(solution, rhs);
 }
 
-
 void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)
 {
     const DomainBox& domain_bx = geom.Domain();
@@ -49,7 +48,7 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
     num_lower = 0;
     num_left = 0;
     num_upper = 0;
-    
+
     for (MFIter mfi(solution); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.validbox();
@@ -59,7 +58,7 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
             bool aligned_lower = false;
             bool aligned_left  = false;
             bool aligned_upper = false;
-      
+
             // check lower boundary
             if (bx_lo.y == domain_lo.y) {
                 aligned_lower = true;
@@ -100,9 +99,8 @@ void MyTest::update_boundary_values(int nb, Real *xb,
     std::copy(xl, xl + nl, ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].begin());
     std::copy(xt, xt + nt, ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].begin());
 
-    const int lev = 0;
-    solution[lev].FillBoundary(geom[lev].periodicity());
-    FillDomainBoundary(solution[lev], geom[lev], {bcs});
+    solution.FillBoundary(geom.periodicity());
+    FillDomainBoundary(solution, geom, {bcs});
 }
 
 void MyTest::setup_adjoint_system()
@@ -117,26 +115,26 @@ void MyTest::setup_adjoint_system()
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    const int lev = 0;
+    const int k = 0;
 
-    for (MFIter mfi(solution[lev]); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(solution); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
         bx_lo = lbound(bx);
         bx_hi = ubound(bx);
 
-        const auto sol_arr = solution[lev][mfi].array();
-        const auto exact_sol_arr = exact_solution[lev][mfi].array();
-        auto adj_arr = adjoint_rhs[lev][mfi].array();        
+        const auto sol_arr = solution[mfi].array();
+        const auto exact_sol_arr = exact_solution[mfi].array();
+        auto adj_arr = adjoint_rhs[mfi].array();
 
         // check if we have part of the right boundary
         if (bx_hi.x == domain_hi.x) {
             const int i = bx_hi.x;
             for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
-                adj_arr(i,j) = exact_sol_arr(i,j) - sol_arr(i,j);
-                adj_arr(i,j) *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
+                adj_arr(i, j, k) = exact_sol_arr(i, j, k) - sol_arr(i, j, k);
+                adj_arr(i, j, k) *= AMREX_D_TERM(geom[0].CellSize[0], *geom[0].CellSize[1], *geom[0].CellSize[2]);
             }
         }
-    }    
+    }
 }
 
 void MyTest::solve_adjoint_system()
@@ -159,14 +157,14 @@ void MyTest::update_target_solution()
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    const int lev = 0;
+    const int k = 0;
 
-    for (MFIter mfi(exact_solution[lev]); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(exact_solution); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
         bx_lo = lbound(bx);
         bx_hi = ubound(bx);
 
-        auto exact_sol_arr = exact_solution[lev][mfi].array();
+        auto exact_sol_arr = exact_solution[mfi].array();
 
         for (int i = bx_lo.x; i <= bx_hi.x; ++i) {
             for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
@@ -174,7 +172,7 @@ void MyTest::update_target_solution()
                 AMREX_D_TERM(cell_indices[0] = i;, cell_indices[1] = j;, cell_indices[2] = k;)
                 Vector<Real> cell_location(AMREX_SPACEDIM);
                 geom[0].CellCenter(cell_indices, cell_location);
-                exact_sol_arr(i,j) = target_function(cell_location.dataPtr());
+                exact_sol_arr(i, j, k) = target_function(cell_location.dataPtr());
             }
         }
     }
@@ -188,22 +186,22 @@ Real MyTest::calculate_obj_val()
 
     Real fobj_local = 0.0;
 
-    const int lev = 0;
+    const int k = 0;
 
-    for (MFIter mfi(solution[lev]); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(solution); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
         bx_lo = lbound(bx);
         bx_hi = ubound(bx);
 
-        const auto sol_arr = solution[lev][mfi].array();
-        const auto exact_sol_arr = exact_solution[lev][mfi].array();
+        const auto sol_arr = solution[mfi].array();
+        const auto exact_sol_arr = exact_solution[mfi].array();
 
         // check if we have part of the right boundary
         if (bx_hi.x == domain_hi.x) {
             const int i = bx_hi.x;
             // loop over right edge, excluding corners
             for (int j = std::max(bx_lo.y, domain_lo.y+1); j <= std::min(bx_hi.y, domain_hi.y-1); ++j) {
-                fobj_local += 0.5 * std::pow(exact_sol_arr(i,j) - sol_arr(i,j), 2.0);
+                fobj_local += 0.5 * std::pow(exact_sol_arr(i, j, k) - sol_arr(i, j, k), 2.0);
             }
         }
     }
@@ -216,171 +214,83 @@ Real MyTest::calculate_obj_val()
     return fobj_global;
 }
 
-void MyTest::calculate_opt_gradient(Real* dfdp_tao)
+void MyTest::calculate_opt_gradient(int nlower, Real* glower,
+                                    int nleft, Real* gleft,
+                                    int nupper, Real* gupper)
 {
-    // Update for cellwise BCs TODO
-    // Fill dfdp_tao TODO
-
-
     // calculate df/dp - \partial f/\partial p = (dR/dp)^T * lambda
+    const DomainBox& domain_bx = geom.Domain();
+    const auto domain_lo = lbound(domain_bx);
+    const auto domain_hi = ubound(domain_bx);
 
-    // iterate over the domain and reduce sum the contributions along the inner edges
-    const auto prob_lo = geom[0].ProbLoArray();
-    const auto prob_hi = geom[0].ProbHiArray();
+    for (int i = 0; i < nlower; ++i) glower[i] = 0.0;
+    for (int i = 0; i < nleft; ++i) gleft[i] = 0.0;
+    for (int i = 0; i < nupper; ++i) gupper[i] = 0.0;
 
-    Real dfdp_x_lo = ReduceSum(adjoint, 0,
-                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
-                                   Real redval = 0.0;
+    // indices into dfdp arrays from TAO
+    int ilower = 0;
+    int ileft = 0;
+    int iupper = 0;
 
-                                   const Array4<Real> fabarray = fab.array();
-                                   const auto lo = lbound(bx);
-                                   const auto hi = ubound(bx);
+    const int k = 0;
 
-                                   for (int k = lo.z; k <= hi.z; ++k)
-                                   {
-                                       for (int j = lo.y; j <= hi.y; ++j)
-                                       {
-                                           for (int i = lo.x; i <= hi.x; ++i)
-                                           {
-                                               if (i == prob_lo[0])
-                                                   redval += fabarray(i, j, k);
-                                           }
-                                       }
-                                   }
+    for (MFIter mfi(adjoint); mfi.isValid(); ++mfi)
+        {
+            const Box& bx = mfi.validbox();
+            bx_lo = lbound(bx);
+            bx_hi = ubound(bx);
 
-                                   return redval;
-                               });
+            bool aligned_lower = false;
+            bool aligned_left  = false;
+            bool aligned_upper = false;
 
-    dfdp[0] = dfdp_x_lo;
+            const auto adjoint_arr = adjoint[mfi].array();
 
-    Real dfdp_x_hi = ReduceSum(adjoint, 0,
-                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
-                                   Real redval = 0.0;
+            // For each iteration of the MFIter, we fill TAO arrays in the same
+            // order as we set number of entries in get_number_local_bcs().
 
-                                   const Array4<Real> fabarray = fab.array();
-                                   const auto lo = lbound(bx);
-                                   const auto hi = ubound(bx);
+            // check lower
+            if (bx_lo.y == domain_lo.y) {
+                aligned_lower = true;
+                const int j = bx_lo.y;
+                for (int i = bx_lo.x; i <= bx_hi.x; ++i) {
+                    glower[ilower] += adjoint_arr(i, j, k);
+                    ilower++;
+                }
+            }
 
-                                   for (int k = lo.z; k <= hi.z; ++k)
-                                   {
-                                       for (int j = lo.y; j <= hi.y; ++j)
-                                       {
-                                           for (int i = lo.x; i <= hi.x; ++i)
-                                           {
-                                               if (i == prob_hi[0])
-                                                   redval += fabarray(i, j, k);
-                                           }
-                                       }
-                                   }
+            // check left (not including corners)
+            if (bx_lo.x == domain_lo.x) {
+                aligned_left = true;
+                const int i = bx_lo.x;
+                for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
+                    gleft[ileft] += adjoint_arr(i, j, k);
+                    ileft++;
+                }
+            }
 
-                                   return redval;
-                               });
+            // check upper
+            if (bx_hi.y == domain_hi.y) {
+                aligned_upper = true;
+                const int j = bx_hi.y;
+                for (int i = bx_lo.x; i <= bx_hi.x; ++i) {
+                    gupper[iupper] += adjoint_arr(i, j, k);
+                    iupper++;
+                }
+            }
 
-    dfdp[1] = dfdp_x_hi;
+            // lower left corner
+            if (aligned_left && aligned_lower) {
+                gleft[ileft] += adjoint_arr(bx_lo.x, bx_lo.y, k);
+                ileft++;
+            }
 
-#if (AMREX_SPACEDIM >= 2)
-    Real dfdp_y_lo = ReduceSum(adjoint, 0,
-                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
-                                   Real redval = 0.0;
-
-                                   const Array4<Real> fabarray = fab.array();
-                                   const auto lo = lbound(bx);
-                                   const auto hi = ubound(bx);
-
-                                   for (int k = lo.z; k <= hi.z; ++k)
-                                   {
-                                       for (int j = lo.y; j <= hi.y; ++j)
-                                       {
-                                           for (int i = lo.x; i <= hi.x; ++i)
-                                           {
-                                               if (i == prob_lo[1])
-                                                   redval += fabarray(i, j, k);
-                                           }
-                                       }
-                                   }
-
-                                   return redval;
-                               });
-
-    dfdp[2] = dfdp_y_lo;
-
-    Real dfdp_y_hi = ReduceSum(adjoint, 0,
-                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
-                                   Real redval = 0.0;
-
-                                   const Array4<Real> fabarray = fab.array();
-                                   const auto lo = lbound(bx);
-                                   const auto hi = ubound(bx);
-
-                                   for (int k = lo.z; k <= hi.z; ++k)
-                                   {
-                                       for (int j = lo.y; j <= hi.y; ++j)
-                                       {
-                                           for (int i = lo.x; i <= hi.x; ++i)
-                                           {
-                                               if (i == prob_hi[1])
-                                                   redval += fabarray(i, j, k);
-                                           }
-                                       }
-                                   }
-
-                                   return redval;
-                               });
-
-    dfdp[3] = dfdp_y_hi;
-#endif
-
-#if (AMREX_SPACEDIM == 3)
-    Real dfdp_z_lo = ReduceSum(adjoint, 0,
-                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
-                                   Real redval = 0.0;
-
-                                   const Array4<Real> fabarray = fab.array();
-                                   const auto lo = lbound(bx);
-                                   const auto hi = ubound(bx);
-
-                                   for (int k = lo.z; k <= hi.z; ++k)
-                                   {
-                                       for (int j = lo.y; j <= hi.y; ++j)
-                                       {
-                                           for (int i = lo.x; i <= hi.x; ++i)
-                                           {
-                                               if (i == prob_lo[2])
-                                                   redval += fabarray(i, j, k);
-                                           }
-                                       }
-                                   }
-
-                                   return redval;
-                               });
-
-    dfdp[4] = dfdp_z_lo;
-
-    Real dfdp_z_hi = ReduceSum(adjoint, 0,
-                               [=] AMREX_GPU_HOST_DEVICE(Box const &bx, FArrayBox const &fab) -> Real {
-                                   Real redval = 0.0;
-
-                                   const Array4<Real> fabarray = fab.array();
-                                   const auto lo = lbound(bx);
-                                   const auto hi = ubound(bx);
-
-                                   for (int k = lo.z; k <= hi.z; ++k)
-                                   {
-                                       for (int j = lo.y; j <= hi.y; ++j)
-                                       {
-                                           for (int i = lo.x; i <= hi.x; ++i)
-                                           {
-                                               if (i == prob_hi[2])
-                                                   redval += fabarray(i, j, k);
-                                           }
-                                       }
-                                   }
-
-                                   return redval;
-                               });
-
-    dfdp[5] = dfdp_z_hi;
-#endif
+            // upper left corner
+            if (aligned_left && aligned_upper) {
+                gleft[ileft] += adjoint_arr(bx_lo.x, bx_hi.y, k);
+                ileft++;
+            }
+        }
 }
 
 void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
@@ -394,12 +304,12 @@ void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
     const Real tol_rel = 1.e-10;
     const Real tol_abs = 0.0;
 
-    const int nlevels = geom.size();
+    const int nlevels = 1;
 
     if (composite_solve)
     {
 
-        MLPoisson mlpoisson(geom, grids, dmap, info);
+        MLPoisson mlpoisson({geom}, {grids}, {dmap}, info);
 
         mlpoisson.setMaxOrder(linop_maxorder);
 
@@ -411,10 +321,7 @@ void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
                                             LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet)});
 
-        for (int ilev = 0; ilev < nlevels; ++ilev)
-        {
-            mlpoisson.setLevelBC(ilev, &solution[ilev]);
-        }
+        mlpoisson.setLevelBC(0, &solution);
 
         MLMG mlmg(mlpoisson);
         mlmg.setMaxIter(max_iter);
@@ -435,52 +342,44 @@ void MyTest::solvePoisson(amrex::Vector<amrex::MultiFab> &solution,
         }
 #endif
 
-        mlmg.solve(GetVecOfPtrs(solution), GetVecOfConstPtrs(rhs), tol_rel, tol_abs);
+        mlmg.solve(GetVecOfPtrs({solution}), GetVecOfConstPtrs({rhs}), tol_rel, tol_abs);
     }
     else
     {
-        for (int ilev = 0; ilev < nlevels; ++ilev)
-        {
-            MLPoisson mlpoisson({geom[ilev]}, {grids[ilev]}, {dmap[ilev]}, info);
+        MLPoisson mlpoisson({geom}, {grids}, {dmap}, info);
 
-            mlpoisson.setMaxOrder(linop_maxorder);
+        mlpoisson.setMaxOrder(linop_maxorder);
 
-            // This is a 3d problem with Dirichlet BC
-            mlpoisson.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
-                                                LinOpBCType::Dirichlet,
-                                                LinOpBCType::Dirichlet)},
-                                  {AMREX_D_DECL(LinOpBCType::Dirichlet,
-                                                LinOpBCType::Dirichlet,
-                                                LinOpBCType::Dirichlet)});
+        // This is a 3d problem with Dirichlet BC
+        mlpoisson.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
+                                            LinOpBCType::Dirichlet,
+                                            LinOpBCType::Dirichlet)},
+            {AMREX_D_DECL(LinOpBCType::Dirichlet,
+                          LinOpBCType::Dirichlet,
+                          LinOpBCType::Dirichlet)});
 
-            if (ilev > 0)
-            {
-                mlpoisson.setCoarseFineBC(&solution[ilev - 1], ref_ratio);
-            }
+        mlpoisson.setLevelBC(0, &solution);
 
-            mlpoisson.setLevelBC(0, &solution[ilev]);
-
-            MLMG mlmg(mlpoisson);
-            mlmg.setMaxIter(max_iter);
-            mlmg.setMaxFmgIter(max_fmg_iter);
-            mlmg.setVerbose(verbose);
-            mlmg.setBottomVerbose(bottom_verbose);
+        MLMG mlmg(mlpoisson);
+        mlmg.setMaxIter(max_iter);
+        mlmg.setMaxFmgIter(max_fmg_iter);
+        mlmg.setVerbose(verbose);
+        mlmg.setBottomVerbose(bottom_verbose);
 #ifdef AMREX_USE_HYPRE
-            if (use_hypre)
+        if (use_hypre)
             {
                 mlmg.setBottomSolver(MLMG::BottomSolver::hypre);
                 mlmg.setHypreInterface(hypre_interface);
             }
 #endif
 #ifdef AMREX_USE_PETSC
-            if (use_petsc)
+        if (use_petsc)
             {
                 mlmg.setBottomSolver(MLMG::BottomSolver::petsc);
             }
 #endif
 
-            mlmg.solve({&solution[ilev]}, {&rhs[ilev]}, tol_rel, tol_abs);
-        }
+        mlmg.solve({&solution}, {&rhs}, tol_rel, tol_abs);
     }
 }
 

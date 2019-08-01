@@ -64,23 +64,21 @@ private:
 #endif
 
     amrex::BCRec bcs; // BCs for 1 component
-    // take these out of vectors ...
-    amrex::Vector<amrex::Geometry> geom;
-    amrex::Vector<amrex::BoxArray> grids;
-    amrex::Vector<amrex::DistributionMapping> dmap;
 
-    amrex::Vector<amrex::MultiFab> solution;
-    amrex::Vector<amrex::MultiFab> rhs;
-    amrex::Vector<amrex::MultiFab> adjoint;
-    amrex::Vector<amrex::MultiFab> adjoint_rhs;
-    amrex::Vector<amrex::MultiFab> exact_solution;
-    amrex::Vector<amrex::MultiFab> acoef;
-    amrex::Vector<amrex::MultiFab> bcoef;
+    amrex::Geometry geom;
+    amrex::BoxArray grids;
+    amrex::DistributionMapping dmap;
+
+    amrex::MultiFab solution;
+    amrex::MultiFab rhs;
+    amrex::MultiFab adjoint;
+    amrex::MultiFab adjoint_rhs;
+    amrex::MultiFab exact_solution;
+    amrex::MultiFab acoef;
+    amrex::MultiFab bcoef;
 
     amrex::Real ascalar = 1.e-3;
     amrex::Real bscalar = 1.0;
-
-    amrex::Vector<amrex::Real> dfdp; // {dfdp_x_lo, dfdp_x_hi, dfdp_y_lo, dfdp_y_hi, ...}
 
     amrex::Real (*target_function)(amrex::Real* physical_coordinates);
 };
