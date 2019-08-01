@@ -61,3 +61,6 @@ realclean: clean
 
 pltclean:
 	$(RM) -rf plt*/ *.png eb_grid* eb*vtp
+
+movie:
+	ffmpeg -framerate 10 -pattern_type glob -i "p*.png" -r 5 -vf scale=1024:-1 macproj.gif

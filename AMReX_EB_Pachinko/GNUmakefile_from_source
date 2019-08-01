@@ -4,8 +4,7 @@ USE_OMP  = FALSE
 
 COMP = gnu
 
-DIM = 2
-#DIM = 3
+DIM = 3
 
 DEBUG = FALSE
 
@@ -30,5 +29,4 @@ include $(Ppack)
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 movie:
-	./plot.py
-	ffmpeg -framerate 10 -pattern_type glob -i "*.png" -r 15 -vf scale=1024:-1 pachinko.gif
+	ffmpeg -framerate 10 -pattern_type glob -i "p*.png" -r 5 -vf scale=1024:-1 pachinko.gif

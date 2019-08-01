@@ -7,32 +7,34 @@
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_VisMF.H>
-#include <AMReX_VisMF.H>
 #include <AMReX_TagBox.H>
-#include <AMReX_ParmParse.H>
 
 #include <MyParticleContainer.H>
+#include <writeEBsurface.H>
 
 using namespace amrex;
 
 void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto& pc,
                     const int ascii_particle_output)
 {
-   std::stringstream sstream;
-   sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
-   std::string plotfile_name = sstream.str();
+    std::stringstream sstream;
+    sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
+    std::string plotfile_name = sstream.str();
     
-   EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                { "proc" },
-                                  geom, 0.0, 0);
+    if (step_counter == 0)
+    {
+      EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                  { "proc" }, geom, 0.0, 0);
+    }
 
-   if (ascii_particle_output)
-   {
-      sstream << "_particles";
-      const std::string particlefile_name = sstream.str();
-      pc.WriteAsciiFile(particlefile_name);
-   }
-   pc.Checkpoint(plotfile_name, "particles", true); // Write particles to plotfile
+    if (ascii_particle_output)
+    {
+       sstream << "_particles";
+       const std::string particlefile_name = sstream.str();
+       pc.WriteAsciiFile(particlefile_name);
+    }
+
+    pc.Checkpoint(plotfile_name, "particles", true); // Write particles to plotfile
 }
 
 int main (int argc, char* argv[])
@@ -216,6 +218,9 @@ int main (int argc, char* argv[])
 
         amrex::Print() << "That took " << end_total << " seconds." << std::endl;
         amrex::Print() << "******************************************************************** \n" << std::endl; 
+
+        Print() << "Writing EB surface" << std::endl;
+        WriteEBSurface (grids, dmap, geom, factory);
     }
 
     amrex::Finalize();
