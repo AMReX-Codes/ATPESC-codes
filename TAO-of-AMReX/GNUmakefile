@@ -6,11 +6,19 @@ USE_OMP  = FALSE
 USE_HYPRE = FALSE
 USE_PETSC = FALSE
 
-COMP = gnu
+HYPRE_DIR  ?= .
+PETSC_HOME ?= $(PETSC_DIR)/$(PETSC_ARCH)
 
-DIM = 3
+COMP = llvm
 
-AMREX_HOME ?= ../../..
+DIM = 2 
+
+AMREX_HOME ?= /Users/adener/Developer/amrex
+
+INCLUDE_LOCATIONS += $(PETSC_DIR)/$(PETSC_ARCH)/include
+INCLUDE_LOCATIONS += $(PETSC_DIR)/include
+LIBRARY_LOCATIONS += $(PETSC_DIR)/$(PETSC_ARCH)/lib
+LIBRARIES += -lpetsc
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 

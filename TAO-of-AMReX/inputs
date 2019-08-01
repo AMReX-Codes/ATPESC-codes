@@ -11,6 +11,7 @@ prob_type = 1
 # prob_type = 2
 
 # For MLMG
+use_hypre = 0
 verbose = 2
 bottom_verbose = 0
 max_iter = 100

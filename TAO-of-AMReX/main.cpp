@@ -4,14 +4,15 @@
 
 #include <petsc.h>
 
+amrex::Real TargetSolution(amrex::Real* coords);
+PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ptr);
+
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc, argv);
 
     BL_PROFILE("main");
     MyTest mytest;
-    mytest.readParameters()
-    mytest.initData()
 
     /* ~~~~~ PETSc/TAO code begins here ~~~~~ */
     PetscErrorCode     ierr;
@@ -24,12 +25,17 @@ int main (int argc, char* argv[])
     PetscBool          flg;
     PetscMPIInt        size,rank;
 
-    ierr = PetscInitialize(&argc, &argv, (char*)0, help); if (ierr) return ierr;
+    ierr = PetscInitialize(&argc, &argv, (char*)0, (char*)0); if (ierr) return ierr;
     ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
 
-    mytest.get_number_local_bcs(&nb, &nl, &nt);
-    mytest.get_number_global_bcs(&Nb, &Nl, &Nt);
+    mytest.get_number_local_bcs(nb, nl, nt);
+    mytest.get_number_global_bcs(Nb, Nl, Nt);
+
+    // For debugging ...
+    amrex::Print() << "num local: " << nb << " " << nl << " " << nt << "\n";
+    amrex::Print() << "num global: " << Nb << " " << Nl << " " << Nt << "\n";
+
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nb, Nb, &Plist[0]);CHKERRQ(ierr);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nl, Nl, &Plist[1]);CHKERRQ(ierr);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nt, Nt, &Plist[2]);CHKERRQ(ierr);
@@ -92,8 +98,11 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
 
     PetscFunctionBeginUser;
 
+    PetscInt          *numNested;
+    *numNested = 3;
+
     /* 1) get boundary values from array x and set them into AMReX */
-    ierr = VecNestGetSubVecs(P, 3, &Plist);CHKERRQ(ierr);
+    ierr = VecNestGetSubVecs(P, numNested, &Plist);CHKERRQ(ierr);
 
     ierr = VecGetArrayRead(Plist[0], &pb);CHKERRQ(ierr);
     ierr = VecGetArrayRead(Plist[1], &pl);CHKERRQ(ierr);
@@ -103,33 +112,33 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = VecGetLocalSize(Plist[1], &nl);CHKERRQ(ierr);
     ierr = VecGetLocalSize(Plist[2], &nt);CHKERRQ(ierr);
 
-    mytest.update_boundary_values((int)nb, (const amrex::Real*)pb,
-                                  (int)nl, (const amrex::Real*)pl,
-                                  (int)nt, (const amrex::Real*)pt);
+    mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
+                                   (int)nl, (const amrex::Real*)pl,
+                                   (int)nt, (const amrex::Real*)pt);
 
     ierr = VecRestoreArrayRead(Plist[0], &pb);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(Plist[1], &pl);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(Plist[2], &pt);CHKERRQ(ierr);
 
     /* 2) solve the Poisson problem with AMReX */
-    mytest.solve(); // solve the poisson problem with the boundary values
+    mytest->solve(); // solve the poisson problem with the boundary values
 
     /* 3) compute the objective function value using solution from AMReX and store into ff */
-    ff = mytest.calculate_obj_val();
+    ff = mytest->calculate_obj_val();
     *f = ff;
 
     /* 4) solve the linearized adjoint problem with AMReX (in this case same as forward linearized problem) */
-    mytest.setup_adjoint_system(); // calculate the adjoint system rhs
-    mytest.solve_adjoint_system(); // solve for the adjoint
+    mytest->setup_adjoint_system(); // calculate the adjoint system rhs
+    mytest->solve_adjoint_system(); // solve for the adjoint
 
     /* 5) compute the gradient per the Overleaf document and store it into array g */
-    ierr = VecNestGetSubVecs(G, 3, &Glist);CHKERRQ(ierr);
+    ierr = VecNestGetSubVecs(G, numNested, &Glist);CHKERRQ(ierr);
 
     ierr = VecGetArray(Glist[0], &gb);CHKERRQ(ierr);
     ierr = VecGetArray(Glist[1], &gl);CHKERRQ(ierr);
     ierr = VecGetArray(Glist[2], &gt);CHKERRQ(ierr);
 
-    mytest.calculate_opt_gradient((int)nb, (amrex::Real*)gb,
+    mytest->calculate_opt_gradient((int)nb, (amrex::Real*)gb,
                                   (int)nl, (amrex::Real*)gl,
                                   (int)nt, (amrex::Real*)gt);
 
@@ -138,8 +147,8 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = VecRestoreArray(Glist[2], &gt);CHKERRQ(ierr);
 
     /* 6) Other misc operations like generating iterative plots can be done here */
-    mytest.write_plotfile();
-    mytest.update_counter();
+    mytest->write_plotfile();
+    mytest->update_counter();
 
     PetscFunctionReturn(0);
 }
