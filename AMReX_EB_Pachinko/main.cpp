@@ -80,11 +80,13 @@ int main (int argc, char* argv[])
         int n_cell_y = n_cell * 8/5;
         int n_cell_z = 4;
 
+        Real zlen = 0.5;
+
         Geometry geom;
         BoxArray grids;
         DistributionMapping dmap;
         {
-            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.25,2.,1.)});
+            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.25,2.,zlen)});
             Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
@@ -100,20 +102,20 @@ int main (int argc, char* argv[])
         MultiFab plotfile_mf;
 
         amrex::Vector<amrex::RealArray> obstacle_center = {
-            {AMREX_D_DECL(0.30,0.3,0.5)},
-            {AMREX_D_DECL(0.60,0.3,0.5)},
-            {AMREX_D_DECL(0.90,0.3,0.5)},
-            {AMREX_D_DECL(0.15,0.7,0.5)},
-            {AMREX_D_DECL(0.45,0.7,0.5)},
-            {AMREX_D_DECL(0.75,0.7,0.5)},
-            {AMREX_D_DECL(1.05,0.7,0.5)},
-            {AMREX_D_DECL(0.30,1.1,0.5)}, 
-            {AMREX_D_DECL(0.60,1.1,0.5)}, 
-            {AMREX_D_DECL(0.90,1.1,0.5)}, 
-            {AMREX_D_DECL(0.15,1.5,0.5)},
-            {AMREX_D_DECL(0.45,1.5,0.5)},
-            {AMREX_D_DECL(0.75,1.5,0.5)},
-            {AMREX_D_DECL(1.05,1.5,0.5)}};
+            {AMREX_D_DECL(0.30,0.3,0.5*zlen)},
+            {AMREX_D_DECL(0.60,0.3,0.5*zlen)},
+            {AMREX_D_DECL(0.90,0.3,0.5*zlen)},
+            {AMREX_D_DECL(0.15,0.7,0.5*zlen)},
+            {AMREX_D_DECL(0.45,0.7,0.5*zlen)},
+            {AMREX_D_DECL(0.75,0.7,0.5*zlen)},
+            {AMREX_D_DECL(1.05,0.7,0.5*zlen)},
+            {AMREX_D_DECL(0.30,1.1,0.5*zlen)}, 
+            {AMREX_D_DECL(0.60,1.1,0.5*zlen)}, 
+            {AMREX_D_DECL(0.90,1.1,0.5*zlen)}, 
+            {AMREX_D_DECL(0.15,1.5,0.5*zlen)},
+            {AMREX_D_DECL(0.45,1.5,0.5*zlen)},
+            {AMREX_D_DECL(0.75,1.5,0.5*zlen)},
+            {AMREX_D_DECL(1.05,1.5,0.5*zlen)}};
 
         // The "false" below is the boolean that determines if the fluid is inside ("true") or 
         //     outside ("false") the object(s)
@@ -162,7 +164,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitPachinko(particle_file);
+        MyPC.InitPachinko(particle_file,zlen);
 
         // Store processor id in the plotfile
         plotfile_mf.define(grids, dmap, 1, 0, MFInfo(), factory);

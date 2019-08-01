@@ -4,7 +4,7 @@
 namespace amrex {
 
 void 
-MyParticleContainer::InitPachinko (std::string initial_particle_file)
+MyParticleContainer::InitPachinko (std::string initial_particle_file, Real zlen)
 {
     BL_PROFILE("MyParticleContainer::InitPachinko()");
 
@@ -26,6 +26,9 @@ MyParticleContainer::InitPachinko (std::string initial_particle_file)
 #if (AMREX_SPACEDIM == 3)
             p.rdata(PIdx::vz) =  0.0;
 #endif
+
+            // We over-write the z-locations to make sure they're in the domain
+            p.pos(2) = 0.5 * zlen;
        }
     }
 }
