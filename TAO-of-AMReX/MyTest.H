@@ -2,14 +2,53 @@
 #define MY_TEST_H_
 
 #include <AMReX_MLMG.H>
+#include <AMReX_Dim3.H>
+#include <map>
 
 #ifdef AMREX_USE_HYPRE
 #include <AMReX_Hypre.H>
 #endif
 
+struct EdgeBoundaryValues
+{
+    amrex::Vector<amrex::Real> x;
+
+    EdgeBoundaryValues() { x.resize(0); }
+
+    amrex::Real& operator()(int i) { return x[i]; }
+
+    void resize(int n) { x.resize(n); }
+
+    int size() { return x.size(); }
+
+    void push_back(amrex::Real xi) { x.push_back(xi); }
+};
+
+struct BoxBoundaryValues
+{
+    amrex::Vector<EdgeBoundaryValues> x;
+
+    BoxBoundaryValues() { x.resize(0); }
+
+    EdgeBoundaryValues& operator()(int i) { return x[i]; }
+
+    amrex::Real& operator()(int i, int j) { return x[i](j); }
+
+    void resize(int n) { x.resize(n); }
+
+    int size() { return x.size(); }
+
+    void push_back(EdgeBoundaryValues xi) { x.push_back(xi); }
+};
+
+typedef std::tuple<int, int, int, int, int, int> BoxCornerTuple;
+
+BoxCornerTuple make_box_corner_tuple(const amrex::Box& bx);
+
 namespace ExtTaoBC
 {
-    extern amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
+    extern std::map<BoxCornerTuple, BoxBoundaryValues> ext_dir_bcs;
+
     const int lower_boundary = 0;
     const int left_boundary = 1;
     const int upper_boundary = 2;
@@ -54,6 +93,7 @@ class MyTest
         int ref_ratio = 2;
         int n_cell = 128;
         int max_grid_size = 64;
+        const int ngrow = 1; // number of ghost cells for solution
 
         bool composite_solve = true;
 

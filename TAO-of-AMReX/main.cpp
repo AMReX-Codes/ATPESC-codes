@@ -108,8 +108,8 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = VecGetLocalSize(Plist[2], &nt);CHKERRQ(ierr);
 
     mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
-                                  (int)nl, (const amrex::Real*)pl,
-                                  (int)nt, (const amrex::Real*)pt);
+                                   (int)nl, (const amrex::Real*)pl,
+                                   (int)nt, (const amrex::Real*)pt);
 
     ierr = VecRestoreArrayRead(Plist[0], &pb);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(Plist[1], &pl);CHKERRQ(ierr);

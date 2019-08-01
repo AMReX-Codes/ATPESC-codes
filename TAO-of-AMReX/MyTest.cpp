@@ -12,7 +12,16 @@ using namespace amrex;
 
 namespace ExtTaoBC
 {
-amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
+    std::map<BoxCornerTuple, BoxBoundaryValues> ext_dir_bcs;
+}
+
+BoxCornerTuple make_box_corner_tuple(const amrex::Box& bx)
+{
+    const auto bx_lo = amrex::lbound(bx);
+    const auto bx_hi = amrex::ubound(bx);
+    
+    return std::make_tuple(bx_lo.x, bx_lo.y, bx_lo.z,
+                           bx_hi.x, bx_hi.y, bx_hi.z);
 }
 
 MyTest::MyTest()
@@ -48,6 +57,7 @@ void MyTest::write_plotfile()
     if (iteration_counter == 0)
         VisMF::Write(exact_solution, get_iteration_filename("exact_solution"));
 }
+
 void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)
 {
     const Box& domain_bx = geom.Domain();
@@ -73,11 +83,16 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
     num_left = 0;
     num_upper = 0;
 
-    for (MFIter mfi(solution); mfi.isValid(); ++mfi)
+    for (MFIter mfi(solution, false); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.validbox();
             const auto bx_lo = lbound(bx);
             const auto bx_hi = ubound(bx);
+
+            const Box& gbx = mfi.growntilebox();
+
+            auto key = make_box_corner_tuple(gbx); 
+            BoxBoundaryValues vvr;
 
             bool aligned_lower = false;
             bool aligned_left  = false;
@@ -107,21 +122,53 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
 
             if (aligned_left && aligned_upper)
                 num_left++;
+
+            // add vectors to ext_dir_bcs mapped to the grown box
+            EdgeBoundaryValues xbc_lower; xbc_lower.resize(num_lower);
+            vvr.push_back(xbc_lower);
+
+            EdgeBoundaryValues xbc_left; xbc_left.resize(num_left);
+            vvr.push_back(xbc_left);
+
+            EdgeBoundaryValues xbc_upper; xbc_upper.resize(num_upper);
+            vvr.push_back(xbc_upper);
+
+            auto key_val = std::make_pair(key, vvr);
+            ExtTaoBC::ext_dir_bcs.insert(key_val); 
         }
 }
 
 
-void MyTest::update_boundary_values(int nb, const Real *xb,
-                                    int nl, const Real *xl,
-                                    int nt, const Real *xt)
+void MyTest::update_boundary_values(int nlower, const Real *xlower,
+                                    int nleft, const Real *xleft,
+                                    int nupper, const Real *xupper)
 {
-    ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].resize(nb);
-    ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].resize(nl);
-    ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].resize(nt);
+    int ilower = 0;
+    int ileft = 0;
+    int iupper = 0;
 
-    std::copy(xb, xb + nb, ExtTaoBC::ext_dir_bcs[ExtTaoBC::lower_boundary].begin());
-    std::copy(xl, xl + nl, ExtTaoBC::ext_dir_bcs[ExtTaoBC::left_boundary].begin());
-    std::copy(xt, xt + nt, ExtTaoBC::ext_dir_bcs[ExtTaoBC::upper_boundary].begin());
+    auto iter = ExtTaoBC::ext_dir_bcs.begin();
+    while (iter != ExtTaoBC::ext_dir_bcs.end())
+    {
+        auto& vvr = iter->second;
+
+        const int size_lower = vvr(ExtTaoBC::lower_boundary).size();
+        const int size_left = vvr(ExtTaoBC::left_boundary).size();
+        const int size_upper = vvr(ExtTaoBC::upper_boundary).size();
+
+        for (int i = 0; i < size_lower; ++i)
+            vvr(ExtTaoBC::lower_boundary, i) = xlower[ilower + i];
+
+        for (int i = 0; i < size_left; ++i)
+            vvr(ExtTaoBC::left_boundary, i) = xleft[ileft + i];
+
+        for (int i = 0; i < size_upper; ++i)
+            vvr(ExtTaoBC::upper_boundary, i) = xupper[iupper + i];
+
+        ilower += size_lower;
+        ileft += size_left;
+        iupper += size_upper;
+    }
 
     solution.FillBoundary(geom.periodicity());
     FillDomainBoundary(solution, geom, {bcs});
@@ -141,7 +188,7 @@ void MyTest::setup_adjoint_system()
 
     const int k = 0;
 
-    for (MFIter mfi(solution); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(solution, false); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
         const auto bx_lo = lbound(bx);
         const auto bx_hi = ubound(bx);
@@ -183,7 +230,7 @@ void MyTest::update_target_solution()
 
     const int k = 0;
 
-    for (MFIter mfi(exact_solution); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(exact_solution, false); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
         const auto bx_lo = lbound(bx);
         const auto bx_hi = ubound(bx);
@@ -212,7 +259,7 @@ Real MyTest::calculate_obj_val()
 
     const int k = 0;
 
-    for (MFIter mfi(solution); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(solution, false); mfi.isValid(); ++mfi) {
         const Box& bx = mfi.validbox();
         const auto bx_lo = lbound(bx);
         const auto bx_hi = ubound(bx);
@@ -258,7 +305,7 @@ void MyTest::calculate_opt_gradient(int nlower, Real* glower,
 
     const int k = 0;
 
-    for (MFIter mfi(adjoint); mfi.isValid(); ++mfi)
+    for (MFIter mfi(adjoint, false); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.validbox();
             const auto bx_lo = lbound(bx);
@@ -463,7 +510,7 @@ void MyTest::initData()
     grids.define(domain);
     grids.maxSize(max_grid_size);
     dmap.define(grids);
-    solution.define(grids, dmap, 1, 1);
+    solution.define(grids, dmap, 1, ngrow);
     rhs.define(grids, dmap, 1, 0);
     exact_solution.define(grids, dmap, 1, 0);
 
@@ -477,11 +524,6 @@ void MyTest::initData()
 
     // - then set outflow to right = first order extrapolation
     bcs.setHi(0, BCType::foextrap);
-
-    ExtTaoBC::ext_dir_bcs.resize(3);
-    ExtTaoBC::ext_dir_bcs[0].resize(n_cell + 2);
-    ExtTaoBC::ext_dir_bcs[1].resize(n_cell + 2);
-    ExtTaoBC::ext_dir_bcs[2].resize(n_cell + 2);
 
     initProbPoisson();
 }
