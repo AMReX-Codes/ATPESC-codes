@@ -11,7 +11,7 @@ PETSC_HOME ?= .
 
 COMP = gnu
 
-DIM = 3
+DIM = 2 
 
 AMREX_HOME ?= ../../..
 
