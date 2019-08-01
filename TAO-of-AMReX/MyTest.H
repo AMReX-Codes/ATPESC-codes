@@ -7,7 +7,7 @@
 #include <AMReX_Hypre.H>
 #endif
 
-namespace ExtTaoBC 
+namespace ExtTaoBC
 {
    extern amrex::Vector<amrex::Vector<amrex::Real>> ext_dir_bcs;
    const int lower_boundary = 0;
@@ -28,7 +28,7 @@ public: // make these public for cuda
     void initProbPoisson ();
     void initProbABecLaplacian ();
     void get_number_global_bcs(int& num_lower, int& num_left, int& num_upper);
-    void get_number_local_bcs(int& num_lower, int& num_left, int& num_upper);    
+    void get_number_local_bcs(int& num_lower, int& num_left, int& num_upper);
 
 private:
 
@@ -41,10 +41,12 @@ private:
     int ref_ratio = 2;
     int n_cell = 128;
     int max_grid_size = 64;
-    
+
     bool composite_solve = true;
 
     int prob_type = 1;  // 1. Poisson,  2. ABecLaplacian
+
+    int iteration_counter = 0;
 
     // For MLMG solver
     int verbose = 2;
@@ -57,7 +59,7 @@ private:
     int max_coarsening_level = 30;
     bool use_hypre = false;
     bool use_petsc = false;
-    
+
 #ifdef AMREX_USE_HYPRE
     int hypre_interface_i = 1;  // 1. structed, 2. semi-structed, 3. ij
     amrex::Hypre::Interface hypre_interface = amrex::Hypre::Interface::structed;

@@ -103,15 +103,15 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = VecGetLocalSize(Plist[1], &nl);CHKERRQ(ierr);
     ierr = VecGetLocalSize(Plist[2], &nt);CHKERRQ(ierr);
 
-    mytest.update_boundary_values((int)nb, (const amrex::Real*)pb, 
-                                  (int)nl, (const amrex::Real*)pl, 
+    mytest.update_boundary_values((int)nb, (const amrex::Real*)pb,
+                                  (int)nl, (const amrex::Real*)pl,
                                   (int)nt, (const amrex::Real*)pt);
 
     ierr = VecRestoreArrayRead(Plist[0], &pb);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(Plist[1], &pl);CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(Plist[2], &pt);CHKERRQ(ierr);
 
-    /* 2) solve the nonlinar problem with AMReX */
+    /* 2) solve the Poisson problem with AMReX */
     mytest.solve(); // solve the poisson problem with the boundary values
 
     /* 3) compute the objective function value using solution from AMReX and store into ff */
@@ -129,16 +129,17 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = VecGetArray(Glist[1], &gl);CHKERRQ(ierr);
     ierr = VecGetArray(Glist[2], &gt);CHKERRQ(ierr);
 
-    mytest.calculate_opt_gradient((int)nb, (amrex::Real*)gb, 
-                                  (int)nl, (amrex::Real*)gl, 
-                                  (int)nt, (amrex::Real*)gt); 
-    
+    mytest.calculate_opt_gradient((int)nb, (amrex::Real*)gb,
+                                  (int)nl, (amrex::Real*)gl,
+                                  (int)nt, (amrex::Real*)gt);
+
     ierr = VecRestoreArray(Glist[0], &gb);CHKERRQ(ierr);
     ierr = VecRestoreArray(Glist[1], &gl);CHKERRQ(ierr);
     ierr = VecRestoreArray(Glist[2], &gt);CHKERRQ(ierr);
 
     /* 6) Other misc operations like generating iterative plots can be done here */
-    mytest.writePlotfile();
+    mytest.write_plotfile();
+    mytest.update_counter();
 
     PetscFunctionReturn(0);
 }

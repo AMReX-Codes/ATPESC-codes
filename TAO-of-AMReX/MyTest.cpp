@@ -5,6 +5,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_ParallelDescriptor.H>
+#include <AMReX_VisMF.H>
 
 using namespace amrex;
 
@@ -24,6 +25,28 @@ void MyTest::solve()
     solvePoisson(solution, rhs);
 }
 
+void MyTest::update_counter()
+{
+    iteration_counter++;
+}
+
+std::string MyTest::get_iteration_filename(std::string filename)
+{
+    std::stringstream sstream;
+    sstream << filename << std::setw(5) << std::setfill('0') << iteration_counter;
+    std::string file_with_counter = sstream.str();
+    return file_with_counter;
+}
+
+void MyTest::write_plotfile()
+{
+    VisMF::Write(solution, get_iteration_filename("solution"));
+    VisMF::Write(adjoint, get_iteration_filename("adjoint"));
+    VisMF::Write(adjoint_rhs, get_iteration_filename("adjoint_rhs"));
+    VisMF::Write(rhs, get_iteration_filename("rhs"));
+    if (iteration_counter == 0)
+        VisMF::Write(exact_solution, get_iteration_filename("exact_solution"));
+}
 void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)
 {
     const DomainBox& domain_bx = geom.Domain();
