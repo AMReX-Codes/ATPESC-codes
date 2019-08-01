@@ -72,22 +72,33 @@ void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper
     num_left += 2; // left/lower and left/upper corners
 }
 
-void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
+void MyTest::get_number_local_bcs(int& local_num_lower, int& local_num_left, int& local_num_upper)
 {
     // Get number of boundary values local to this MPI rank
     const Box& domain_bx = geom.Domain();
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    num_lower = 0;
-    num_left = 0;
-    num_upper = 0;
+    local_num_lower = 0;
+    local_num_left = 0;
+    local_num_upper = 0;
 
+    int im = 0;
     for (MFIter mfi(solution, false); mfi.isValid(); ++mfi)
         {
+            int num_lower = 0;
+            int num_left = 0;
+            int num_upper = 0;
+
             const Box& bx = mfi.validbox();
             const auto bx_lo = lbound(bx);
             const auto bx_hi = ubound(bx);
+
+            // For debugging ...
+            Print() << "im = " << im << "\n";
+            Print() << "bx_lo = " << bx_lo.x << " " << bx_lo.y << " " << bx_lo.z << "\n";
+            Print() << "bx_hi = " << bx_hi.x << " " << bx_hi.y << " " << bx_hi.z << "\n";
+            im++;
 
             const Box& gbx = mfi.growntilebox();
 
@@ -135,6 +146,10 @@ void MyTest::get_number_local_bcs(int& num_lower, int& num_left, int& num_upper)
 
             auto key_val = std::make_pair(key, vvr);
             ExtTaoBC::ext_dir_bcs.insert(key_val); 
+
+            local_num_lower += num_lower;
+            local_num_left += num_left;
+            local_num_upper += num_upper;
         }
 }
 

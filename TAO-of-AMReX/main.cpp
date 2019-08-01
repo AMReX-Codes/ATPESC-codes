@@ -31,6 +31,11 @@ int main (int argc, char* argv[])
 
     mytest.get_number_local_bcs(nb, nl, nt);
     mytest.get_number_global_bcs(Nb, Nl, Nt);
+
+    // For debugging ...
+    amrex::Print() << "num local: " << nb << " " << nl << " " << nt << "\n";
+    amrex::Print() << "num global: " << Nb << " " << Nl << " " << Nt << "\n";
+
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nb, Nb, &Plist[0]);CHKERRQ(ierr);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nl, Nl, &Plist[1]);CHKERRQ(ierr);
     ierr = VecCreateMPI(PETSC_COMM_WORLD, nt, Nt, &Plist[2]);CHKERRQ(ierr);
