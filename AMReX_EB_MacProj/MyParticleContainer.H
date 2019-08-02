@@ -24,7 +24,8 @@ public:
 
     Real FindWinner (int n);
 
-//  void WriteAsciiFile (std::stream& filename);
+    void InitParticles (std::string initial_particle_file, Real zlen);
+
 };
 
 }

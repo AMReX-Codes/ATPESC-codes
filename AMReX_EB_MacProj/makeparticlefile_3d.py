@@ -16,7 +16,7 @@ dy = (dimy[1] - dimy[0]) / NY
 
 f = open("initial_particles_3d", "w")
 
-z_loc = 0.55
+z_loc = 0.5
 
 for i in range(NX):
     for j in range(NY):

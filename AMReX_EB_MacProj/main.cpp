@@ -146,11 +146,13 @@ int main (int argc, char* argv[])
            amrex::Print() << " ********************************************************************" << std::endl; 
         } 
 
+        Real zlen = 0.125;
+
         Geometry geom;
         BoxArray grids;
         DistributionMapping dmap;
         {
-            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.0,1.0,0.125)});
+            RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(2.0,1.0,zlen)});
 
             Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
             Geometry::Setup(&rb, 0, isp.data());
@@ -317,7 +319,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitFromAsciiFile(particle_file, 0);
+        MyPC.InitParticles(particle_file,zlen);
 
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
