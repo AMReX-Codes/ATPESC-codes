@@ -267,7 +267,7 @@ void MyTest::update_target_solution()
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    Copy(exact_solution, solution, 0, 0, 1, solution.nGrow());
+    Copy(exact_solution, solution, 0, 0, 1, 0);
 
     const int k = 0;
 
@@ -502,7 +502,6 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
 
 void MyTest::readParameters()
 {
- /*
     ParmParse pp;
     pp.query("max_level", max_level);
     pp.query("ref_ratio", ref_ratio);
@@ -539,31 +538,7 @@ void MyTest::readParameters()
 #ifdef AMREX_USE_PETSC
     pp.query("use_petsc", use_petsc);
 #endif
-*/
-    
-max_level = 1;
-ref_ratio = 2;
-n_cell = 128;
-max_grid_size = 64;
-
-composite_solve = 1;   // composite solve or level by level?
-
-// For MLMG
-use_hypre = 0;
-#ifdef AMREX_USE_HYPRE
-hypre_interface = Hypre::Interface::ij;
-#endif
-use_petsc = 0;
-verbose = 0;
-bottom_verbose = 0;
-max_iter = 100;
-max_fmg_iter = 0;     // of F-cycles before switching to V.  To do pure V-cycle, set to 0
-linop_maxorder = 2;
-agglomeration = 1;    // Do agglomeration on AMR Level 0?
-consolidation = 1;    // Do consolidation?
-
-max_coarsening_level = 1000;
-
+   
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!(use_hypre && use_petsc),
                                      "use_hypre & use_petsc cannot be both true");
 }

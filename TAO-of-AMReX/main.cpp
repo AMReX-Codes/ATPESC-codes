@@ -9,7 +9,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
 
 int main (int argc, char* argv[])
 {
-    int no_args = 1;
+    int no_args = 2;
     amrex::Initialize(no_args, argv);
 
     PetscErrorCode     ierr;
