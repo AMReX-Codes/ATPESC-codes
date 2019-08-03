@@ -12,9 +12,6 @@ int main (int argc, char* argv[])
     int no_args = 1;
     amrex::Initialize(no_args, argv);
 
-    BL_PROFILE("main");
-    MyTest mytest;
-
     PetscErrorCode     ierr;
     PetscReal          zero=0.0;
     int                nb, nl, nt;
@@ -28,6 +25,10 @@ int main (int argc, char* argv[])
     ierr = PetscInitialize(&argc, &argv, (char*)0, (char*)0); if (ierr) return ierr;
     ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+    
+    {
+    BL_PROFILE("main");
+    MyTest mytest;
 
     // Create PETSc vectors for the bottom, left and top edge Dirichlet boundaries
     mytest.get_number_local_bcs(nb, nl, nt);
@@ -59,6 +60,7 @@ int main (int argc, char* argv[])
 
     // Start the optimization solution
     ierr = TaoSolve(tao); CHKERRQ(ierr);
+    }
 
     // Cleanup and exit
     ierr = VecDestroy(&P);CHKERRQ(ierr);
