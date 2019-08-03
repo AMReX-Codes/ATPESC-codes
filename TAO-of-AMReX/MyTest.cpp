@@ -589,6 +589,8 @@ void MyTest::initData()
     rhs.define(grids, dmap, 1, ngrow);
     exact_solution.define(grids, dmap, 1, 0);
 
+    solution = 0.0;
+
     // set up boundary conditions:
     // - first set all boundary conditions to external Dirichlet
     for (int i = 0; i < AMREX_SPACEDIM; ++i)
