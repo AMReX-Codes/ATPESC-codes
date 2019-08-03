@@ -553,9 +553,11 @@ composite_solve = 1;   // composite solve or level by level?
 
 // For MLMG
 use_hypre = 0;
+#ifdef AMREX_USE_HYPRE
 hypre_interface = Hypre::Interface::ij;
+#endif
 use_petsc = 0;
-verbose = 2;
+verbose = 0;
 bottom_verbose = 0;
 max_iter = 100;
 max_fmg_iter = 0;     // of F-cycles before switching to V.  To do pure V-cycle, set to 0
