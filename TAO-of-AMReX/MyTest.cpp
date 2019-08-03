@@ -28,7 +28,6 @@ BoxCornerTuple make_box_corner_tuple(const amrex::Box& bx)
 MyTest::MyTest()
 {
     readParameters();
-    initData();
 }
 
 void MyTest::solve()

@@ -59,9 +59,11 @@ class MyTest
     public:
 
         MyTest ();
-
+        void initData ();
         void solve ();
         void writePlotfile ();
+        int n_cell = 128;
+        bool fd_grad = false;
 
     public: // make these public for cuda
         void initProbPoisson ();
@@ -83,7 +85,6 @@ class MyTest
     private:
 
         void readParameters ();
-        void initData ();
         void solvePoisson(amrex::MultiFab &solution, amrex::MultiFab &rhs);
         void solveABecLaplacian ();
         std::string get_iteration_filename(std::string filename);
@@ -91,7 +92,6 @@ class MyTest
 
         int max_level = 1;
         int ref_ratio = 2;
-        int n_cell = 128;
         int max_grid_size = 64;
         const int ngrow = 1; // number of ghost cells for solution
 
