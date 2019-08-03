@@ -437,8 +437,10 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
                                             LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet)});
 
-        auto ngv = solution.nGrowVect();
-        Print() << "solution ngrowvect = " << ngv[0] << " " << ngv[1] << "\n";
+        const Real* dx = geom.CellSize();
+        mlpoisson.setDomainBCLoc({AMREX_D_DECL(0.5*dx[0],0.5*dx[1],0.5*dx[2])},
+                                 {AMREX_D_DECL(0.5*dx[0],0.5*dx[1],0.5*dx[2])});
+
         mlpoisson.setLevelBC(0, &solution);
 
         MLMG mlmg(mlpoisson);
