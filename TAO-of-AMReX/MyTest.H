@@ -62,6 +62,7 @@ class MyTest
         void initData ();
         void solve ();
         void writePlotfile ();
+        void writeMinimalPlotfile ();
         int n_cell = 128;
         bool fd_grad = false;
 
@@ -79,7 +80,7 @@ class MyTest
                 int nupper, amrex::Real* gupper);
         void setup_adjoint_system();
         void solve_adjoint_system();
-        void write_plotfile();
+        void write_plotfile(bool minimal=false);
         void update_counter();
 
     private:
@@ -112,6 +113,8 @@ class MyTest
         int max_coarsening_level = 30;
         bool use_hypre = false;
         bool use_petsc = false;
+        amrex::Real mlmg_tol_rel = 1.0e-12;
+        amrex::Real mlmg_tol_abs = 1.0e-6;
 
 #ifdef AMREX_USE_HYPRE
         int hypre_interface_i = 1;  // 1. structed, 2. semi-structed, 3. ij

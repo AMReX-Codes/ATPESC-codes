@@ -48,9 +48,12 @@ std::string MyTest::get_iteration_filename(std::string filename)
     return file_with_counter;
 }
 
-void MyTest::write_plotfile()
+void MyTest::write_plotfile(bool minimal_plotfile)
 {
-    writePlotfile();
+    if (minimal_plotfile)
+        writeMinimalPlotfile();
+    else
+        writePlotfile();
 }
 
 void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)
@@ -414,8 +417,8 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
     info.setConsolidation(consolidation);
     info.setMaxCoarseningLevel(max_coarsening_level);
 
-    const Real tol_rel = 1.e-10;
-    const Real tol_abs = 0.0;
+    const Real tol_rel = mlmg_tol_rel;
+    const Real tol_abs = mlmg_tol_abs;
 
     const int nlevels = 1;
 
@@ -518,6 +521,9 @@ void MyTest::readParameters()
     pp.query("agglomeration", agglomeration);
     pp.query("consolidation", consolidation);
     pp.query("max_coarsening_level", max_coarsening_level);
+
+    pp.query("mlmg_tol_rel", mlmg_tol_rel);
+    pp.query("mlmg_tol_abs", mlmg_tol_abs);
 
 #ifdef AMREX_USE_HYPRE
     pp.query("use_hypre", use_hypre);
