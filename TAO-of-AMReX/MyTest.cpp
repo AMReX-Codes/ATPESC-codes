@@ -224,6 +224,7 @@ void MyTest::setup_adjoint_system()
     // by evaluating \partial f/\partial u = \int_V (u(p) - u_t) dV
 
     adjoint_rhs = 0.0;
+    adjoint = 0.0;
 
     // for right boundary, adjoint_rhs(cell) = -dfdu = target solution(cell) - poisson solution(cell)
     const Box& domain_bx = geom.Domain();
@@ -581,6 +582,7 @@ void MyTest::initData()
     grids.maxSize(max_grid_size);
     dmap.define(grids);
     solution.define(grids, dmap, 1, ngrow);
+    adjoint.define(grids, dmap, 1, ngrow);
     adjoint_rhs.define(grids, dmap, 1, ngrow);
     rhs.define(grids, dmap, 1, ngrow);
     exact_solution.define(grids, dmap, 1, 0);
