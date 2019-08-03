@@ -29,3 +29,23 @@ MyTest::writePlotfile ()
     WriteSingleLevelPlotfile(filename, plotmf, varname, geom, 0.0, 1);
 }
 
+void
+MyTest::writeMinimalPlotfile ()
+{
+    const int ncomp = 2;
+    Vector<std::string> varname = {"solution", "rhs"};
+
+    const int nlevels = max_level+1;
+
+    MultiFab plotmf;
+    for (int ilev = 0; ilev < nlevels; ++ilev)
+    {
+        plotmf.define(grids, dmap, ncomp, 0);
+        MultiFab::Copy(plotmf, solution      , 0, 0, 1, 0);
+        MultiFab::Copy(plotmf, rhs           , 0, 1, 1, 0);
+    }
+
+    std::string filename = get_iteration_filename("plt");
+    WriteSingleLevelPlotfile(filename, plotmf, varname, geom, 0.0, 1);
+}
+

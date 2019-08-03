@@ -194,6 +194,8 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
                                                (int)nt, (const amrex::Real*)pt);
                 mytest->solve();
                 fpert = mytest->calculate_obj_val();
+                mytest->update_counter();
+                mytest->write_plotfile(true);
 
                 if (rank == r) {
                     gb[i] = (fpert - ff)/eps;
