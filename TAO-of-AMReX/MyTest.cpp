@@ -7,6 +7,7 @@
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_BCUtil.H>
+#include <cassert>
 
 using namespace amrex;
 
@@ -162,7 +163,12 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
     int ileft = 0;
     int iupper = 0;
 
+        Print() << "nlower = " << nlower << "\n";
+        Print() << "nleft = " << nleft << "\n";
+        Print() << "nupper = " << nupper << "\n";
+
     auto iter = ExtTaoBC::ext_dir_bcs.begin();
+    int iiter = 0;
     while (iter != ExtTaoBC::ext_dir_bcs.end())
     {
         auto& vvr = iter->second;
@@ -171,14 +177,29 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
         const int size_left = vvr(ExtTaoBC::left_boundary).size();
         const int size_upper = vvr(ExtTaoBC::upper_boundary).size();
 
+        Print() << "iiter = " << iiter << "\n";
+        Print() << "size_lower = " << size_lower << "\n";
+        Print() << "size_left = " << size_left << "\n";
+        Print() << "size_upper = " << size_upper << "\n";
+        iiter++;
+
         for (int i = 0; i < size_lower; ++i)
-            vvr(ExtTaoBC::lower_boundary, i) = xlower[ilower + i];
+        {
+            vvr(ExtTaoBC::lower_boundary, i) = 1.0; // xlower[ilower + i];
+            assert(ilower + i <= nlower);
+        }
 
         for (int i = 0; i < size_left; ++i)
-            vvr(ExtTaoBC::left_boundary, i) = xleft[ileft + i];
+        {
+            vvr(ExtTaoBC::left_boundary, i) = 1.0; // xleft[ileft + i];
+            assert(ileft + i <= nleft);
+        }
 
         for (int i = 0; i < size_upper; ++i)
-            vvr(ExtTaoBC::upper_boundary, i) = xupper[iupper + i];
+        {
+            vvr(ExtTaoBC::upper_boundary, i) = 1.0; // xupper[iupper + i];
+            assert(iupper + i <= nupper);
+        }
 
         ilower += size_lower;
         ileft += size_left;
@@ -471,6 +492,7 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
 
 void MyTest::readParameters()
 {
+ /*
     ParmParse pp;
     pp.query("max_level", max_level);
     pp.query("ref_ratio", ref_ratio);
@@ -507,6 +529,29 @@ void MyTest::readParameters()
 #ifdef AMREX_USE_PETSC
     pp.query("use_petsc", use_petsc);
 #endif
+*/
+    
+max_level = 1;
+ref_ratio = 2;
+n_cell = 128;
+max_grid_size = 64;
+
+composite_solve = 1;   // composite solve or level by level?
+
+// For MLMG
+use_hypre = 0;
+hypre_interface = Hypre::Interface::ij;
+use_petsc = 0;
+verbose = 2;
+bottom_verbose = 0;
+max_iter = 100;
+max_fmg_iter = 0;     // of F-cycles before switching to V.  To do pure V-cycle, set to 0
+linop_maxorder = 2;
+agglomeration = 1;    // Do agglomeration on AMR Level 0?
+consolidation = 1;    // Do consolidation?
+
+max_coarsening_level = 1000;
+
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!(use_hypre && use_petsc),
                                      "use_hypre & use_petsc cannot be both true");
 }

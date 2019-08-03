@@ -9,7 +9,8 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
 
 int main (int argc, char* argv[])
 {
-    amrex::Initialize(argc, argv);
+    int no_args = 1;
+    amrex::Initialize(no_args, argv);
 
     BL_PROFILE("main");
     MyTest mytest;
