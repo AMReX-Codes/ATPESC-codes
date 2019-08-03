@@ -100,7 +100,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     PetscInt          i;
     PetscInt          numNested;
     PetscErrorCode    ierr;
-    PetscReal         cache, ff=0, fpert=0, eps=1.e-5;
+    PetscReal         cache, ff=0, fpert=0, eps=1.e-3;
     Vec               *Plist, *Glist;
     Vec               Ptmp;
     PetscInt          nb, nl, nt, ntmp;
@@ -186,6 +186,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
                 if (rank == r) {
                     cache = pp[i];
                     pp[i] += eps;
+                    std::cout << "rank: " << r << " | cache: " << cache << " | pp[" << i << "] = " << pp[i] << std::endl;
                 }
 
                 mytest->update_boundary_values((int)nb, (const amrex::Real*)pp,
@@ -196,6 +197,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
 
                 if (rank == r) {
                     gb[i] = (fpert - ff)/eps;
+                    std::cout << "rank: " << r << " | gb[" << i << "] = " << gb[i] << std::endl;
                     pp[i] = cache;
                 }
             }
@@ -215,6 +217,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
                 if (rank == r) {
                     cache = pp[i];
                     pp[i] += eps;
+                    std::cout << "rank: " << r << " | cache: " << cache << " | pp[" << i << "] = " << pp[i] << std::endl;
                 }
 
                 mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
@@ -225,6 +228,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
 
                 if (rank == r) {
                     gl[i] = (fpert - ff)/eps;
+                    std::cout << "rank: " << r << " | gl[" << i << "] = " << gl[i] << std::endl;
                     pp[i] = cache;
                 }
             }
@@ -244,6 +248,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
                 if (rank == r) {
                     cache = pp[i];
                     pp[i] += eps;
+                    std::cout << "rank: " << r << " | cache: " << cache << " | pp[" << i << "] = " << pp[i] << std::endl;
                 }
 
                 mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
@@ -254,6 +259,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
 
                 if (rank == r) {
                     gt[i] = (fpert - ff)/eps;
+                    std::cout << "rank: " << r << " | gt[" << i << "] = " << gt[i] << std::endl;
                     pp[i] = cache;
                 }
             }
