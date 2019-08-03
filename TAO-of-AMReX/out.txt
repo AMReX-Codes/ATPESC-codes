@@ -1,0 +1,513 @@
+MPI initialized with 1 MPI processes
+AMReX (19.07-374-g9d2e2f9eb796) initialized
+rank: 0 | cache: 0 | pp[0] = 0.001
+rank: 0 | gb[0] = 25.96081748
+rank: 0 | cache: 0 | pp[1] = 0.001
+rank: 0 | gb[1] = 42.15691026
+rank: 0 | cache: 0 | pp[2] = 0.001
+rank: 0 | gb[2] = 51.24306069
+rank: 0 | cache: 0 | pp[3] = 0.001
+rank: 0 | gb[3] = 56.11031066
+rank: 0 | cache: 0 | pp[4] = 0.001
+rank: 0 | gb[4] = 58.65825483
+rank: 0 | cache: 0 | pp[5] = 0.001
+rank: 0 | gb[5] = 59.97565009
+rank: 0 | cache: 0 | pp[6] = 0.001
+rank: 0 | gb[6] = 60.65143189
+rank: 0 | cache: 0 | pp[7] = 0.001
+rank: 0 | gb[7] = 60.99627465
+rank: 0 | cache: 0 | pp[0] = 0.001
+rank: 0 | gl[0] = 61.17737994
+rank: 0 | cache: 0 | pp[1] = 0.001
+rank: 0 | gl[1] = 61.27110948
+rank: 0 | cache: 0 | pp[2] = 0.001
+rank: 0 | gl[2] = 61.31935449
+rank: 0 | cache: 0 | pp[3] = 0.001
+rank: 0 | gl[3] = 61.34417645
+rank: 0 | cache: 0 | pp[4] = 0.001
+rank: 0 | gl[4] = 61.35700167
+rank: 0 | cache: 0 | pp[5] = 0.001
+rank: 0 | gl[5] = 61.3636984
+rank: 0 | cache: 0 | pp[6] = 0.001
+rank: 0 | gl[6] = 61.36726423
+rank: 0 | cache: 0 | pp[7] = 0.001
+rank: 0 | gl[7] = 61.36922808
+rank: 0 | cache: 0 | pp[8] = 0.001
+rank: 0 | gl[8] = 61.37037481
+rank: 0 | cache: 0 | pp[9] = 0.001
+rank: 0 | gl[9] = 61.371028
+rank: 0 | cache: 0 | pp[0] = 0.001
+rank: 0 | gt[0] = 61.37132454
+rank: 0 | cache: 0 | pp[1] = 0.001
+rank: 0 | gt[1] = 61.37140536
+rank: 0 | cache: 0 | pp[2] = 0.001
+rank: 0 | gt[2] = 61.37136567
+rank: 0 | cache: 0 | pp[3] = 0.001
+rank: 0 | gt[3] = 61.37129173
+rank: 0 | cache: 0 | pp[4] = 0.001
+rank: 0 | gt[4] = 61.37129993
+rank: 0 | cache: 0 | pp[5] = 0.001
+rank: 0 | gt[5] = 61.3715803
+rank: 0 | cache: 0 | pp[6] = 0.001
+rank: 0 | gt[6] = 61.37239332
+rank: 0 | cache: 0 | pp[7] = 0.001
+rank: 0 | gt[7] = 61.37367341
+  0 TAO,  Function value: 0.0536209,  Residual: 300.682 
+rank: 0 | cache: -3.079418987e-05 | pp[0] = 0.0009692058101
+rank: 0 | gb[0] = -4.870944931e-05
+rank: 0 | cache: -5.000566334e-05 | pp[1] = 0.0009499943367
+rank: 0 | gb[1] = 2.873545352e-05
+rank: 0 | cache: -6.078346884e-05 | pp[2] = 0.0009392165312
+rank: 0 | gb[2] = 7.479687397e-06
+rank: 0 | cache: -6.655690105e-05 | pp[3] = 0.000933443099
+rank: 0 | gb[3] = -0.0003243800682
+rank: 0 | cache: -6.957922023e-05 | pp[4] = 0.0009304207798
+rank: 0 | gb[4] = -0.001184312719
+rank: 0 | cache: -7.11418875e-05 | pp[5] = 0.0009288581125
+rank: 0 | gb[5] = -0.00284253739
+rank: 0 | cache: -7.194348602e-05 | pp[6] = 0.000928056514
+rank: 0 | gb[6] = -0.005528038714
+rank: 0 | cache: -7.235253144e-05 | pp[7] = 0.0009276474686
+rank: 0 | gb[7] = -0.008536515643
+rank: 0 | cache: -7.256735482e-05 | pp[0] = 0.0009274326452
+rank: 0 | gl[0] = -0.00546373329
+rank: 0 | cache: -7.267853489e-05 | pp[1] = 0.0009273214651
+rank: 0 | gl[1] = -0.002770225461
+rank: 0 | cache: -7.273576213e-05 | pp[2] = 0.0009272642379
+rank: 0 | gl[2] = -0.001049648296
+rank: 0 | cache: -7.276520543e-05 | pp[3] = 0.0009272347946
+rank: 0 | gl[3] = 5.296188002e-06
+rank: 0 | cache: -7.278041845e-05 | pp[4] = 0.0009272195816
+rank: 0 | gl[4] = 0.0006933653472
+rank: 0 | cache: -7.278836197e-05 | pp[5] = 0.000927211638
+rank: 0 | gl[5] = 0.001194289066
+rank: 0 | cache: -7.279259168e-05 | pp[6] = 0.0009272074083
+rank: 0 | gl[6] = 0.001598727665
+rank: 0 | cache: -7.279492116e-05 | pp[7] = 0.0009272050788
+rank: 0 | gl[7] = 0.0019504668
+rank: 0 | cache: -7.279628139e-05 | pp[8] = 0.0009272037186
+rank: 0 | gl[8] = 0.002275809821
+rank: 0 | cache: -7.279705618e-05 | pp[9] = 0.0009272029438
+rank: 0 | gl[9] = 0.002510961765
+rank: 0 | cache: -7.279740794e-05 | pp[0] = 0.0009272025921
+rank: 0 | gt[0] = 0.002595080541
+rank: 0 | cache: -7.27975038e-05 | pp[1] = 0.0009272024962
+rank: 0 | gt[1] = 0.002568173098
+rank: 0 | cache: -7.279745673e-05 | pp[2] = 0.0009272025433
+rank: 0 | gt[2] = 0.002474017035
+rank: 0 | cache: -7.279736902e-05 | pp[3] = 0.000927202631
+rank: 0 | gt[3] = 0.002372631903
+rank: 0 | cache: -7.279737874e-05 | pp[4] = 0.0009272026213
+rank: 0 | gt[4] = 0.002367066791
+rank: 0 | cache: -7.279771131e-05 | pp[5] = 0.0009272022887
+rank: 0 | gt[5] = 0.002640560653
+rank: 0 | cache: -7.279867571e-05 | pp[6] = 0.0009272013243
+rank: 0 | gt[6] = 0.003450156952
+rank: 0 | cache: -7.280019412e-05 | pp[7] = 0.0009271998059
+rank: 0 | gt[7] = 0.004728551099
+rank: 0 | cache: -4.786344886e-06 | pp[0] = 0.0009952136551
+rank: 0 | gb[0] = -0.001835626197
+rank: 0 | cache: -7.772386677e-06 | pp[1] = 0.0009922276133
+rank: 0 | gb[1] = -0.003065697043
+rank: 0 | cache: -9.447582369e-06 | pp[2] = 0.0009905524176
+rank: 0 | gb[2] = -0.004023690342
+rank: 0 | cache: -1.034494768e-05 | pp[3] = 0.0009896550523
+rank: 0 | gb[3] = -0.005021470717
+rank: 0 | cache: -1.081470714e-05 | pp[4] = 0.0009891852929
+rank: 0 | gb[4] = -0.006353297849
+rank: 0 | cache: -1.105759271e-05 | pp[5] = 0.0009889424073
+rank: 0 | gb[5] = -0.008345429394
+rank: 0 | cache: -1.118218527e-05 | pp[6] = 0.0009888178147
+rank: 0 | gb[6] = -0.01126701318
+rank: 0 | cache: -1.124576326e-05 | pp[7] = 0.0009887542367
+rank: 0 | gb[7] = -0.01444234793
+rank: 0 | cache: -1.127915328e-05 | pp[0] = 0.0009887208467
+rank: 0 | gl[0] = -0.01148760423
+rank: 0 | cache: -1.129643401e-05 | pp[1] = 0.000988703566
+rank: 0 | gl[1] = -0.008877526911
+rank: 0 | cache: -1.130532885e-05 | pp[2] = 0.0009886946711
+rank: 0 | gl[2] = -0.007215898672
+rank: 0 | cache: -1.130990523e-05 | pp[3] = 0.0009886900948
+rank: 0 | gl[3] = -0.006202600659
+rank: 0 | cache: -1.131226979e-05 | pp[4] = 0.0009886877302
+rank: 0 | gl[4] = -0.005543954594
+rank: 0 | cache: -1.131350445e-05 | pp[5] = 0.0009886864956
+rank: 0 | gl[5] = -0.0050638212
+rank: 0 | cache: -1.131416188e-05 | pp[6] = 0.0009886858381
+rank: 0 | gl[6] = -0.004674077221
+rank: 0 | cache: -1.131452395e-05 | pp[7] = 0.0009886854761
+rank: 0 | gl[7] = -0.004332728792
+rank: 0 | cache: -1.131473537e-05 | pp[8] = 0.0009886852646
+rank: 0 | gl[8] = -0.004014737329
+rank: 0 | cache: -1.131485579e-05 | pp[9] = 0.0009886851442
+rank: 0 | gl[9] = -0.003784778733
+rank: 0 | cache: -1.131491047e-05 | pp[0] = 0.0009886850895
+rank: 0 | gt[0] = -0.003704317477
+rank: 0 | cache: -1.131492537e-05 | pp[1] = 0.0009886850746
+rank: 0 | gt[1] = -0.003733796085
+rank: 0 | cache: -1.131491805e-05 | pp[2] = 0.000988685082
+rank: 0 | gt[2] = -0.003829753034
+rank: 0 | cache: -1.131490442e-05 | pp[3] = 0.0009886850956
+rank: 0 | gt[3] = -0.003932390267
+rank: 0 | cache: -1.131490593e-05 | pp[4] = 0.0009886850941
+rank: 0 | gt[4] = -0.003938813098
+rank: 0 | cache: -1.131495762e-05 | pp[5] = 0.0009886850424
+rank: 0 | gt[5] = -0.003665889986
+rank: 0 | cache: -1.131510752e-05 | pp[6] = 0.0009886848925
+rank: 0 | gt[6] = -0.002856656102
+rank: 0 | cache: -1.131534352e-05 | pp[7] = 0.0009886846565
+rank: 0 | gt[7] = -0.001578498103
+rank: 0 | cache: -1.907472653e-07 | pp[0] = 0.0009998092527
+rank: 0 | gb[0] = -0.001162325496
+rank: 0 | cache: -3.097481561e-07 | pp[1] = 0.0009996902518
+rank: 0 | gb[1] = -0.001899697743
+rank: 0 | cache: -3.765087019e-07 | pp[2] = 0.0009996234913
+rank: 0 | gb[2] = -0.002504685254
+rank: 0 | cache: -4.122708509e-07 | pp[3] = 0.0009995877291
+rank: 0 | gb[3] = -0.003251497391
+rank: 0 | cache: -4.309918863e-07 | pp[4] = 0.0009995690081
+rank: 0 | gb[4] = -0.004405461115
+rank: 0 | cache: -4.40671456e-07 | pp[5] = 0.0009995593285
+rank: 0 | gb[5] = -0.006271717385
+rank: 0 | cache: -4.456367669e-07 | pp[6] = 0.0009995543632
+rank: 0 | gb[6] = -0.009104280141
+rank: 0 | cache: -4.481705012e-07 | pp[7] = 0.0009995518295
+rank: 0 | gb[7] = -0.01221668551
+rank: 0 | cache: -4.495011734e-07 | pp[0] = 0.0009995504988
+rank: 0 | gl[0] = -0.009217495429
+rank: 0 | cache: -4.501898518e-07 | pp[1] = 0.0009995498101
+rank: 0 | gl[1] = -0.006576014731
+rank: 0 | cache: -4.505443323e-07 | pp[2] = 0.0009995494557
+rank: 0 | gl[2] = -0.004892197783
+rank: 0 | cache: -4.507267118e-07 | pp[3] = 0.0009995492733
+rank: 0 | gl[3] = -0.003863222506
+rank: 0 | cache: -4.508209452e-07 | pp[4] = 0.0009995491791
+rank: 0 | gl[4] = -0.003193500692
+rank: 0 | cache: -4.508701494e-07 | pp[5] = 0.0009995491299
+rank: 0 | gl[5] = -0.002705543379
+rank: 0 | cache: -4.508963494e-07 | pp[6] = 0.0009995491037
+rank: 0 | gl[6] = -0.002310273508
+rank: 0 | cache: -4.509107788e-07 | pp[7] = 0.0009995490892
+rank: 0 | gl[7] = -0.001965023129
+rank: 0 | cache: -4.509192044e-07 | pp[8] = 0.0009995490808
+rank: 0 | gl[8] = -0.001644277186
+rank: 0 | cache: -4.509240037e-07 | pp[9] = 0.000999549076
+rank: 0 | gl[9] = -0.001412372747
+rank: 0 | cache: -4.509261826e-07 | pp[0] = 0.0009995490738
+rank: 0 | gt[0] = -0.001330534899
+rank: 0 | cache: -4.509267764e-07 | pp[1] = 0.0009995490732
+rank: 0 | gt[1] = -0.001359038833
+rank: 0 | cache: -4.509264848e-07 | pp[2] = 0.0009995490735
+rank: 0 | gt[2] = -0.001454304528
+rank: 0 | cache: -4.509259415e-07 | pp[3] = 0.0009995490741
+rank: 0 | gt[3] = -0.001556449902
+rank: 0 | cache: -4.509260017e-07 | pp[4] = 0.000999549074
+rank: 0 | gt[4] = -0.001562520546
+rank: 0 | cache: -4.509280617e-07 | pp[5] = 0.0009995490719
+rank: 0 | gt[5] = -0.001289342434
+rank: 0 | cache: -4.509340355e-07 | pp[6] = 0.000999549066
+rank: 0 | gt[6] = -0.0004799212126
+rank: 0 | cache: -4.509434409e-07 | pp[7] = 0.0009995490566
+rank: 0 | gt[7] = 0.0007983726279
+rank: 0 | cache: -3.422472836e-10 | pp[0] = 0.0009999996578
+rank: 0 | gb[0] = -0.001023720953
+rank: 0 | cache: -5.5576401e-10 | pp[1] = 0.0009999994442
+rank: 0 | gb[1] = -0.001659666478
+rank: 0 | cache: -6.755487704e-10 | pp[2] = 0.0009999993245
+rank: 0 | gb[2] = -0.002191984785
+rank: 0 | cache: -7.397148192e-10 | pp[3] = 0.0009999992603
+rank: 0 | gb[3] = -0.00288713344
+rank: 0 | cache: -7.733049391e-10 | pp[4] = 0.0009999992267
+rank: 0 | gb[4] = -0.004004483467
+rank: 0 | cache: -7.906724565e-10 | pp[5] = 0.0009999992093
+rank: 0 | gb[5] = -0.005844828898
+rank: 0 | cache: -7.995814396e-10 | pp[6] = 0.0009999992004
+rank: 0 | gb[6] = -0.008659068229
+rank: 0 | cache: -8.041275791e-10 | pp[7] = 0.0009999991959
+rank: 0 | gb[7] = -0.01175852123
+rank: 0 | cache: -8.065151307e-10 | pp[0] = 0.0009999991935
+rank: 0 | gl[0] = -0.008750179273
+rank: 0 | cache: -8.077507884e-10 | pp[1] = 0.0009999991922
+rank: 0 | gl[1] = -0.006102231736
+rank: 0 | cache: -8.083868132e-10 | pp[2] = 0.0009999991916
+rank: 0 | gl[2] = -0.004413845516
+rank: 0 | cache: -8.087140466e-10 | pp[3] = 0.0009999991913
+rank: 0 | gl[3] = -0.003381641919
+rank: 0 | cache: -8.088831244e-10 | pp[4] = 0.0009999991911
+rank: 0 | gl[4] = -0.002709639336
+rank: 0 | cache: -8.089714089e-10 | pp[5] = 0.000999999191
+rank: 0 | gl[5] = -0.002220070769
+rank: 0 | cache: -8.09018418e-10 | pp[6] = 0.000999999191
+rank: 0 | gl[6] = -0.001823662684
+rank: 0 | cache: -8.090443079e-10 | pp[7] = 0.000999999191
+rank: 0 | gl[7] = -0.001477608302
+rank: 0 | cache: -8.090594255e-10 | pp[8] = 0.0009999991909
+rank: 0 | gl[8] = -0.001156294466
+rank: 0 | cache: -8.090680366e-10 | pp[9] = 0.0009999991909
+rank: 0 | gl[9] = -0.0009239888513
+rank: 0 | cache: -8.09071946e-10 | pp[0] = 0.0009999991909
+rank: 0 | gt[0] = -0.0008418675181
+rank: 0 | cache: -8.090730114e-10 | pp[1] = 0.0009999991909
+rank: 0 | gt[1] = -0.0008701711003
+rank: 0 | cache: -8.090724882e-10 | pp[2] = 0.0009999991909
+rank: 0 | gt[2] = -0.0009652951499
+rank: 0 | cache: -8.090715134e-10 | pp[3] = 0.0009999991909
+rank: 0 | gt[3] = -0.001067340316
+rank: 0 | cache: -8.090716215e-10 | pp[4] = 0.0009999991909
+rank: 0 | gt[4] = -0.001073339977
+rank: 0 | cache: -8.090753177e-10 | pp[5] = 0.0009999991909
+rank: 0 | gt[5] = -0.0008001114639
+rank: 0 | cache: -8.09086036e-10 | pp[6] = 0.0009999991909
+rank: 0 | gt[6] = 9.345659163e-06
+rank: 0 | cache: -8.091029117e-10 | pp[7] = 0.0009999991909
+rank: 0 | gt[7] = 0.001287665006
+rank: 0 | cache: -1.107762745e-15 | pp[0] = 0.001
+rank: 0 | gb[0] = -0.001017731059
+rank: 0 | cache: -1.798859172e-15 | pp[1] = 0.001
+rank: 0 | gb[1] = -0.001649293595
+rank: 0 | cache: -2.186570343e-15 | pp[2] = 0.001
+rank: 0 | gb[2] = -0.002178471689
+rank: 0 | cache: -2.394258648e-15 | pp[3] = 0.001
+rank: 0 | gb[3] = -0.002871387865
+rank: 0 | cache: -2.502980865e-15 | pp[4] = 0.001
+rank: 0 | gb[4] = -0.003987155757
+rank: 0 | cache: -2.559194865e-15 | pp[5] = 0.001
+rank: 0 | gb[5] = -0.005826381554
+rank: 0 | cache: -2.588030856e-15 | pp[6] = 0.001
+rank: 0 | gb[6] = -0.008639829124
+rank: 0 | cache: -2.602745491e-15 | pp[7] = 0.001
+rank: 0 | gb[7] = -0.01173872246
+rank: 0 | cache: -2.610473356e-15 | pp[0] = 0.001
+rank: 0 | gl[0] = -0.008729985007
+rank: 0 | cache: -2.614472849e-15 | pp[1] = 0.001
+rank: 0 | gl[1] = -0.006081758005
+rank: 0 | cache: -2.616531491e-15 | pp[2] = 0.001
+rank: 0 | gl[2] = -0.004393174324
+rank: 0 | cache: -2.617590658e-15 | pp[3] = 0.001
+rank: 0 | gl[3] = -0.003360831216
+rank: 0 | cache: -2.618137917e-15 | pp[4] = 0.001
+rank: 0 | gl[4] = -0.00268873007
+rank: 0 | cache: -2.61842367e-15 | pp[5] = 0.001
+rank: 0 | gl[5] = -0.002199091871
+rank: 0 | cache: -2.618575826e-15 | pp[6] = 0.001
+rank: 0 | gl[6] = -0.001802634596
+rank: 0 | cache: -2.618659625e-15 | pp[7] = 0.001
+rank: 0 | gl[7] = -0.001456545463
+rank: 0 | cache: -2.618708557e-15 | pp[8] = 0.001
+rank: 0 | gl[8] = -0.001135207079
+rank: 0 | cache: -2.618736428e-15 | pp[9] = 0.001
+rank: 0 | gl[9] = -0.0009028841223
+rank: 0 | cache: -2.618749082e-15 | pp[0] = 0.001
+rank: 0 | gt[0] = -0.0008207505382
+rank: 0 | cache: -2.618752531e-15 | pp[1] = 0.001
+rank: 0 | gt[1] = -0.0008490454659
+rank: 0 | cache: -2.618750837e-15 | pp[2] = 0.001
+rank: 0 | gt[2] = -0.0009441634016
+rank: 0 | cache: -2.618747682e-15 | pp[3] = 0.001
+rank: 0 | gt[3] = -0.001046204249
+rank: 0 | cache: -2.618748032e-15 | pp[4] = 0.001
+rank: 0 | gt[4] = -0.001052200858
+rank: 0 | cache: -2.618759995e-15 | pp[5] = 0.001
+rank: 0 | gt[5] = -0.000778970189
+rank: 0 | cache: -2.618794688e-15 | pp[6] = 0.001
+rank: 0 | gt[6] = 3.048845768e-05
+rank: 0 | cache: -2.61884931e-15 | pp[7] = 0.001
+rank: 0 | gt[7] = 0.001308808881
+rank: 0 | cache: -1.160550434e-26 | pp[0] = 0.001
+rank: 0 | gb[0] = -0.001017719759
+rank: 0 | cache: -1.884579349e-26 | pp[1] = 0.001
+rank: 0 | gb[1] = -0.001649274039
+rank: 0 | cache: -2.290765935e-26 | pp[2] = 0.001
+rank: 0 | gb[2] = -0.002178446222
+rank: 0 | cache: -2.508351112e-26 | pp[3] = 0.001
+rank: 0 | gb[3] = -0.002871358197
+rank: 0 | cache: -2.622254217e-26 | pp[4] = 0.001
+rank: 0 | gb[4] = -0.003987123112
+rank: 0 | cache: -2.681146955e-26 | pp[5] = 0.001
+rank: 0 | gb[5] = -0.005826346802
+rank: 0 | cache: -2.711357054e-26 | pp[6] = 0.001
+rank: 0 | gb[6] = -0.008639792882
+rank: 0 | cache: -2.726772879e-26 | pp[7] = 0.001
+rank: 0 | gb[7] = -0.01173868516
+rank: 0 | cache: -2.734868996e-26 | pp[0] = 0.001
+rank: 0 | gl[0] = -0.008729946969
+rank: 0 | cache: -2.739059075e-26 | pp[1] = 0.001
+rank: 0 | gl[1] = -0.006081719441
+rank: 0 | cache: -2.741215816e-26 | pp[2] = 0.001
+rank: 0 | gl[2] = -0.004393135388
+rank: 0 | cache: -2.742325455e-26 | pp[3] = 0.001
+rank: 0 | gl[3] = -0.003360792018
+rank: 0 | cache: -2.742898793e-26 | pp[4] = 0.001
+rank: 0 | gl[4] = -0.002688690686
+rank: 0 | cache: -2.743198163e-26 | pp[5] = 0.001
+rank: 0 | gl[5] = -0.002199052357
+rank: 0 | cache: -2.743357569e-26 | pp[6] = 0.001
+rank: 0 | gl[6] = -0.001802594988
+rank: 0 | cache: -2.743445361e-26 | pp[7] = 0.001
+rank: 0 | gl[7] = -0.00145650579
+rank: 0 | cache: -2.743496624e-26 | pp[8] = 0.001
+rank: 0 | gl[8] = -0.00113516736
+rank: 0 | cache: -2.743525824e-26 | pp[9] = 0.001
+rank: 0 | gl[9] = -0.0009028443709
+rank: 0 | cache: -2.743539081e-26 | pp[0] = 0.001
+rank: 0 | gt[0] = -0.0008207107638
+rank: 0 | cache: -2.743542694e-26 | pp[1] = 0.001
+rank: 0 | gt[1] = -0.0008490056752
+rank: 0 | cache: -2.74354092e-26 | pp[2] = 0.001
+rank: 0 | gt[2] = -0.0009441235994
+rank: 0 | cache: -2.743537614e-26 | pp[3] = 0.001
+rank: 0 | gt[3] = -0.001046164439
+rank: 0 | cache: -2.743537981e-26 | pp[4] = 0.001
+rank: 0 | gt[4] = -0.001052161042
+rank: 0 | cache: -2.743550514e-26 | pp[5] = 0.001
+rank: 0 | gt[5] = -0.0007789303688
+rank: 0 | cache: -2.74358686e-26 | pp[6] = 0.001
+rank: 0 | gt[6] = 3.052828071e-05
+rank: 0 | cache: -2.743644085e-26 | pp[7] = 0.001
+rank: 0 | gt[7] = 0.001308848706
+rank: 0 | cache: 0 | pp[0] = 0.001
+rank: 0 | gb[0] = -0.001017719758
+rank: 0 | cache: 0 | pp[1] = 0.001
+rank: 0 | gb[1] = -0.001649274037
+rank: 0 | cache: 0 | pp[2] = 0.001
+rank: 0 | gb[2] = -0.00217844622
+rank: 0 | cache: 0 | pp[3] = 0.001
+rank: 0 | gb[3] = -0.002871358194
+rank: 0 | cache: 0 | pp[4] = 0.001
+rank: 0 | gb[4] = -0.003987123109
+rank: 0 | cache: 0 | pp[5] = 0.001
+rank: 0 | gb[5] = -0.005826346799
+rank: 0 | cache: 0 | pp[6] = 0.001
+rank: 0 | gb[6] = -0.008639792879
+rank: 0 | cache: 0 | pp[7] = 0.001
+rank: 0 | gb[7] = -0.01173868516
+rank: 0 | cache: 0 | pp[0] = 0.001
+rank: 0 | gl[0] = -0.008729946965
+rank: 0 | cache: 0 | pp[1] = 0.001
+rank: 0 | gl[1] = -0.006081719437
+rank: 0 | cache: 0 | pp[2] = 0.001
+rank: 0 | gl[2] = -0.004393135385
+rank: 0 | cache: 0 | pp[3] = 0.001
+rank: 0 | gl[3] = -0.003360792014
+rank: 0 | cache: 0 | pp[4] = 0.001
+rank: 0 | gl[4] = -0.002688690682
+rank: 0 | cache: 0 | pp[5] = 0.001
+rank: 0 | gl[5] = -0.002199052353
+rank: 0 | cache: 0 | pp[6] = 0.001
+rank: 0 | gl[6] = -0.001802594985
+rank: 0 | cache: 0 | pp[7] = 0.001
+rank: 0 | gl[7] = -0.001456505787
+rank: 0 | cache: 0 | pp[8] = 0.001
+rank: 0 | gl[8] = -0.001135167356
+rank: 0 | cache: 0 | pp[9] = 0.001
+rank: 0 | gl[9] = -0.0009028443674
+rank: 0 | cache: 0 | pp[0] = 0.001
+rank: 0 | gt[0] = -0.0008207107602
+rank: 0 | cache: 0 | pp[1] = 0.001
+rank: 0 | gt[1] = -0.0008490056716
+rank: 0 | cache: 0 | pp[2] = 0.001
+rank: 0 | gt[2] = -0.0009441235958
+rank: 0 | cache: 0 | pp[3] = 0.001
+rank: 0 | gt[3] = -0.001046164435
+rank: 0 | cache: 0 | pp[4] = 0.001
+rank: 0 | gt[4] = -0.001052161039
+rank: 0 | cache: 0 | pp[5] = 0.001
+rank: 0 | gt[5] = -0.0007789303653
+rank: 0 | cache: 0 | pp[6] = 0.001
+rank: 0 | gt[6] = 3.052828429e-05
+rank: 0 | cache: 0 | pp[7] = 0.001
+rank: 0 | gt[7] = 0.00130884871
+  1 TAO,  Function value: 0.0536209,  Residual: 300.682 
+Tao Object: 1 MPI processes
+  type: bqnls
+    Rejected BFGS updates: 0
+    CG steps: 0
+    Newton steps: 0
+    BFGS steps: 0
+    Scaled gradient steps: 0
+    Gradient steps: 0
+    KSP termination reasons:
+      atol: 0
+      rtol: 0
+      ctol: 0
+      negc: 0
+      dtol: 0
+      iter: 0
+      othr: 0
+  Mat Object: (tao_bqnls_) 1 MPI processes
+    type: lmvmbfgs
+    rows=26, cols=26
+      Scale type: diagonal
+      Scale history: 1
+      Scale params: alpha=1., beta=0.5, rho=1.
+      Convex factors: phi=0., theta=0.125
+      Max. storage: 5
+      Used storage: 0
+      Number of updates: 0
+      Number of rejects: 0
+      Number of resets: 0
+      Mat Object: (J0_) 1 MPI processes
+        type: lmvmdiagbrdn
+        rows=26, cols=26
+          Scale history: 1
+          Scale params: alpha=1., beta=0.5, rho=1.
+          Convex factor: theta=0.125
+          Max. storage: 1
+          Used storage: 0
+          Number of updates: 0
+          Number of rejects: 0
+          Number of resets: 0
+  TaoLineSearch Object: 1 MPI processes
+    type: more-thuente
+    maximum function evaluations=30
+    tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+    total number of function evaluations=0
+    total number of gradient evaluations=0
+    total number of function/gradient evaluations=7
+    Termination reason: 3
+  KSP Object: (unused) 1 MPI processes
+    type: stcg
+    maximum iterations=10000, initial guess is zero
+    tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
+    left preconditioning
+    using DEFAULT norm type for convergence test
+  PC Object: (unused) 1 MPI processes
+    type: lmvm
+    PC has not been set up so information may be incomplete
+    Mat Object: (tao_bqnls_) 1 MPI processes
+      type: lmvmbfgs
+      rows=26, cols=26
+        Scale type: diagonal
+        Scale history: 1
+        Scale params: alpha=1., beta=0.5, rho=1.
+        Convex factors: phi=0., theta=0.125
+        Max. storage: 5
+        Used storage: 0
+        Number of updates: 0
+        Number of rejects: 0
+        Number of resets: 0
+        Mat Object: (J0_) 1 MPI processes
+          type: lmvmdiagbrdn
+          rows=26, cols=26
+            Scale history: 1
+            Scale params: alpha=1., beta=0.5, rho=1.
+            Convex factor: theta=0.125
+            Max. storage: 1
+            Used storage: 0
+            Number of updates: 0
+            Number of rejects: 0
+            Number of resets: 0
+  total KSP iterations: 0
+  Active Set subset type: subvec
+  convergence tolerances: gatol=1e-08,   steptol=0.,   gttol=0.
+  Residual in Function/Gradient:=300.682
+  Objective value=0.0536209
+  total number of iterations=1,                          (max: 50)
+  total number of function/gradient evaluations=8,      (max: 10000)
+  Solver terminated: -6   Line Search Failure
+Unused ParmParse Variables:
+  [TOP]::prob_type(nvals = 1)  :: [1]
+  [TOP]::use_hypre(nvals = 1)  :: [0]
+
+[The  Pinned Arena] space (MB) used spread across MPI: [8 ... 8]
+AMReX (19.07-374-g9d2e2f9eb796) finalized
