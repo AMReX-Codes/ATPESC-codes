@@ -186,19 +186,19 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
 
         for (int i = 0; i < size_lower; ++i)
         {
-            vvr(ExtTaoBC::lower_boundary, i) = 1.0; // xlower[ilower + i];
+            vvr(ExtTaoBC::lower_boundary, i) = xlower[ilower + i];
             assert(ilower + i <= nlower);
         }
 
         for (int i = 0; i < size_left; ++i)
         {
-            vvr(ExtTaoBC::left_boundary, i) = 1.0; // xleft[ileft + i];
+            vvr(ExtTaoBC::left_boundary, i) = xleft[ileft + i];
             assert(ileft + i <= nleft);
         }
 
         for (int i = 0; i < size_upper; ++i)
         {
-            vvr(ExtTaoBC::upper_boundary, i) = 1.0; // xupper[iupper + i];
+            vvr(ExtTaoBC::upper_boundary, i) = xupper[iupper + i];
             assert(iupper + i <= nupper);
         }
 
