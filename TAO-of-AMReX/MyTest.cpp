@@ -268,6 +268,8 @@ void MyTest::update_target_solution()
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
+    exact_solution = solution;
+
     const int k = 0;
 
     for (MFIter mfi(exact_solution, false); mfi.isValid(); ++mfi) {
@@ -277,7 +279,8 @@ void MyTest::update_target_solution()
 
         auto exact_sol_arr = exact_solution[mfi].array();
 
-        for (int i = bx_lo.x; i <= bx_hi.x; ++i) {
+        if (bx_hi.x == domain_hi.x) {
+            const int i = bx_hi.x;
             for (int j = bx_lo.y; j <= bx_hi.y; ++j) {
                 IntVect cell_indices;
                 AMREX_D_TERM(cell_indices[0] = i;, cell_indices[1] = j;, cell_indices[2] = k;)
