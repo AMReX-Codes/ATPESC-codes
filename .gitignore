@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+*.ex
 
 # Merge files
 *.orig
@@ -44,3 +45,6 @@ build/
 plt*
 movie.visit
 ARKStep_diagnostics.txt
+
+# Debugging
+Backtrace.*
