@@ -96,9 +96,11 @@ void MyTest::get_number_local_bcs(int& local_num_lower, int& local_num_left, int
             const auto bx_hi = ubound(bx);
 
             // For debugging ...
+            /*
             Print() << "im = " << im << "\n";
             Print() << "bx_lo = " << bx_lo.x << " " << bx_lo.y << " " << bx_lo.z << "\n";
             Print() << "bx_hi = " << bx_hi.x << " " << bx_hi.y << " " << bx_hi.z << "\n";
+            */
             im++;
 
             const Box& gbx = mfi.growntilebox();
@@ -163,9 +165,11 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
     int ileft = 0;
     int iupper = 0;
 
+    /*
         Print() << "nlower = " << nlower << "\n";
         Print() << "nleft = " << nleft << "\n";
         Print() << "nupper = " << nupper << "\n";
+    */
 
     auto iter = ExtTaoBC::ext_dir_bcs.begin();
     int iiter = 0;
@@ -177,10 +181,12 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
         const int size_left = vvr(ExtTaoBC::left_boundary).size();
         const int size_upper = vvr(ExtTaoBC::upper_boundary).size();
 
+        /*
         Print() << "iiter = " << iiter << "\n";
         Print() << "size_lower = " << size_lower << "\n";
         Print() << "size_left = " << size_left << "\n";
         Print() << "size_upper = " << size_upper << "\n";
+        */
         iiter++;
 
         for (int i = 0; i < size_lower; ++i)
@@ -204,6 +210,8 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
         ilower += size_lower;
         ileft += size_left;
         iupper += size_upper;
+
+        iter++;
     }
 
     solution.FillBoundary(geom.periodicity());
@@ -428,6 +436,8 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
                                             LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet)});
 
+        auto ngv = solution.nGrowVect();
+        Print() << "solution ngrowvect = " << ngv[0] << " " << ngv[1] << "\n";
         mlpoisson.setLevelBC(0, &solution);
 
         MLMG mlmg(mlpoisson);
@@ -571,7 +581,8 @@ void MyTest::initData()
     grids.maxSize(max_grid_size);
     dmap.define(grids);
     solution.define(grids, dmap, 1, ngrow);
-    rhs.define(grids, dmap, 1, 0);
+    adjoint_rhs.define(grids, dmap, 1, ngrow);
+    rhs.define(grids, dmap, 1, ngrow);
     exact_solution.define(grids, dmap, 1, 0);
 
     // set up boundary conditions:

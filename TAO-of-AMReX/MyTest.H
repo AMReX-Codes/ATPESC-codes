@@ -15,7 +15,7 @@ struct EdgeBoundaryValues
 
     EdgeBoundaryValues() { x.resize(0); }
 
-    amrex::Real& operator()(int i) { return x[i]; }
+    amrex::Real& operator()(int i) { return x[static_cast<long>(i)]; }
 
     void resize(int n) { x.resize(n); }
 
