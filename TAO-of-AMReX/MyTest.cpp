@@ -433,7 +433,7 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
         mlpoisson.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet)},
-                              {AMREX_D_DECL(LinOpBCType::Dirichlet,
+                              {AMREX_D_DECL(LinOpBCType::Neumann,
                                             LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet)});
 
@@ -474,7 +474,7 @@ void MyTest::solvePoisson(amrex::MultiFab &solution,
         mlpoisson.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet,
                                             LinOpBCType::Dirichlet)},
-            {AMREX_D_DECL(LinOpBCType::Dirichlet,
+            {AMREX_D_DECL(LinOpBCType::Neumann,
                           LinOpBCType::Dirichlet,
                           LinOpBCType::Dirichlet)});
 
