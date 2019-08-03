@@ -12,7 +12,7 @@ prob_type = 1
 
 # For MLMG
 use_hypre = 0
-verbose = 2
+verbose = 0
 bottom_verbose = 0
 max_iter = 100
 max_fmg_iter = 0     # # of F-cycles before switching to V.  To do pure V-cycle, set to 0
