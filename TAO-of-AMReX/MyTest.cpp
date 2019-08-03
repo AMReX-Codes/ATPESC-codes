@@ -51,12 +51,7 @@ std::string MyTest::get_iteration_filename(std::string filename)
 
 void MyTest::write_plotfile()
 {
-    VisMF::Write(solution, get_iteration_filename("solution"));
-    VisMF::Write(adjoint, get_iteration_filename("adjoint"));
-    VisMF::Write(adjoint_rhs, get_iteration_filename("adjoint_rhs"));
-    VisMF::Write(rhs, get_iteration_filename("rhs"));
-    if (iteration_counter == 0)
-        VisMF::Write(exact_solution, get_iteration_filename("exact_solution"));
+    writePlotfile();
 }
 
 void MyTest::get_number_global_bcs(int& num_lower, int& num_left, int& num_upper)

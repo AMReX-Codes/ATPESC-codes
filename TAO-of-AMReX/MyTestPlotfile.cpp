@@ -31,7 +31,7 @@ MyTest::writePlotfile ()
         }
     }
 
-    std::string filename = get_iteration_filename("plot");
+    std::string filename = get_iteration_filename("plt");
     WriteSingleLevelPlotfile(filename, plotmf, varname, geom, 0.0, 1);
 }
 
