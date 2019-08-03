@@ -268,7 +268,7 @@ void MyTest::update_target_solution()
     const auto domain_lo = lbound(domain_bx);
     const auto domain_hi = ubound(domain_bx);
 
-    Copy(exact_solution, solution, 0, 0, 1, solution.nGrow());
+    Copy(exact_solution, solution, 0, 0, 1, 0);
 
     const int k = 0;
 
