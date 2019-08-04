@@ -5,56 +5,59 @@
 #include <petsc.h>
 
 amrex::Real TargetSolution(amrex::Real* coords);
+PetscErrorCode FormFunction(Tao tao, Vec P, PetscReal *f, void *ptr);
 PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ptr);
 
 int main (int argc, char* argv[])
 {
-    int no_args = 2;
-    amrex::Initialize(no_args, argv);
-
     PetscErrorCode     ierr;
-    PetscReal          zero=0.0;
-    int                nb, nl, nt;
-    int                Nb, Nl, Nt;
-    Vec                Plist[3];
+    PetscReal          one = 1.0;
+    int                nb, nl, nt, n;
+    int                Nb, Nl, Nt, N;
+    int                no_args = 2;
     Vec                P;
     Tao                tao;
     PetscBool          flg, fd=PETSC_FALSE;
-    PetscMPIInt        size,rank;
 
+    amrex::Initialize(no_args, argv);
     ierr = PetscInitialize(&argc, &argv, (char*)0, (char*)0); if (ierr) return ierr;
-    ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     
     {
     BL_PROFILE("main");
     MyTest mytest;
 
+    // Get domain sizing and gradient type from command line options
     ierr = PetscOptionsGetInt(NULL,NULL,"-nx",&mytest.n_cell,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsGetBool(NULL,NULL,"-fd",&fd,&flg);CHKERRQ(ierr);
     if (fd) mytest.fd_grad = true;
 
-    // Set the target solution we want to recover on the right edge of the domain
-    // u_target = 10.0 - y^2
+    // Prep the solver and set the target solution we want to recover on the right edge of the domain
+    // u_target = 4.0*(y-0.5)^2;
     mytest.initData();
     mytest.set_target_solution(TargetSolution);
 
-    // Create PETSc vectors for the bottom, left and top edge Dirichlet boundaries
-    mytest.get_number_local_bcs(nb, nl, nt);
-    mytest.get_number_global_bcs(Nb, Nl, Nt);
-    ierr = VecCreateMPI(PETSC_COMM_WORLD, nb, Nb, &Plist[0]);CHKERRQ(ierr);
-    ierr = VecCreateMPI(PETSC_COMM_WORLD, nl, Nl, &Plist[1]);CHKERRQ(ierr);
-    ierr = VecCreateMPI(PETSC_COMM_WORLD, nt, Nt, &Plist[2]);CHKERRQ(ierr);
-
-    // Combine the vectors for each edge into a single vector, initialize with zero
-    ierr = VecCreateNest(PETSC_COMM_WORLD, 3, NULL, Plist, &P);CHKERRQ(ierr);
-    ierr = VecSet(P, zero); CHKERRQ(ierr);
+    // Create PETSc vector for the bottom, left and top Dirichlet boundaries
+    mytest.get_number_local_bcs(mytest.nb, mytest.nl, mytest.nt);
+    n = mytest.nb + mytest.nl + mytest.nt; // total local size
+    mytest.get_number_global_bcs(mytest.Nb, mytest.Nl, mytest.Nt);
+    N = mytest.Nb + mytest.Nl + mytest.Nt; // total global size
+    ierr = VecCreateMPI(PETSC_COMM_WORLD, n, N, &P);CHKERRQ(ierr);
+    ierr = VecSet(P, one); CHKERRQ(ierr);
 
     // Create and setup the TAO optimization algorithm
     ierr = TaoCreate(PETSC_COMM_WORLD, &tao); CHKERRQ(ierr);
     ierr = TaoSetType(tao, TAOBQNLS); CHKERRQ(ierr); // TAOBQNLS is a bound-constrained quasi-Newton linesearch alg,
     ierr = TaoSetInitialVector(tao, P); CHKERRQ(ierr);
-    ierr = TaoSetObjectiveAndGradientRoutine(tao, FormFunctionGradient, &mytest); CHKERRQ(ierr);
+    if (!mytest.fd_grad) {
+        // Sets the callback for the gradient computed with the adjoint method
+        ierr = TaoSetObjectiveAndGradientRoutine(tao, FormFunctionGradient, &mytest); CHKERRQ(ierr);
+    } else {
+        // TAO provides a default gradient function for the central finite-difference formula
+        ierr = TaoSetObjectiveRoutine(tao, FormFunction, &mytest);CHKERRQ(ierr);
+        ierr = TaoSetGradientRoutine(tao, TaoDefaultComputeGradient, &mytest); CHKERRQ(ierr);
+    }
+    
+    // This lets TAO read command line options
     ierr = TaoSetFromOptions(tao); CHKERRQ(ierr);
 
     // Start the optimization solution
@@ -62,6 +65,7 @@ int main (int argc, char* argv[])
     }
 
     // Cleanup and exit
+    ierr = TaoDestroy(&tao);CHKERRQ(ierr);
     ierr = VecDestroy(&P);CHKERRQ(ierr);
     ierr = PetscFinalize();
     amrex::Finalize();
@@ -72,214 +76,95 @@ int main (int argc, char* argv[])
 amrex::Real TargetSolution(amrex::Real* coords)
 {
     amrex::Real y = coords[1];
-    amrex::Real utarg = 1.0 - (y*y);
+    amrex::Real utarg = 4.*(y-0.5)*(y-0.5) - 0.5;
     return utarg;
 }
 
 /* -------------------------------------------------------------------- */
-/*
-    FormFunctionGradient - Evaluates the function, f(X), and gradient, G(X).
 
-    Input Parameters:
-.   tao  - the Tao context
-.   X    - input vector
-.   ptr  - optional user-defined context, as set by TaoSetFunctionGradient()
-
-    Output Parameters:
-.   G - vector containing the newly evaluated gradient
-.   f - function value
-
-    Note:
-    Some optimization methods ask for the function and the gradient evaluation
-    at the same time.  Evaluating both at once may be more efficient that
-    evaluating each separately.
-*/
-PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ptr)
+// This function computes only the objective value
+PetscErrorCode FormFunction(Tao tao, Vec P, PetscReal *f, void *ptr)
 {
     MyTest            *mytest = (MyTest *) ptr;
-    PetscInt          i;
-    PetscInt          numNested;
     PetscErrorCode    ierr;
-    PetscReal         cache, ff=0, fpert=0, eps=1.e-3;
-    Vec               *Plist, *Glist;
-    Vec               Ptmp;
-    PetscInt          nb, nl, nt, ntmp;
-    const PetscScalar *pb, *pl, *pt;
-    PetscScalar       *gb, *gl, *gt, *pp;
-    PetscMPIInt       size, rank;
+    PetscReal         ff=0;
+    const PetscScalar *pp;
+    amrex::Real       *pb, *pl, *pt;
 
     PetscFunctionBeginUser;
 
-    // Break up the vector of optimization variables into subvectors for bottom, left and top Dirichlet boundaries
-    ierr = VecNestGetSubVecs(P, &numNested, &Plist);CHKERRQ(ierr);
+    // Allocate arrays for bottom, left and top Dirichlet boundaries
+    if (mytest->nb > 0) ierr = PetscMalloc1(mytest->nb * sizeof(amrex::Real), &pb);CHKERRQ(ierr);
+    if (mytest->nl > 0) ierr = PetscMalloc1(mytest->nl * sizeof(amrex::Real), &pl);CHKERRQ(ierr);
+    if (mytest->nt > 0) ierr = PetscMalloc1(mytest->nt * sizeof(amrex::Real), &pt);CHKERRQ(ierr);
 
-    // Extract the subvector data as C arrays
-    // NOTE: this is read-only to prevent accidental changes of the optimization variables
-    ierr = VecGetArrayRead(Plist[0], &pb);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(Plist[1], &pl);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(Plist[2], &pt);CHKERRQ(ierr);
-
-    ierr = VecGetLocalSize(Plist[0], &nb);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(Plist[1], &nl);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(Plist[2], &nt);CHKERRQ(ierr);
+    // Split the PETSc vector of optimization variables into its components
+    ierr = VecGetArrayRead(P, &pp);CHKERRQ(ierr);
+    for (int i=0; i<mytest->nb; i++) pb[i] = pp[i];
+    for (int i=0; i<mytest->nl; i++) pl[i] = pp[mytest->nb + i];
+    for (int i=0; i<mytest->nt; i++) pt[i] = pp[mytest->nb + mytest->nl + i];
+    ierr = VecRestoreArrayRead(P, &pp);CHKERRQ(ierr);
 
     // Set the boundary values from TAO into the AMReX solver
-    mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
-                                   (int)nl, (const amrex::Real*)pl,
-                                   (int)nt, (const amrex::Real*)pt);
+    mytest->update_boundary_values(mytest->nb, pb, mytest->nl, pl, mytest->nt, pt);
 
-    // Extracted C arrays must be restored back into the parent PETSc vectors
-    ierr = VecRestoreArrayRead(Plist[0], &pb);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(Plist[1], &pl);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(Plist[2], &pt);CHKERRQ(ierr);
+    // Clean-up
+    if (mytest->nb > 0) ierr = PetscFree(pb);CHKERRQ(ierr);
+    if (mytest->nl > 0) ierr = PetscFree(pl);CHKERRQ(ierr);
+    if (mytest->nt > 0) ierr = PetscFree(pt);CHKERRQ(ierr);
 
     /// Solve the Laplace equations with the prescribed boundary values
     mytest->solve();
 
     // Compute the objective function using the AMReX solution
     // f = 0.5 * \int_0^1 (u(1, y) - u_targ)^2 dy
-    // u_targ = 10.0 - y^2
     ff = mytest->calculate_obj_val();
     *f = ff;
 
-    // Solve the adjoint problem
-    // NOTE: Laplace equation is self-adjoint so we re-do the forward solution with a new RHS vector
-    if (!mytest->fd_grad) {
-        mytest->setup_adjoint_system(); 
-        mytest->solve_adjoint_system(); 
+    if (mytest->fd_grad) {
+        // Perform other misc operations like visualization and I/O
+        mytest->write_plotfile();
+        mytest->update_counter();
     }
 
-    // The gradient copies the structure of the optimization variable with subvectors corresponding to 
-    // the component of the gradient on each Dirichlet boundary edge
-    ierr = VecNestGetSubVecs(G, &numNested, &Glist);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+}
 
-    // Extract the gradient data as C arrays
-    // NOTE: this is read/write enabled so that we can copy gradient info from AMReX into the PETSc vector
-    ierr = VecGetArray(Glist[0], &gb);CHKERRQ(ierr);
-    ierr = VecGetArray(Glist[1], &gl);CHKERRQ(ierr);
-    ierr = VecGetArray(Glist[2], &gt);CHKERRQ(ierr);
+/* -------------------------------------------------------------------- */
 
-    // Calculate the gradient values using the adjoint computed above
-    if (!mytest->fd_grad) {
-        mytest->calculate_opt_gradient((int)nb, (amrex::Real*)gb,
-                                      (int)nl, (amrex::Real*)gl,
-                                      (int)nt, (amrex::Real*)gt);
-    } else {
-        ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
-        ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ptr)
+{
+    MyTest            *mytest = (MyTest *) ptr;
+    PetscErrorCode    ierr;
+    amrex::Real       *gb, *gl, *gt;
+    PetscScalar       *gg;
 
-        ierr = VecGetArrayRead(Plist[0], &pb);CHKERRQ(ierr);
-        ierr = VecGetArrayRead(Plist[1], &pl);CHKERRQ(ierr);
-        ierr = VecGetArrayRead(Plist[2], &pt);CHKERRQ(ierr);
+    PetscFunctionBeginUser;
 
-        for (int r=0; r<size; r++) {
+    // Evaluate the objective function
+    ierr = FormFunction(tao, P, f, ptr);CHKERRQ(ierr);
 
-            // Bottom boundary
-            ierr = VecDuplicate(Plist[0], &Ptmp);CHKERRQ(ierr);
-            ierr = VecCopy(Plist[0], Ptmp);CHKERRQ(ierr);
-            ierr = VecGetArray(Ptmp, &pp);CHKERRQ(ierr);
-            
-            ntmp = nb;
-            ierr = MPI_Bcast(&ntmp, 1, MPI_INT, r, PETSC_COMM_WORLD);CHKERRQ(ierr);
-            for (int i=0; i<ntmp; i++) {
-                
-                if (rank == r) {
-                    cache = pp[i];
-                    pp[i] += eps;
-                    std::cout << "rank: " << r << " | cache: " << cache << " | pp[" << i << "] = " << pp[i] << std::endl;
-                }
+    // Allocate arrays for bottom, left and top Dirichlet boundaries
+    if (mytest->nb > 0) ierr = PetscMalloc1(mytest->nb * sizeof(amrex::Real), &gb);CHKERRQ(ierr);
+    if (mytest->nl > 0) ierr = PetscMalloc1(mytest->nl * sizeof(amrex::Real), &gl);CHKERRQ(ierr);
+    if (mytest->nt > 0) ierr = PetscMalloc1(mytest->nt * sizeof(amrex::Real), &gt);CHKERRQ(ierr);
 
-                mytest->update_boundary_values((int)nb, (const amrex::Real*)pp,
-                                               (int)nl, (const amrex::Real*)pl,
-                                               (int)nt, (const amrex::Real*)pt);
-                mytest->solve();
-                fpert = mytest->calculate_obj_val();
-                mytest->update_counter();
-                mytest->write_plotfile(true);
+    // Solve the adjoint problem and assemble the gradient for each boundary
+    mytest->setup_adjoint_system(); 
+    mytest->solve_adjoint_system();
+    mytest->calculate_opt_gradient(mytest->nb, gb, mytest->nl, gl, mytest->nt, gt);
 
-                if (rank == r) {
-                    gb[i] = (fpert - ff)/eps;
-                    std::cout << "rank: " << r << " | gb[" << i << "] = " << gb[i] << std::endl;
-                    pp[i] = cache;
-                }
-            }
+    // Write the AMReX gradient data into the PETSc vector
+    ierr = VecGetArray(G, &gg);CHKERRQ(ierr);
+    for (int i=0; i<mytest->nb; i++) gg[i] = gb[i];
+    for (int i=0; i<mytest->nl; i++) gg[mytest->nb + i] = gl[i];
+    for (int i=0; i<mytest->nt; i++) gg[mytest->nb + mytest->nl + i] = gt[i];
+    ierr = VecRestoreArray(G, &gg);CHKERRQ(ierr);
 
-            ierr = VecRestoreArray(Ptmp, &pp);CHKERRQ(ierr);
-            ierr = VecDestroy(&Ptmp);CHKERRQ(ierr);
-
-            // Left boundary
-            ierr = VecDuplicate(Plist[1], &Ptmp);CHKERRQ(ierr);
-            ierr = VecCopy(Plist[1], Ptmp);CHKERRQ(ierr);
-            ierr = VecGetArray(Ptmp, &pp);CHKERRQ(ierr);
-            
-            ntmp = nl;
-            ierr = MPI_Bcast(&ntmp, 1, MPI_INT, r, PETSC_COMM_WORLD);CHKERRQ(ierr);
-            for (int i=0; i<ntmp; i++) {
-                
-                if (rank == r) {
-                    cache = pp[i];
-                    pp[i] += eps;
-                    std::cout << "rank: " << r << " | cache: " << cache << " | pp[" << i << "] = " << pp[i] << std::endl;
-                }
-
-                mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
-                                               (int)nl, (const amrex::Real*)pp,
-                                               (int)nt, (const amrex::Real*)pt);
-                mytest->solve();
-                fpert = mytest->calculate_obj_val();
-
-                if (rank == r) {
-                    gl[i] = (fpert - ff)/eps;
-                    std::cout << "rank: " << r << " | gl[" << i << "] = " << gl[i] << std::endl;
-                    pp[i] = cache;
-                }
-            }
-
-            ierr = VecRestoreArray(Ptmp, &pp);CHKERRQ(ierr);
-            ierr = VecDestroy(&Ptmp);CHKERRQ(ierr);
-
-            // Bottom boundary
-            ierr = VecDuplicate(Plist[2], &Ptmp);CHKERRQ(ierr);
-            ierr = VecCopy(Plist[2], Ptmp);CHKERRQ(ierr);
-            ierr = VecGetArray(Ptmp, &pp);CHKERRQ(ierr);
-            
-            ntmp = nt;
-            ierr = MPI_Bcast(&ntmp, 1, MPI_INT, r, PETSC_COMM_WORLD);CHKERRQ(ierr);
-            for (int i=0; i<ntmp; i++) {
-                
-                if (rank == r) {
-                    cache = pp[i];
-                    pp[i] += eps;
-                    std::cout << "rank: " << r << " | cache: " << cache << " | pp[" << i << "] = " << pp[i] << std::endl;
-                }
-
-                mytest->update_boundary_values((int)nb, (const amrex::Real*)pb,
-                                               (int)nl, (const amrex::Real*)pl,
-                                               (int)nt, (const amrex::Real*)pp);
-                mytest->solve();
-                fpert = mytest->calculate_obj_val();
-
-                if (rank == r) {
-                    gt[i] = (fpert - ff)/eps;
-                    std::cout << "rank: " << r << " | gt[" << i << "] = " << gt[i] << std::endl;
-                    pp[i] = cache;
-                }
-            }
-
-            ierr = VecRestoreArray(Ptmp, &pp);CHKERRQ(ierr);
-            ierr = VecDestroy(&Ptmp);CHKERRQ(ierr);
-
-        }
-
-        ierr = VecRestoreArrayRead(Plist[0], &pb);CHKERRQ(ierr);
-        ierr = VecRestoreArrayRead(Plist[1], &pl);CHKERRQ(ierr);
-        ierr = VecRestoreArrayRead(Plist[2], &pt);CHKERRQ(ierr);
-    }
-
-    // Restore the arrays back into their parent vectors
-    ierr = VecRestoreArray(Glist[0], &gb);CHKERRQ(ierr);
-    ierr = VecRestoreArray(Glist[1], &gl);CHKERRQ(ierr);
-    ierr = VecRestoreArray(Glist[2], &gt);CHKERRQ(ierr);
+    // Clean-up
+    if (mytest->nb > 0) ierr = PetscFree(gb);CHKERRQ(ierr);
+    if (mytest->nl > 0) ierr = PetscFree(gl);CHKERRQ(ierr);
+    if (mytest->nt > 0) ierr = PetscFree(gt);CHKERRQ(ierr);
 
     // Perform other misc operations like visualization and I/O
     mytest->write_plotfile();

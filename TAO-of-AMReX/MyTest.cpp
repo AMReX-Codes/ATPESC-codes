@@ -92,12 +92,6 @@ void MyTest::get_number_local_bcs(int& local_num_lower, int& local_num_left, int
             const auto bx_lo = lbound(bx);
             const auto bx_hi = ubound(bx);
 
-            // For debugging ...
-            /*
-            Print() << "im = " << im << "\n";
-            Print() << "bx_lo = " << bx_lo.x << " " << bx_lo.y << " " << bx_lo.z << "\n";
-            Print() << "bx_hi = " << bx_hi.x << " " << bx_hi.y << " " << bx_hi.z << "\n";
-            */
             im++;
 
             const Box& gbx = mfi.growntilebox();
@@ -162,12 +156,6 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
     int ileft = 0;
     int iupper = 0;
 
-    /*
-        Print() << "nlower = " << nlower << "\n";
-        Print() << "nleft = " << nleft << "\n";
-        Print() << "nupper = " << nupper << "\n";
-    */
-
     auto iter = ExtTaoBC::ext_dir_bcs.begin();
     int iiter = 0;
     while (iter != ExtTaoBC::ext_dir_bcs.end())
@@ -178,12 +166,6 @@ void MyTest::update_boundary_values(int nlower, const Real *xlower,
         const int size_left = vvr(ExtTaoBC::left_boundary).size();
         const int size_upper = vvr(ExtTaoBC::upper_boundary).size();
 
-        /*
-        Print() << "iiter = " << iiter << "\n";
-        Print() << "size_lower = " << size_lower << "\n";
-        Print() << "size_left = " << size_left << "\n";
-        Print() << "size_upper = " << size_upper << "\n";
-        */
         iiter++;
 
         for (int i = 0; i < size_lower; ++i)
@@ -317,7 +299,7 @@ Real MyTest::calculate_obj_val()
             const int i = bx_hi.x;
             // loop over right edge, excluding corners
             for (int j = std::max(bx_lo.y, domain_lo.y+1); j <= std::min(bx_hi.y, domain_hi.y-1); ++j) {
-                fobj_local += 0.5 * std::pow(exact_sol_arr(i, j, k) - sol_arr(i, j, k), 2.0);
+                fobj_local += 0.5 * std::pow(sol_arr(i, j, k) - exact_sol_arr(i, j, k), 2.0);
             }
         }
     }
@@ -544,7 +526,7 @@ void MyTest::readParameters()
 #ifdef AMREX_USE_PETSC
     pp.query("use_petsc", use_petsc);
 #endif
-   
+
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!(use_hypre && use_petsc),
                                      "use_hypre & use_petsc cannot be both true");
 }

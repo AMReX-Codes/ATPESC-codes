@@ -64,6 +64,8 @@ class MyTest
         void writePlotfile ();
         void writeMinimalPlotfile ();
         int n_cell = 128;
+        int nb, nl, nt;
+        int Nb, Nl, Nt;
         bool fd_grad = false;
 
     public: // make these public for cuda

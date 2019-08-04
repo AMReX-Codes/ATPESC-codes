@@ -9,11 +9,11 @@ USE_PETSC = FALSE
 HYPRE_DIR  ?= .
 PETSC_HOME ?= $(PETSC_DIR)/$(PETSC_ARCH)
 
-COMP = llvm
+COMP = gnu
 
 DIM = 2 
 
-AMREX_HOME ?= /Users/adener/Developer/amrex
+AMREX_HOME ?= /home/adener/amrex
 
 INCLUDE_LOCATIONS += $(PETSC_DIR)/$(PETSC_ARCH)/include
 INCLUDE_LOCATIONS += $(PETSC_DIR)/include

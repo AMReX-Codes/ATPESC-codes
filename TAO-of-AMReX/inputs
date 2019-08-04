@@ -3,16 +3,10 @@ max_level = 1
 ref_ratio = 2
 n_cell = 128
 max_grid_size = 64
-
-composite_solve = 1   # composite solve or level by level?
-
-# In this tutorial, we set up two examples.
-prob_type = 1
-# prob_type = 2
+composite_solve = 1
 
 # For MLMG
-use_hypre = 0
-verbose = 2
+verbose = 0
 bottom_verbose = 0
 max_iter = 100
 max_fmg_iter = 0     # # of F-cycles before switching to V.  To do pure V-cycle, set to 0
