@@ -1,3 +1,5 @@
+#include <chrono>
+using namespace std::chrono;
 
 #include <AMReX.H>
 #include "MyTest.H"
@@ -18,9 +20,11 @@ int main (int argc, char* argv[])
     Vec                P;
     Tao                tao;
     PetscBool          flg, fd=PETSC_FALSE;
+    PetscMPIInt        rank;
 
     amrex::Initialize(no_args, argv);
     ierr = PetscInitialize(&argc, &argv, (char*)0, (char*)0); if (ierr) return ierr;
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
     
     {
     BL_PROFILE("main");
@@ -61,7 +65,12 @@ int main (int argc, char* argv[])
     ierr = TaoSetFromOptions(tao); CHKERRQ(ierr);
 
     // Start the optimization solution
+    auto start = high_resolution_clock::now();
     ierr = TaoSolve(tao); CHKERRQ(ierr);
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<microseconds>(stop - start);
+    if (rank == 0) std::cout << "TaoSolve() duration: " << duration.count() << " ms" << std::endl;
     }
 
     // Cleanup and exit
@@ -94,9 +103,9 @@ PetscErrorCode FormFunction(Tao tao, Vec P, PetscReal *f, void *ptr)
     PetscFunctionBeginUser;
 
     // Allocate arrays for bottom, left and top Dirichlet boundaries
-    if (mytest->nb > 0) ierr = PetscMalloc1(mytest->nb * sizeof(amrex::Real), &pb);CHKERRQ(ierr);
-    if (mytest->nl > 0) ierr = PetscMalloc1(mytest->nl * sizeof(amrex::Real), &pl);CHKERRQ(ierr);
-    if (mytest->nt > 0) ierr = PetscMalloc1(mytest->nt * sizeof(amrex::Real), &pt);CHKERRQ(ierr);
+    ierr = PetscMalloc1(mytest->nb * sizeof(amrex::Real), &pb);CHKERRQ(ierr);
+    ierr = PetscMalloc1(mytest->nl * sizeof(amrex::Real), &pl);CHKERRQ(ierr);
+    ierr = PetscMalloc1(mytest->nt * sizeof(amrex::Real), &pt);CHKERRQ(ierr);
 
     // Split the PETSc vector of optimization variables into its components
     ierr = VecGetArrayRead(P, &pp);CHKERRQ(ierr);
@@ -109,9 +118,9 @@ PetscErrorCode FormFunction(Tao tao, Vec P, PetscReal *f, void *ptr)
     mytest->update_boundary_values(mytest->nb, pb, mytest->nl, pl, mytest->nt, pt);
 
     // Clean-up
-    if (mytest->nb > 0) ierr = PetscFree(pb);CHKERRQ(ierr);
-    if (mytest->nl > 0) ierr = PetscFree(pl);CHKERRQ(ierr);
-    if (mytest->nt > 0) ierr = PetscFree(pt);CHKERRQ(ierr);
+    ierr = PetscFree(pb);CHKERRQ(ierr);
+    ierr = PetscFree(pl);CHKERRQ(ierr);
+    ierr = PetscFree(pt);CHKERRQ(ierr);
 
     /// Solve the Laplace equations with the prescribed boundary values
     mytest->solve();
@@ -145,9 +154,9 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = FormFunction(tao, P, f, ptr);CHKERRQ(ierr);
 
     // Allocate arrays for bottom, left and top Dirichlet boundaries
-    if (mytest->nb > 0) ierr = PetscMalloc1(mytest->nb * sizeof(amrex::Real), &gb);CHKERRQ(ierr);
-    if (mytest->nl > 0) ierr = PetscMalloc1(mytest->nl * sizeof(amrex::Real), &gl);CHKERRQ(ierr);
-    if (mytest->nt > 0) ierr = PetscMalloc1(mytest->nt * sizeof(amrex::Real), &gt);CHKERRQ(ierr);
+    ierr = PetscMalloc1(mytest->nb * sizeof(amrex::Real), &gb);CHKERRQ(ierr);
+    ierr = PetscMalloc1(mytest->nl * sizeof(amrex::Real), &gl);CHKERRQ(ierr);
+    ierr = PetscMalloc1(mytest->nt * sizeof(amrex::Real), &gt);CHKERRQ(ierr);
 
     // Solve the adjoint problem and assemble the gradient for each boundary
     mytest->setup_adjoint_system(); 
@@ -162,9 +171,9 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = VecRestoreArray(G, &gg);CHKERRQ(ierr);
 
     // Clean-up
-    if (mytest->nb > 0) ierr = PetscFree(gb);CHKERRQ(ierr);
-    if (mytest->nl > 0) ierr = PetscFree(gl);CHKERRQ(ierr);
-    if (mytest->nt > 0) ierr = PetscFree(gt);CHKERRQ(ierr);
+    ierr = PetscFree(gb);CHKERRQ(ierr);
+    ierr = PetscFree(gl);CHKERRQ(ierr);
+    ierr = PetscFree(gt);CHKERRQ(ierr);
 
     // Perform other misc operations like visualization and I/O
     mytest->write_plotfile();
