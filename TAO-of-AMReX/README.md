@@ -8,9 +8,9 @@ ATPESC 2019 Numerical Software Track
 
 __Developed by:__
 
-    Alp Dener, Postdoctoral Researcher, Argonne National Laboratory
+* Alp Dener, Postdoctoral Researcher, Argonne National Laboratory
 
-    Donald E. Willcox, Postdoctoral Researcher. Lawrence-Livermore National Laboratory
+* Donald E. Willcox, Postdoctoral Researcher. Lawrence-Livermore National Laboratory
 
 ## Dependencies
 
