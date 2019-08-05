@@ -31,7 +31,7 @@ CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I. -I$(HYPRE_DIR)/include
 CPPFLAGS = -I$(AMREX_INSTALL_DIR)/include -I. -I$(HYPRE_DIR)/include
 CXXFLAGS = -O2 -std=c++14
 FFLAGS = -O2
-LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(HYPRE_DIR)/lib -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib
+LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(HYPRE_DIR)/lib -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib -Wl,-rpath,$(HYPRE_DIR)/lib
 
 LIBRARIES = -lamrex -lHYPRE
 LIBRARIES += -lgfortran
