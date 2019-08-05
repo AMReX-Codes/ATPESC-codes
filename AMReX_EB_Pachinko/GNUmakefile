@@ -35,6 +35,7 @@ LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(HYPRE_DIR)/lib -Wl,-rpath,$(AMREX_INSTA
 
 LIBRARIES = -lamrex -lHYPRE
 LIBRARIES += -lgfortran
+LIBRARIES += -lpthread
 
 default: main$(DIM)d.exe
 
