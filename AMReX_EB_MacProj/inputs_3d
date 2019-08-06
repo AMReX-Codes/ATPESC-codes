@@ -1,7 +1,7 @@
 n_cell = 128                             # number of cells in x- and z-directions; we double this in the y-direction
 max_grid_size = 64                       # the maximum number of cells in any direction in a single grid
 
-plot_int = 10                            # frequency of writing plotfiles
+plot_int = 50                            # frequency of writing plotfiles
 
 particle_file = initial_particles_3d     # name of file where we specify the initial positions of the particles
 
