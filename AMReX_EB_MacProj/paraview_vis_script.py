@@ -5,6 +5,10 @@
 
 #### import the simple module from the paraview
 from paraview.simple import *
+import glob
+
+AllPlotFiles = sorted(glob.glob("plt[0-9][0-9][0-9][0-9][0-9]"))
+
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
@@ -201,7 +205,7 @@ velLUT = GetColorTransferFunction('vel')
 velPWF = GetOpacityTransferFunction('vel')
 
 # create a new 'AMReX Particles Reader'
-plt0 = AMReXParticlesReader(FileNames=['plt00000', 'plt00050', 'plt00100', 'plt00150', 'plt00200', 'plt00250', 'plt00300', 'plt00350', 'plt00400', 'plt00450', 'plt00500', 'plt00550', 'plt00600', 'plt00650', 'plt00700', 'plt00750', 'plt00800', 'plt00850', 'plt00900', 'plt00950', 'plt01000', 'plt01050', 'plt01100', 'plt01150', 'plt01200', 'plt01250', 'plt01300', 'plt01350', 'plt01400', 'plt01450', 'plt01500', 'plt01550', 'plt01600', 'plt01650', 'plt01700', 'plt01750', 'plt01800', 'plt01850', 'plt01900', 'plt01950', 'plt02000', 'plt02050', 'plt02100', 'plt02150', 'plt02200', 'plt02250', 'plt02300', 'plt02350', 'plt02400', 'plt02450', 'plt02500', 'plt02550', 'plt02600', 'plt02650', 'plt02700', 'plt02750', 'plt02800', 'plt02850', 'plt02900', 'plt02950', 'plt03000', 'plt03050', 'plt03100', 'plt03150', 'plt03200', 'plt03250', 'plt03300', 'plt03350', 'plt03400', 'plt03450', 'plt03500', 'plt03550', 'plt03600', 'plt03650', 'plt03700', 'plt03750', 'plt03800', 'plt03850', 'plt03900', 'plt03950', 'plt04000', 'plt04050', 'plt04100', 'plt04150', 'plt04200', 'plt04250', 'plt04300', 'plt04350', 'plt04400', 'plt04450', 'plt04500', 'plt04550', 'plt04600', 'plt04650', 'plt04700', 'plt04750', 'plt04800', 'plt04850', 'plt04900', 'plt04950', 'plt05000', 'plt05050', 'plt05100', 'plt05150', 'plt05200', 'plt05250', 'plt05300', 'plt05350', 'plt05400', 'plt05450', 'plt05500', 'plt05550', 'plt05600', 'plt05650', 'plt05700', 'plt05750', 'plt05800', 'plt05850', 'plt05900', 'plt05950', 'plt06000', 'plt06050', 'plt06100', 'plt06150', 'plt06200', 'plt06202'])
+plt0 = AMReXParticlesReader(FileNames=AllPlotFiles)
 plt0.PointArrayStatus = ['id', 'cpu', 'real_comp0', 'real_comp1', 'real_comp2']
 
 # get animation scene
@@ -324,11 +328,11 @@ renderView1.CameraFocalPoint = [1.1629506105506158, 0.48673942949189786, 0.40831
 renderView1.CameraViewAngle = 18.900000000000002
 renderView1.CameraParallelScale = 1.0028520435610733
 
-animationScene1.Play()
+# animationScene1.Play()
 
 # save animation
 SaveAnimation('off_to_the_races.jpeg', renderView1, ImageResolution=[1400, 800],
-    FrameWindow=[0, 125], 
+    FrameWindow=[0, len(AllPlotFiles)-1], 
     # JPEG options
     Quality=85)
 
