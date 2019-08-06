@@ -67,6 +67,7 @@ class MyTest
         int nb, nl, nt;
         int Nb, Nl, Nt;
         bool fd_grad = false;
+	bool plot = false;
 
     public: // make these public for cuda
         void initProbPoisson ();

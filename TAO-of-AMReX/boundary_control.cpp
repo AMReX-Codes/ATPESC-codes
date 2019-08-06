@@ -19,7 +19,7 @@ int main (int argc, char* argv[])
     int                no_args = 2;
     Vec                P;
     Tao                tao;
-    PetscBool          flg, fd=PETSC_FALSE;
+    PetscBool          flg, fd=PETSC_FALSE, plot=PETSC_FALSE;
     PetscMPIInt        rank;
 
     amrex::Initialize(no_args, argv);
@@ -34,6 +34,8 @@ int main (int argc, char* argv[])
     ierr = PetscOptionsGetInt(NULL,NULL,"-nx",&mytest.n_cell,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsGetBool(NULL,NULL,"-fd",&fd,&flg);CHKERRQ(ierr);
     if (fd) mytest.fd_grad = true;
+    ierr = PetscOptionsGetBool(NULL,NULL,"-plot",&plot,&flg);CHKERRQ(ierr);
+    if (plot) mytest.plot = true;
 
     // Prep the solver and set the target solution we want to recover on the right edge of the domain
     // u_target = 4.0*(y-0.5)^2;
@@ -130,7 +132,7 @@ PetscErrorCode FormFunction(Tao tao, Vec P, PetscReal *f, void *ptr)
     ff = mytest->calculate_obj_val();
     *f = ff;
 
-    if (mytest->fd_grad) {
+    if (mytest->fd_grad && mytest->plot) {
         // Perform other misc operations like visualization and I/O
         mytest->write_plotfile();
         mytest->update_counter();
@@ -169,6 +171,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     for (int i=0; i<mytest->nl; i++) gg[mytest->nb + i] = gl[i];
     for (int i=0; i<mytest->nt; i++) gg[mytest->nb + mytest->nl + i] = gt[i];
     ierr = VecRestoreArray(G, &gg);CHKERRQ(ierr);
+    ierr = VecScale(G, mytest->n_cell*mytest->n_cell);CHKERRQ(ierr);
 
     // Clean-up
     ierr = PetscFree(gb);CHKERRQ(ierr);
@@ -176,8 +179,10 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *p
     ierr = PetscFree(gt);CHKERRQ(ierr);
 
     // Perform other misc operations like visualization and I/O
-    mytest->write_plotfile();
-    mytest->update_counter();
+    if (mytest->plot) {
+        mytest->write_plotfile();
+        mytest->update_counter();
+    }
 
     PetscFunctionReturn(0);
 }
