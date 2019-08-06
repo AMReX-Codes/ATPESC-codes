@@ -72,7 +72,7 @@ int main (int argc, char* argv[])
     auto stop = high_resolution_clock::now();
 
     auto duration = duration_cast<microseconds>(stop - start);
-    if (rank == 0) std::cout << "TaoSolve() duration: " << duration.count() << " ms" << std::endl;
+    if (rank == 0) std::cout << "TaoSolve() duration: " << duration.count() << " microseconds" << std::endl;
     }
 
     // Cleanup and exit
