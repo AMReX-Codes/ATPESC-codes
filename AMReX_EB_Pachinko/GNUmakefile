@@ -21,6 +21,9 @@ endif
 AMREX_INSTALL_DIR ?= /projects/ATPESC2019/MathPackagesTraining/amrex/libamrex3D
 HYPRE_DIR         ?= /projects/ATPESC2019/MathPackagesTraining/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/hypre-develop-bjrvkgdwbwewvxhrv6wu4g6tgejcfnm4/
 
+# Path to ParaView 5.6.1 MESA on Cooley
+PARAVIEW_DIR ?= /projects/ATPESC2019/MathPackagesTraining/ParaView-5.6.1-osmesa-MPI-Linux-64bit
+
 ifeq ($(MPICXX),)
   MPICXX = mpicxx
 endif
@@ -66,4 +69,5 @@ pltclean:
 	$(RM) -rf plt*/ *.png eb_grid* eb*vtp
 
 movie:
-	ffmpeg -framerate 10 -pattern_type glob -i "p*.png" -r 5 -vf scale=1024:-1 pachinko.gif
+	$(PARAVIEW_DIR)/bin/pvpython paraview_vis_script.py
+	ffmpeg -r 10 -i pachinko_game.%04d.jpeg -s 1400x800 -vcodec libx264 -crf 10 -pix_fmt yuv420p pachinko.mp4
