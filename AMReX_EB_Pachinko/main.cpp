@@ -8,9 +8,9 @@
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_TagBox.H>
+#include <AMReX_WriteEBSurface.H>
 
 #include <MyParticleContainer.H>
-#include <writeEBsurface.H>
 
 using namespace amrex;
 
@@ -222,7 +222,7 @@ int main (int argc, char* argv[])
         amrex::Print() << "******************************************************************** \n" << std::endl; 
 
         Print() << "Writing EB surface" << std::endl;
-        WriteEBSurface (grids, dmap, geom, factory);
+        WriteEBSurface (grids, dmap, geom, &factory);
     }
 
     amrex::Finalize();
