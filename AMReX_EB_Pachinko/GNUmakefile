@@ -17,9 +17,8 @@ ifeq ($(AMREX_INSTALL_DIR),)
 endif
 
 # These will only apply if they are not set as environment variables
-# These are the paths to the AMReX and HYPRE libraries on Cooley for ATPESC
+# These are the paths to the AMReX libraries on Cooley for ATPESC
 AMREX_INSTALL_DIR ?= /projects/ATPESC2019/MathPackagesTraining/amrex/libamrex3D
-HYPRE_DIR         ?= /projects/ATPESC2019/MathPackagesTraining/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/hypre-develop-bjrvkgdwbwewvxhrv6wu4g6tgejcfnm4/
 
 # Path to ParaView 5.6.1 MESA on Cooley
 PARAVIEW_DIR ?= /projects/ATPESC2019/MathPackagesTraining/ParaView-5.6.1-osmesa-MPI-Linux-64bit
@@ -30,13 +29,13 @@ endif
 
 FC = gfortran
 
-CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I. -I$(HYPRE_DIR)/include
-CPPFLAGS = -I$(AMREX_INSTALL_DIR)/include -I. -I$(HYPRE_DIR)/include
+CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I.
+CPPFLAGS = -I$(AMREX_INSTALL_DIR)/include -I.
 CXXFLAGS = -O2 -std=c++14
 FFLAGS = -O2
-LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(HYPRE_DIR)/lib -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib -Wl,-rpath,$(HYPRE_DIR)/lib
+LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib
 
-LIBRARIES = -lamrex -lHYPRE
+LIBRARIES = -lamrex
 LIBRARIES += -lgfortran
 LIBRARIES += -lpthread
 
