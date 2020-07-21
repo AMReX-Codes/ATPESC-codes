@@ -9,9 +9,9 @@
 #include <AMReX_TagBox.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_ParmParse.H>
+#include <AMReX_WriteEBSurface.H>
 
 #include <MyParticleContainer.H>
-#include <writeEBsurface.H>
 
 using namespace amrex;
 
@@ -334,10 +334,10 @@ int main (int argc, char* argv[])
             lp_info.setMaxCoarseningLevel(0);
 
         MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
-			     MLMG::Location::FaceCenter, // velocity located on face centers
+			     MLMG::Location::FaceCenter,       // velocity located on face centers
                              {amrex::GetArrOfConstPtrs(beta)}, // beta
-			     MLMG::Location::FaceCenter, // beta located on face centers
-			     MLMG::Location::CellCenter, // location of velocity divergence
+			     MLMG::Location::FaceCenter,       // beta located on face centers
+			     MLMG::Location::CellCenter,       // location of velocity divergence
                              {geom},
                              lp_info);                          // structure for passing info to the operator
 
@@ -449,7 +449,7 @@ int main (int argc, char* argv[])
         }
 
         Print() << "Writing EB surface" << std::endl;
-        WriteEBSurface (grids, dmap, geom, factory);
+        WriteEBSurface (grids, dmap, geom, &factory);
     }
   
     Real stop_time = amrex::second() - strt_time;

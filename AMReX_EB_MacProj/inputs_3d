@@ -15,3 +15,5 @@ obstacles = 0 1 2 3 4 5 6 7 8            # this is how we choose which obstacles
 
 mg_verbose = 2
 cg_verbose = 2
+
+use_hypre = 1                            # use hypre instead of native GMG to solve the problem  

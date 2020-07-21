@@ -43,20 +43,14 @@ LIBRARIES += -lpthread
 
 default: main$(DIM)d.exe
 
-main$(DIM)d.exe: main.o MyParticleContainer.o writeEBsurface.o eb_to_pvf.o
+main$(DIM)d.exe: main.o MyParticleContainer.o 
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-main.o: main.cpp MyParticleContainer.H writeEBsurface.H
+main.o: main.cpp MyParticleContainer.H 
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 MyParticleContainer.o: MyParticleContainer.cpp MyParticleContainer.H
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
-
-writeEBsurface.o: writeEBsurface.cpp writeEBsurface.H
-	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
-
-eb_to_pvf.o: eb_to_pvf.F90
-	$(FC) -o $@ -c $(FFLAGS) $(CPPFLAGS) $<
 
 .PHONY: clean realclean pltclean
 
