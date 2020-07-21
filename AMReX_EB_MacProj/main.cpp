@@ -308,6 +308,7 @@ int main (int argc, char* argv[])
 //      const FabFactory<FArrayBox>& test_factory = (num_obstacles > 0) ? 
 //          EBFArrayBoxFactory(eb_level, geom, grids, dmap, ng_ebs, ebs): FArrayBoxFactory();
 
+	// Velocities and Beta are face-centered
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), factory);
             beta[idim].define(amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 0, MFInfo(), factory);
@@ -333,13 +334,16 @@ int main (int argc, char* argv[])
             lp_info.setMaxCoarseningLevel(0);
 
         MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
+			     MLMG::Location::FaceCenter, // velocity located on face centers
                              {amrex::GetArrOfConstPtrs(beta)}, // beta
+			     MLMG::Location::FaceCenter, // beta located on face centers
+			     MLMG::Location::CellCenter, // location of velocity divergence
                              {geom},
                              lp_info);                          // structure for passing info to the operator
 
         // Set bottom-solver to use hypre instead of native BiCGStab 
         if (use_hypre) 
-           macproj.setBottomSolver(MLMG::BottomSolver::hypre);
+           macproj.getMLMG().setBottomSolver(MLMG::BottomSolver::hypre);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Periodic,
@@ -349,16 +353,17 @@ int main (int argc, char* argv[])
                           LinOpBCType::Periodic)});
 
         macproj.setVerbose(mg_verbose);
-        macproj.setCGVerbose(cg_verbose);
+        macproj.getMLMG().setBottomVerbose(cg_verbose);
 
         Real reltol = 1.e-8;
+        Real abstol = 1.e-12;
 
         amrex::Print() << " \n********************************************************************" << std::endl; 
         amrex::Print() << " First let's project the initial velocity to find " << std::endl;
         amrex::Print() << "   the flow field around the obstacles ... " << std::endl;
         amrex::Print() << "******************************************************************** \n" << std::endl; 
 
-        macproj.project(reltol);
+        macproj.project(reltol, abstol);
 
         amrex::Print() << " \n********************************************************************" << std::endl; 
         amrex::Print() << " Done!  Now let's advect the particles ... " << std::endl;
