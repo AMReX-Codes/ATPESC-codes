@@ -22,6 +22,7 @@ Pdirs := AmrCore
 Pdirs += Base 
 Pdirs += Boundary 
 Pdirs += EB
+Pdirs += LinearSolvers/Projections
 Pdirs += LinearSolvers/MLMG
 Pdirs += Particle
 
