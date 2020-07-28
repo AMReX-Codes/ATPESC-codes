@@ -1,11 +1,17 @@
-if (DIM EQUAL 1)
-   return()
+# Disabled for now
+return()
+
+#
+# Does not work if amrex is built in shared mode
+#
+if (BUILD_SHARED_LIBS)
+  return()
 endif ()
 
 #
 # This test works for both 2D and 3D builds 
 #
-set ( EXENAME  "Advection_AmrCore.exe" )
+set ( EXENAME  "Advection_AmrCore_GPU.exe" )
 set ( SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/Source )
 set ( EXE_DIR ${CMAKE_CURRENT_LIST_DIR}/Exec/SingleVortex )
 
@@ -45,6 +51,7 @@ file ( GLOB_RECURSE inputs LIST_DIRECTORIES false  ${EXE_DIR}/input* )
 # Copy input files to corresponding build dir
 #
 file ( COPY ${inputs} DESTINATION ${CMAKE_CURRENT_BINARY_DIR} ) 
+file ( COPY ${EXE_DIR}/sensei DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )
 
 #
 # Add to the "tutorial" target

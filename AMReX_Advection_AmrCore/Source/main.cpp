@@ -11,8 +11,6 @@ using namespace amrex;
 
 int main(int argc, char* argv[])
 {
-    amrex::SetVerbose(0);
-
     amrex::Initialize(argc,argv);
 
     // timer for profiling

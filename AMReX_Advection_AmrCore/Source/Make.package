@@ -1,6 +1,3 @@
-CEXE_sources += main.cpp AmrCoreAdv.cpp
+CEXE_sources += main.cpp AmrCoreAdv.cpp AdvanceLevel.cpp
 
-CEXE_headers += AmrCoreAdv.H
-
-F90EXE_sources += bc_fill_nd.F90
-
+CEXE_headers += AmrCoreAdv.H Kernels.H Tagging.H bc_fill.H
