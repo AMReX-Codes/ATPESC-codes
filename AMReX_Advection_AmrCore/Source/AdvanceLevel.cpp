@@ -137,9 +137,9 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                                                                       fluxcalc[1].array(mfi),
                                                                       fluxcalc[2].array(mfi)) };
 
-            AMREX_D_TERM(const Box& dqbxx = amrex::grow(bx, IntVect{2, 1, 1});,
-                         const Box& dqbxy = amrex::grow(bx, IntVect{1, 2, 1});,
-                         const Box& dqbxz = amrex::grow(bx, IntVect{1, 1, 2}););
+            AMREX_D_TERM(const Box& dqbxx = amrex::grow(bx, IntVect{AMREX_D_DECL(2, 1, 1)});,
+                         const Box& dqbxy = amrex::grow(bx, IntVect{AMREX_D_DECL(1, 2, 1)});,
+                         const Box& dqbxz = amrex::grow(bx, IntVect{AMREX_D_DECL(1, 1, 2)}););
 
             FArrayBox slope2fab (amrex::grow(bx, 2), 1);
             Elixir slope2eli = slope2fab.elixir();
@@ -197,6 +197,7 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                 flux_y(i, j, k, statein, vel[1], phiy, slope4, dtdx); 
             });
 
+#if (AMREX_SPACEDIM > 2)
             // z -------------------------
             FArrayBox phizfab (gbx, 1);
             Elixir phizeli = phizfab.elixir();
@@ -219,6 +220,7 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
             {
                 flux_z(i, j, k, statein, vel[2], phiz, slope4, dtdx); 
             });
+#endif
 
             // compute transverse fluxes
             // ===========================
@@ -227,13 +229,10 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                          const Box& gbxy = amrex::grow(bx, 1, 1);,
                          const Box& gbxz = amrex::grow(bx, 2, 1););
 
-            // xy & xz --------------------
+            // xy --------------------
             FArrayBox phix_yfab (gbx, 1);
-            FArrayBox phix_zfab (gbx, 1);
             Elixir phix_yeli = phix_yfab.elixir();
-            Elixir phix_zeli = phix_zfab.elixir();
             Array4<Real> phix_y = phix_yfab.array();
-            Array4<Real> phix_z = phix_zfab.array();
 
             amrex::ParallelFor(amrex::growHi(gbxz, 0, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -244,6 +243,12 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         phix_y, dtdx);
             }); 
 
+#if (AMREX_SPACEDIM > 2)
+            // xz --------------------
+            FArrayBox phix_zfab (gbx, 1);
+            Elixir phix_zeli = phix_zfab.elixir();
+            Array4<Real> phix_z = phix_zfab.array();
+
             amrex::ParallelFor(amrex::growHi(gbxy, 0, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
@@ -252,8 +257,9 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         AMREX_D_DECL(phix, phiy, phiz),
                         phix_z, dtdx);
             }); 
+#endif
 
-            // yz & yz --------------------
+            // yx --------------------
             FArrayBox phiy_xfab (gbx, 1);
             FArrayBox phiy_zfab (gbx, 1);
             Elixir phiy_xeli = phiy_xfab.elixir();
@@ -270,6 +276,8 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         phiy_x, dtdx);
             }); 
 
+#if (AMREX_SPACEDIM > 2)
+            // yz --------------------
             amrex::ParallelFor(amrex::growHi(gbxx, 1, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
@@ -304,6 +312,7 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         AMREX_D_DECL(phix, phiy, phiz),
                         phiz_y, dtdx);
             }); 
+#endif
 
             // final edge states 
             // ===========================
@@ -394,8 +403,13 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                      vmax*dt_lev > dx[1], ||
                      wmax*dt_lev > dx[2]))
     {
+#if (AMREX_SPACEDIM > 2)
         amrex::Print() << "umax = " << umax << ", vmax = " << vmax << ", wmax = " << wmax 
                        << ", dt = " << ctr_time << " dx = " << dx[1] << " " << dx[2] << " " << dx[3] << std::endl;
+#else
+        amrex::Print() << "umax = " << umax << ", vmax = " << vmax 
+                       << ", dt = " << ctr_time << " dx = " << dx[1] << " " << dx[2] << " " << dx[3] << std::endl;
+#endif
         amrex::Abort("CFL violation. use smaller adv.cfl.");
     }
 
