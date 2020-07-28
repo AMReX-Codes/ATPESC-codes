@@ -153,15 +153,15 @@ void flux_zy(int i, int j, int k,
 
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
-void combine_flux_x(int i, int j, int k,
-                    AMREX_D_DECL(Array4<Real> const& vx, 
-                                 Array4<Real> const& vy,
-                                 Array4<Real> const& vz),
-                    Array4<Real> const& px,
-                    Array4<Real> const& pyz,
-                    Array4<Real> const& pzy,
-                    Array4<Real> const& fx,
-                    const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
+void create_flux_x(int i, int j, int k,
+                   AMREX_D_DECL(Array4<Real> const& vx, 
+                                Array4<Real> const& vy,
+                                Array4<Real> const& vz),
+                   Array4<Real> const& px,
+                   Array4<Real> const& pyz,
+                   Array4<Real> const& pzy,
+                   Array4<Real> const& fx,
+                   const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
 {
     px(i,j,k) = ( (vx(i,j,k) < 0) ? 
                 px(i,j,k) - 0.5*dtdx[1] * ( 0.5*(vy(i  ,j+1,k  ) + vy(i  ,j,k)) * (pyz(i  ,j+1,k  )-pyz(i  ,j,k)))
@@ -174,15 +174,15 @@ void combine_flux_x(int i, int j, int k,
 
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
-void combine_flux_y(int i, int j, int k,
-                    AMREX_D_DECL(Array4<Real> const& vx, 
-                                 Array4<Real> const& vy,
-                                 Array4<Real> const& vz),
-                    Array4<Real> const& py,
-                    Array4<Real> const& pxz,
-                    Array4<Real> const& pzx,
-                    Array4<Real> const& fy,
-                    const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
+void create_flux_y(int i, int j, int k,
+                   AMREX_D_DECL(Array4<Real> const& vx, 
+                                Array4<Real> const& vy,
+                                Array4<Real> const& vz),
+                   Array4<Real> const& py,
+                   Array4<Real> const& pxz,
+                   Array4<Real> const& pzx,
+                   Array4<Real> const& fy,
+                   const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
 {
     py(i,j,k) = ( (vy(i,j,k) < 0) ? 
                 py(i,j,k) - 0.5*dtdx[0] * ( 0.5*(vx(i+1,j  ,k  ) + vx(i,j  ,k)) * (pxz(i+1,j  ,k  )-pxz(i,j  ,k)))
@@ -195,15 +195,15 @@ void combine_flux_y(int i, int j, int k,
 
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
-void combine_flux_z(int i, int j, int k,
-                    AMREX_D_DECL(Array4<Real> const& vx, 
-                                 Array4<Real> const& vy,
-                                 Array4<Real> const& vz),
-                    Array4<Real> const& pz,
-                    Array4<Real> const& pxy,
-                    Array4<Real> const& pyx,
-                    Array4<Real> const& fz,
-                    const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
+void create_flux_z(int i, int j, int k,
+                   AMREX_D_DECL(Array4<Real> const& vx, 
+                                Array4<Real> const& vy,
+                                Array4<Real> const& vz),
+                   Array4<Real> const& pz,
+                   Array4<Real> const& pxy,
+                   Array4<Real> const& pyx,
+                   Array4<Real> const& fz,
+                   const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
 {
     pz(i,j,k) = ( (vz(i,j,k) < 0) ? 
                 pz(i,j,k) - 0.5*dtdx[0] * ( 0.5*(vx(i+1,j  ,k  ) + vx(i,j,k  )) * (pxy(i+1,j  ,k  )-pxy(i,j,k  )))

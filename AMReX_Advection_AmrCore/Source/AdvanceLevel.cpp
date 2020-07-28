@@ -220,10 +220,9 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
             {
                 flux_z(i, j, k, statein, vel[2], phiz, slope4, dtdx); 
             });
-#endif
 
-            // compute transverse fluxes
-            // ===========================
+            // compute transverse fluxes (3D only)
+            // ===================================
 
             AMREX_D_TERM(const Box& gbxx = amrex::grow(bx, 0, 1);,
                          const Box& gbxy = amrex::grow(bx, 1, 1);,
@@ -243,7 +242,6 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         phix_y, dtdx);
             }); 
 
-#if (AMREX_SPACEDIM > 2)
             // xz --------------------
             FArrayBox phix_zfab (gbx, 1);
             Elixir phix_zeli = phix_zfab.elixir();
@@ -257,7 +255,6 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         AMREX_D_DECL(phix, phiy, phiz),
                         phix_z, dtdx);
             }); 
-#endif
 
             // yx --------------------
             FArrayBox phiy_xfab (gbx, 1);
@@ -276,7 +273,6 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                         phiy_x, dtdx);
             }); 
 
-#if (AMREX_SPACEDIM > 2)
             // yz --------------------
             amrex::ParallelFor(amrex::growHi(gbxx, 1, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -319,29 +315,45 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
             amrex::ParallelFor(amrex::growHi(bx, 0, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                combine_flux_x(i, j, k,
-                               vel[0], vel[1], vel[2],
-                               phix, phiy_z, phiz_y,
-                               flux[0], dtdx);
+                create_flux_x(i, j, k,
+                              vel[0], vel[1], 
+#if (AMREX_SPACEDIM > 2)
+                              vel[2],
+#endif
+#if (AMREX_SPACEDIM > 2)
+                              phix, phiy_z, phiz_y,
+#else
+                              phix, phiy,
+#endif
+                              flux[0], dtdx);
             });
 
             amrex::ParallelFor(amrex::growHi(bx, 1, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                combine_flux_y(i, j, k,
-                               vel[0], vel[1], vel[2],
-                               phiy, phix_z, phiz_x,
-                               flux[1], dtdx);
+                create_flux_y(i, j, k,
+                              vel[0], vel[1], 
+#if (AMREX_SPACEDIM > 2)
+                              vel[2],
+#endif
+#if (AMREX_SPACEDIM > 2)
+                              phiy, phix_z, phiz_x,
+#else
+                              phiy, phix,
+#endif
+                              flux[1], dtdx);
             });
 
+#if (AMREX_SPACEDIM > 2)
             amrex::ParallelFor(amrex::growHi(bx, 2, 1),
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                combine_flux_z(i, j, k,
+                create_flux_z(i, j, k,
                                vel[0], vel[1], vel[2],
                                phiz, phix_y, phiy_x,
                                flux[2], dtdx);
             });
+#endif
 
             // compute new state (stateout) and scale fluxes based on face area.
             // ===========================
