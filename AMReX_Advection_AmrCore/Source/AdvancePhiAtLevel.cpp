@@ -3,9 +3,9 @@
 
 using namespace amrex;
 
-// advance a single level for a single time step, updates flux registers
+// Advance a single level for a single time step, updates flux registers
 void
-AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
+AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, int ncycle)
 {
     constexpr int num_grow = 3;
 

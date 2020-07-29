@@ -1,4 +1,5 @@
-CEXE_sources += AdvanceLevel.cpp
+CEXE_sources += AdvancePhiAtLevel.cpp
+CEXE_sources += AdvancePhiAllLevels.cpp
 CEXE_sources += AmrCoreAdv.cpp 
 CEXE_sources += DefineVelocity.cpp 
 CEXE_sources += main.cpp 

@@ -118,7 +118,10 @@ AmrCoreAdv::Evolve ()
 
 	int lev = 0;
 	int iteration = 1;
-	timeStep(lev, cur_time, iteration);
+	if (do_subcycle)
+	    timeStepWithSubcycling(lev, cur_time, iteration);
+	else
+	    timeStepNoSubcycling(cur_time, iteration);
 
 	cur_time += dt[0];
 
@@ -532,10 +535,10 @@ AmrCoreAdv::GetData (int lev, Real time, Vector<MultiFab*>& data, Vector<Real>& 
 }
 
 
-// advance a level by dt
-// includes a recursive call for finer levels
+// Advance a level by dt
+// (includes a recursive call for finer levels)
 void
-AmrCoreAdv::timeStep (int lev, Real time, int iteration)
+AmrCoreAdv::timeStepWithSubcycling (int lev, Real time, int iteration)
 {
     if (regrid_int > 0)  // We may need to regrid
     {
@@ -575,8 +578,10 @@ AmrCoreAdv::timeStep (int lev, Real time, int iteration)
                        << " dt = " << dt[lev] << std::endl;
     }
 
-    // advance a single level for a single time step, updates flux registers
-    Advance(lev, time, dt[lev], iteration, nsubsteps[lev]);
+    // Advance a single level for a single time step, and update flux registers
+    Real t_nph = 0.5 * (t_old[lev] + t_new[lev]);
+    DefineVelocityAtLevel(lev, t_nph);
+    AdvancePhiAtLevel(lev, time, dt[lev], iteration, nsubsteps[lev]);
 
     ++istep[lev];
 
@@ -591,7 +596,7 @@ AmrCoreAdv::timeStep (int lev, Real time, int iteration)
         // recursive call for next-finer level
 	for (int i = 1; i <= nsubsteps[lev+1]; ++i)
 	{
-	    timeStep(lev+1, time+(i-1)*dt[lev+1], i);
+	    timeStepWithSubcycling(lev+1, time+(i-1)*dt[lev+1], i);
 	}
 
 	if (do_reflux)
@@ -603,6 +608,51 @@ AmrCoreAdv::timeStep (int lev, Real time, int iteration)
 	AverageDownTo(lev); // average lev+1 down to lev
     }
     
+}
+
+// Advance all the levels with the same dt
+void
+AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
+{
+    if (max_level > 0 && regrid_int > 0)  // We may need to regrid
+    {
+        if (istep[0] % regrid_int == 0)
+        {
+            // Regrid could add newly refine levels (if finest_level < max_level)
+            // so we save the previous finest level index
+            int old_finest = finest_level; 
+            regrid(0, time);
+        }
+    }
+
+    if (Verbose()) {
+        for (int lev = 0; lev < max_level; lev++)
+        {
+           amrex::Print() << "[Level " << lev << " step " << istep[lev]+1 << "] ";
+           amrex::Print() << "ADVANCE with time = " << t_new[lev] 
+                          << " dt = " << dt[lev] << std::endl;
+        }
+    }
+
+    DefineVelocityAllLevels(time);
+    AdvancePhiAllLevels    (time, dt[0], iteration, nsubsteps[0]);
+
+    // Make sure the coarser levels are consistent with the finer levels
+    for (int lev = max_level-1; lev >= 0; lev--)
+        AverageDownTo(lev); // average lev+1 down to lev
+
+    for (int lev = 0; lev < max_level; lev++)
+        ++istep[lev];
+
+    if (Verbose())
+    {
+        for (int lev = 0; lev < max_level; lev++)
+        {
+            amrex::Print() << "[Level " << lev << " step " << istep[lev] << "] ";
+            amrex::Print() << "Advanced " << CountCells(lev) << " cells" << std::endl;
+        }
+    }
+
 }
 
 // a wrapper for EstTimeStep
