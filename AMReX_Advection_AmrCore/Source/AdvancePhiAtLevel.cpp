@@ -28,10 +28,10 @@ AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, i
 
     const Real* prob_lo = geom[lev].ProbLo();
 
-    MultiFab fluxes[BL_SPACEDIM];
+    MultiFab fluxes[AMREX_SPACEDIM];
     if (do_reflux)
     {
-        for (int i = 0; i < BL_SPACEDIM; ++i)
+        for (int i = 0; i < AMREX_SPACEDIM; ++i)
         {
             BoxArray ba = grids[lev];
             ba.surroundingNodes(i);
@@ -340,7 +340,7 @@ AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, i
                                                                          fluxes[2].array(mfi)) };
           
             if (do_reflux) {
-                for (int idim = 0; idim < BL_SPACEDIM; ++idim) {
+                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     amrex::ParallelFor(nbx[idim],
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
@@ -383,13 +383,13 @@ AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, i
     // with the lev/lev-1 interface (and has grid spacing associated with lev-1)
     if (do_reflux) { 
         if (flux_reg[lev+1]) {
-            for (int i = 0; i < BL_SPACEDIM; ++i) {
+            for (int i = 0; i < AMREX_SPACEDIM; ++i) {
                 // update the lev+1/lev flux register (index lev+1)   
                 flux_reg[lev+1]->CrseInit(fluxes[i],i,0,0,fluxes[i].nComp(), -1.0);
             }       
         }
         if (flux_reg[lev]) {
-            for (int i = 0; i < BL_SPACEDIM; ++i) {
+            for (int i = 0; i < AMREX_SPACEDIM; ++i) {
                 // update the lev/lev-1 flux register (index lev) 
                 flux_reg[lev]->FineAdd(fluxes[i],i,0,0,fluxes[i].nComp(), 1.0);
             }

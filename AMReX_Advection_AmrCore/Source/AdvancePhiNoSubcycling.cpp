@@ -31,10 +31,10 @@ AmrCoreAdv::AdvancePhiNoSubcycling (Real time, Real dt_lev, int iteration, int n
 
     const Real* prob_lo = geom[lev].ProbLo();
 
-    MultiFab fluxes[BL_SPACEDIM];
+    MultiFab fluxes[AMREX_SPACEDIM];
     if (do_reflux)
     {
-        for (int i = 0; i < BL_SPACEDIM; ++i)
+        for (int i = 0; i < AMREX_SPACEDIM; ++i)
         {
             BoxArray ba = grids[lev];
             ba.surroundingNodes(i);
@@ -343,7 +343,7 @@ AmrCoreAdv::AdvancePhiNoSubcycling (Real time, Real dt_lev, int iteration, int n
                                                                          fluxes[2].array(mfi)) };
           
             if (do_reflux) {
-                for (int idim = 0; idim < BL_SPACEDIM; ++idim) {
+                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     amrex::ParallelFor(nbx[idim],
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
