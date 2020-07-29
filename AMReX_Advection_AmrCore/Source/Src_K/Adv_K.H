@@ -23,6 +23,8 @@ void conservative(int i, int j, int k,
                               + (flxz(i,j,k) - flxz(i,j,k+1)) * dtdx[2] ) );
 }
 
+#if (AMREX_SPACEDIM > 2)
+
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
 void flux_scale_x(int i, int j, int k,
@@ -52,5 +54,29 @@ void flux_scale_z(int i, int j ,int k,
 {
     flxz(i,j,k) = flxz(i,j,k) * (dt * dx[0]*dx[1]);
 }
+
+#else
+
+AMREX_GPU_DEVICE
+AMREX_FORCE_INLINE
+void flux_scale_x(int i, int j, int k,
+                  Array4<Real> const& flxx,
+                  Real dt,
+                  const GpuArray<Real, AMREX_SPACEDIM>& dx)
+{
+   flxx(i,j,k) = flxx(i,j,k) * (dt * dx[1]);
+}
+
+AMREX_GPU_DEVICE
+AMREX_FORCE_INLINE
+void flux_scale_y(int i, int j, int k,
+                  Array4<Real> const& flxy,
+                  Real dt,
+                  const GpuArray<Real, AMREX_SPACEDIM>& dx)
+{
+   flxy(i,j,k) = flxy(i,j,k) * (dt * dx[0]);
+}
+
+#endif
 
 #endif
