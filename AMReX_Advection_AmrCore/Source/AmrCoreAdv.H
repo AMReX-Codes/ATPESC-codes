@@ -69,7 +69,7 @@ public:
     void Advance (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
 
     // compute dt from CFL considerations
-    Real EstTimeStep (int lev, bool local=false) const;
+    Real EstTimeStep (int lev, bool local=false);
 
 private:
 
@@ -96,6 +96,10 @@ private:
     // utility to copy in data from phi_old and/or phi_new into another multifab
     void GetData (int lev, amrex::Real time, amrex::Vector<amrex::MultiFab*>& data,
                   amrex::Vector<amrex::Real>& datatime);
+
+    // Define the advection velocity as the curl of a scalar field
+    void DefineVelocityAtLevel (int lev, amrex::Real time);
+    void DefineVelocityAllLevels (amrex::Real time);
 
     // advance a level by dt
     // includes a recursive call for finer levels
@@ -152,6 +156,9 @@ private:
     // therefore flux_reg[0] and flux_reg[nlevs_max] are never actually 
     // used in the reflux operation
     amrex::Vector<std::unique_ptr<amrex::FluxRegister> > flux_reg; 
+
+    // Velocity on all faces at all levels
+    amrex::Vector< Array<amrex::MultiFab, AMREX_SPACEDIM> > facevel;
     
     ////////////////
     // runtime parameters
@@ -173,6 +180,9 @@ private:
     // hyperbolic refluxing as part of multilevel synchronization
     int do_reflux = 1;
 
+    // do we subcycle in time?
+    int do_subcycle = 1;
+
     // plotfile prefix and frequency
     std::string plot_file {"plt"};
     int plot_int = -1;
@@ -180,9 +190,6 @@ private:
     // checkpoint prefix and frequency
     std::string chk_file {"chk"};
     int chk_int = -1;
-
-    // are we doing a planar problem in 3D?
-    const int planar = 1;
 
 #if defined(BL_USE_SENSEI_INSITU)
     amrex::AmrMeshInSituBridge *insitu_bridge;
