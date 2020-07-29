@@ -1,3 +1,15 @@
-CEXE_sources += main.cpp AmrCoreAdv.cpp AdvanceLevel.cpp
+CEXE_sources += AdvancePhiAtLevel.cpp
+CEXE_sources += AdvancePhiNoSubcycling.cpp
+CEXE_sources += AmrCoreAdv.cpp
+CEXE_sources += DefineVelocity.cpp
+CEXE_sources += main.cpp
 
-CEXE_headers += AmrCoreAdv.H Kernels.H Tagging.H bc_fill.H
+CEXE_headers += AmrCoreAdv.H 
+CEXE_headers += bc_fill.H
+CEXE_headers += Kernels.H
+CEXE_headers += Tagging.H
+
+ifeq ($(USE_EB),TRUE)
+CEXE_sources += mac_project_velocity.cpp
+CEXE_sources += make_eb_geometry.cpp
+endif

@@ -3,11 +3,14 @@
 
 using namespace amrex;
 
-// advance a single level for a single time step, updates flux registers
+// advance all levels for a single time step
 void
-AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
+AmrCoreAdv::AdvancePhiNoSubcycling (Real time, Real dt_lev, int iteration, int ncycle)
 {
-    constexpr int num_grow = 3;
+  constexpr int num_grow = 3;
+
+  for (int lev = 0; lev <= max_level; lev++)
+  {
 
     std::swap(phi_old[lev], phi_new[lev]);
     t_old[lev] = t_new[lev];
@@ -31,103 +34,49 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
     MultiFab fluxes[BL_SPACEDIM];
     if (do_reflux)
     {
-	for (int i = 0; i < BL_SPACEDIM; ++i)
-	{
-	    BoxArray ba = grids[lev];
-	    ba.surroundingNodes(i);
-	    fluxes[i].define(ba, dmap[lev], S_new.nComp(), 0);
-	}
+        for (int i = 0; i < BL_SPACEDIM; ++i)
+        {
+            BoxArray ba = grids[lev];
+            ba.surroundingNodes(i);
+            fluxes[i].define(ba, dmap[lev], S_new.nComp(), 0);
+        }
     }
 
     // State with ghost cells
     MultiFab Sborder(grids[lev], dmap[lev], S_new.nComp(), num_grow);
     FillPatch(lev, time, Sborder, 0, Sborder.nComp());
 
-
-/*
-    // Allocate fabs for fluxes and Godunov velocities. (Kept for reference).
-    for (int i = 0; i < BL_SPACEDIM ; i++) {
-	const Box& bxtmp = amrex::surroundingNodes(bx,i);
-	flux[i].resize(bxtmp,S_new.nComp());
-	uface[i].resize(amrex::grow(bxtmp,1),1);
-    }
-*/
-
     // Build temporary multiFabs to work on.
     Array<MultiFab, AMREX_SPACEDIM> fluxcalc;
-    Array<MultiFab, AMREX_SPACEDIM> facevel;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         BoxArray ba = amrex::convert(S_new.boxArray(), IntVect::TheDimensionVector(idim));
-
         fluxcalc[idim].define (ba,         S_new.DistributionMap(), S_new.nComp(), 0);
-        facevel [idim].define (ba.grow(1), S_new.DistributionMap(),             1, 0);
     }
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
     {
-	for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-	{
+        for (MFIter mfi(S_new,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
 
         // ======== GET FACE VELOCITY =========
-            GpuArray<Box, AMREX_SPACEDIM> nbx;
-            AMREX_D_TERM(nbx[0] = mfi.nodaltilebox(0);,
-                         nbx[1] = mfi.nodaltilebox(1);,
-                         nbx[2] = mfi.nodaltilebox(2););
+        GpuArray<Box, AMREX_SPACEDIM> nbx;
+        AMREX_D_TERM(nbx[0] = mfi.nodaltilebox(0);,
+                     nbx[1] = mfi.nodaltilebox(1);,
+                     nbx[2] = mfi.nodaltilebox(2););
 
-            AMREX_D_TERM(const Box& ngbxx = amrex::grow(mfi.nodaltilebox(0),1);,
-                         const Box& ngbxy = amrex::grow(mfi.nodaltilebox(1),1);,
-                         const Box& ngbxz = amrex::grow(mfi.nodaltilebox(2),1););
+        AMREX_D_TERM(const Box& ngbxx = amrex::grow(mfi.nodaltilebox(0),1);,
+                     const Box& ngbxy = amrex::grow(mfi.nodaltilebox(1),1);,
+                     const Box& ngbxz = amrex::grow(mfi.nodaltilebox(2),1););
 
-            GpuArray<Array4<Real>, AMREX_SPACEDIM> vel{ AMREX_D_DECL( facevel[0].array(mfi),
-                                                                      facevel[1].array(mfi),
-                                                                      facevel[2].array(mfi)) };
-
-            const Box& psibox = Box(IntVect(AMREX_D_DECL(std::min(ngbxx.smallEnd(0)-1, ngbxy.smallEnd(0)-1),
-                                                         std::min(ngbxx.smallEnd(1)-1, ngbxy.smallEnd(0)-1),
-                                                         0)),
-                                    IntVect(AMREX_D_DECL(std::max(ngbxx.bigEnd(0),   ngbxy.bigEnd(0)+1),
-                                                         std::max(ngbxx.bigEnd(1)+1, ngbxy.bigEnd(1)),
-                                                         0)));
-
-            FArrayBox psifab(psibox, 1);
-            Elixir psieli = psifab.elixir();
-            Array4<Real> psi = psifab.array();
-            GeometryData geomdata = geom[lev].data();
-            auto prob_lo = geom[lev].ProbLoArray();
-            auto dx = geom[lev].CellSizeArray();
-
-            amrex::launch(psibox,
-            [=] AMREX_GPU_DEVICE (const Box& tbx)
-            {
-                get_face_velocity_psi(tbx, ctr_time,
-                                      psi, geomdata); 
-            });
-
-            AMREX_D_TERM(
-                         amrex::ParallelFor(ngbxx,
-                         [=] AMREX_GPU_DEVICE (int i, int j, int k)
-                         {
-                             get_face_velocity_x(i, j, k, vel[0], psi, prob_lo, dx); 
-                         });,
-
-                         amrex::ParallelFor(ngbxy,
-                         [=] AMREX_GPU_DEVICE (int i, int j, int k)
-                         {
-                             get_face_velocity_y(i, j, k, vel[1], psi, prob_lo, dx);
-                         });,
-
-                         amrex::ParallelFor(ngbxz,
-                         [=] AMREX_GPU_DEVICE (int i, int j, int k)
-                         {
-                             get_face_velocity_z(i, j, k, vel[2], psi, prob_lo, dx);
-                         });
-                        );
+        GpuArray<Array4<Real>, AMREX_SPACEDIM> vel{ AMREX_D_DECL( facevel[lev][0].array(mfi),
+                                                                  facevel[lev][1].array(mfi),
+                                                                  facevel[lev][2].array(mfi)) };
 
         // ======== FLUX CALC AND UPDATE =========
 
-	    const Box& bx = mfi.tilebox();
+            const Box& bx = mfi.tilebox();
             const Box& gbx = amrex::grow(bx, 1);
 
             Array4<Real> statein  = Sborder.array(mfi);
@@ -407,9 +356,9 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
 
     // ======== CFL CHECK, MOVED OUTSIDE MFITER LOOP =========
 
-    AMREX_D_TERM(Real umax = facevel[0].norm0(0,0,false);,
-                 Real vmax = facevel[1].norm0(0,0,false);,
-                 Real wmax = facevel[2].norm0(0,0,false););
+    AMREX_D_TERM(Real umax = facevel[lev][0].norm0(0,0,false);,
+                 Real vmax = facevel[lev][1].norm0(0,0,false);,
+                 Real wmax = facevel[lev][2].norm0(0,0,false););
 
     if (AMREX_D_TERM(umax*dt_lev > dx[0], ||
                      vmax*dt_lev > dx[1], ||
@@ -424,29 +373,5 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
 #endif
         amrex::Abort("CFL violation. use smaller adv.cfl.");
     }
-
-    // ======== END OF GPU EDIT, (FOR NOW) =========
-
-    // increment or decrement the flux registers by area and time-weighted fluxes
-    // Note that the fluxes have already been scaled by dt and area
-    // In this example we are solving phi_t = -div(+F)
-    // The fluxes contain, e.g., F_{i+1/2,j} = (phi*u)_{i+1/2,j}
-    // Keep this in mind when considering the different sign convention for updating
-    // the flux registers from the coarse or fine grid perspective
-    // NOTE: the flux register associated with flux_reg[lev] is associated
-    // with the lev/lev-1 interface (and has grid spacing associated with lev-1)
-    if (do_reflux) { 
-	if (flux_reg[lev+1]) {
-	    for (int i = 0; i < BL_SPACEDIM; ++i) {
-	        // update the lev+1/lev flux register (index lev+1)   
-	        flux_reg[lev+1]->CrseInit(fluxes[i],i,0,0,fluxes[i].nComp(), -1.0);
-	    }	    
-	}
-	if (flux_reg[lev]) {
-	    for (int i = 0; i < BL_SPACEDIM; ++i) {
-	        // update the lev/lev-1 flux register (index lev) 
-		flux_reg[lev]->FineAdd(fluxes[i],i,0,0,fluxes[i].nComp(), 1.0);
-	    }
-	}
-    }
+  }
 }

@@ -43,13 +43,13 @@ public:
     // fill with interpolated coarse level data.
     // overrides the pure virtual function in AmrCore
     virtual void MakeNewLevelFromCoarse (int lev, amrex::Real time, const amrex::BoxArray& ba,
-					 const amrex::DistributionMapping& dm) override;
+                                         const amrex::DistributionMapping& dm) override;
 
     // Remake an existing level using provided BoxArray and DistributionMapping and 
     // fill with existing fine and coarse data.
     // overrides the pure virtual function in AmrCore
     virtual void RemakeLevel (int lev, amrex::Real time, const amrex::BoxArray& ba,
-			      const amrex::DistributionMapping& dm) override;
+                              const amrex::DistributionMapping& dm) override;
 
     // Delete level data
     // overrides the pure virtual function in AmrCore
@@ -59,14 +59,15 @@ public:
     // Only used during initialization.
     // overrides the pure virtual function in AmrCore
     virtual void MakeNewLevelFromScratch (int lev, amrex::Real time, const amrex::BoxArray& ba,
-					  const amrex::DistributionMapping& dm) override;
+                                          const amrex::DistributionMapping& dm) override;
 
     // tag all cells for refinement
     // overrides the pure virtual function in AmrCore
     virtual void ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real time, int ngrow) override;
 
     // advance a single level for a single time step, updates flux registers
-    void Advance (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+    void AdvancePhiAtLevel (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+    void AdvancePhiNoSubcycling (amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
 
     // compute dt from CFL considerations
     Real EstTimeStep (int lev, bool local=false) const;
@@ -97,9 +98,16 @@ private:
     void GetData (int lev, amrex::Real time, amrex::Vector<amrex::MultiFab*>& data,
                   amrex::Vector<amrex::Real>& datatime);
 
-    // advance a level by dt
+    // Advance a level by dt
     // includes a recursive call for finer levels
-    void timeStep (int lev, amrex::Real time, int iteration);
+    void timeStepWithSubcycling (int lev, amrex::Real time, int iteration);
+
+    // Advance all levels by dt
+    void timeStepNoSubcycling (amrex::Real time, int iteration);
+
+    // Define the advection velocity as the curl of a scalar field
+    void DefineVelocityAtLevel (int lev, Real time);
+    void DefineVelocityNoSubcycling (Real time);
 
     // a wrapper for EstTimeStep(0
     void ComputeDt ();
@@ -124,6 +132,12 @@ private:
 
     // utility to skip to next line in Header
     static void GotoNextLine (std::istream& is);
+
+    // Construct the EB geometry
+    void make_eb_geometry();
+
+    // Project the velocity field
+    void mac_project_velocity();
 
     ////////////////
     // private data members
@@ -152,6 +166,8 @@ private:
     // therefore flux_reg[0] and flux_reg[nlevs_max] are never actually 
     // used in the reflux operation
     amrex::Vector<std::unique_ptr<amrex::FluxRegister> > flux_reg; 
+
+    amrex::Vector< Array<amrex::MultiFab, AMREX_SPACEDIM> > facevel;
     
     ////////////////
     // runtime parameters
@@ -165,6 +181,9 @@ private:
 
     // advective cfl number - dt = cfl*dx/umax
     amrex::Real cfl = 0.7;
+
+    // Do we subcycle in time?
+    bool subcycle = true;
 
     // how often each level regrids the higher levels of refinement
     // (after a level advances that many time steps)
@@ -183,6 +202,10 @@ private:
 
     // are we doing a planar problem in 3D?
     const int planar = 1;
+
+#ifdef AMREX_USE_EB
+    const EBFArrayBoxFactory* factory;
+#endif
 
 #if defined(BL_USE_SENSEI_INSITU)
     amrex::AmrMeshInSituBridge *insitu_bridge;
