@@ -335,11 +335,11 @@ AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, i
                          });
                         );
 
-            GpuArray<Array4<Real>, AMREX_SPACEDIM> fluxout{ AMREX_D_DECL(fluxes[0].array(mfi),
-                                                                         fluxes[1].array(mfi),
-                                                                         fluxes[2].array(mfi)) };
-          
             if (do_reflux) {
+                GpuArray<Array4<Real>, AMREX_SPACEDIM> fluxout{ AMREX_D_DECL(fluxes[0].array(mfi),
+                                                                             fluxes[1].array(mfi),
+                                                                             fluxes[2].array(mfi)) };
+
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     amrex::ParallelFor(nbx[idim],
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
