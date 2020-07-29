@@ -31,12 +31,12 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
     MultiFab fluxes[AMREX_SPACEDIM];
     if (do_reflux)
     {
-	for (int i = 0; i < AMREX_SPACEDIM; ++i)
-	{
-	    BoxArray ba = grids[lev];
-	    ba.surroundingNodes(i);
-	    fluxes[i].define(ba, dmap[lev], S_new.nComp(), 0);
-	}
+        for (int i = 0; i < AMREX_SPACEDIM; ++i)
+        {
+            BoxArray ba = grids[lev];
+            ba.surroundingNodes(i);
+            fluxes[i].define(ba, dmap[lev], S_new.nComp(), 0);
+        }
     }
 
     // State with ghost cells
@@ -388,11 +388,12 @@ AmrCoreAdv::Advance (int lev, Real time, Real dt_lev, int iteration, int ncycle)
                          });
                         );
 
-            GpuArray<Array4<Real>, AMREX_SPACEDIM> fluxout{ AMREX_D_DECL(fluxes[0].array(mfi),
-                                                                         fluxes[1].array(mfi),
-                                                                         fluxes[2].array(mfi)) };
-          
             if (do_reflux) {
+
+                GpuArray<Array4<Real>, AMREX_SPACEDIM> fluxout{ AMREX_D_DECL(fluxes[0].array(mfi),
+                                                                             fluxes[1].array(mfi),
+                                                                             fluxes[2].array(mfi)) };
+
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     amrex::ParallelFor(nbx[idim],
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
