@@ -39,18 +39,16 @@ AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
 void create_flux_x(int i, int j, int k,
                    AMREX_D_DECL(Array4<Real> const& vx, 
-                                 Array4<Real> const& vy,
-                                 Array4<Real> const& vz),
+                                Array4<Real> const& vy,
+                                Array4<Real> const& vz),
                    Array4<Real> const& px,
                    Array4<Real> const& py,
                    Array4<Real> const& fx,
                    const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
 {
-    px(i,j,k) = ( (vx(i,j,k) < 0) ? 
-                px(i,j,k) - 0.5*dtdx[1] * ( 0.5*(vy(i  ,j+1,k  ) + vy(i  ,j,k)) * (py(i  ,j+1,k  )-py(i  ,j,k))) :
-                px(i,j,k) - 0.5*dtdx[1] * ( 0.5*(vy(i-1,j+1,k  ) + vy(i-1,j,k)) * (py(i-1,j+1,k  )-py(i-1,j,k))) );
-
-    fx(i,j,k) = vx(i,j,k)*px(i,j,k);
+    fx(i,j,k) = ( (vx(i,j,k) < 0) ? 
+                (px(i,j,k) - 0.5*dtdx[1] * ( 0.5*(vy(i  ,j+1,k  ) + vy(i  ,j,k)) * (py(i  ,j+1,k  )-py(i  ,j,k))))*vx(i,j,k) :
+                (px(i,j,k) - 0.5*dtdx[1] * ( 0.5*(vy(i-1,j+1,k  ) + vy(i-1,j,k)) * (py(i-1,j+1,k  )-py(i-1,j,k))))*vx(i,j,k) );
 }
 
 AMREX_GPU_DEVICE
@@ -64,11 +62,9 @@ void create_flux_y(int i, int j, int k,
                    Array4<Real> const& fy,
                    const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
 {
-    py(i,j,k) = ( (vy(i,j,k) < 0) ? 
-                py(i,j,k) - 0.5*dtdx[0] * ( 0.5*(vx(i+1,j  ,k  ) + vx(i,j  ,k)) * (px(i+1,j  ,k  )-px(i,j  ,k))) :
-                py(i,j,k) - 0.5*dtdx[0] * ( 0.5*(vx(i+1,j-1,k  ) + vx(i,j-1,k)) * (px(i+1,j-1,k  )-px(i,j-1,k))) );
-
-    fy(i,j,k) = vy(i,j,k)*py(i,j,k);
+    fy(i,j,k) = ( (vy(i,j,k) < 0) ? 
+                (py(i,j,k) - 0.5*dtdx[0] * ( 0.5*(vx(i+1,j  ,k  ) + vx(i,j  ,k)) * (px(i+1,j  ,k  )-px(i,j  ,k))))*vy(i,j,k) :
+                (py(i,j,k) - 0.5*dtdx[0] * ( 0.5*(vx(i+1,j-1,k  ) + vx(i,j-1,k)) * (px(i+1,j-1,k  )-px(i,j-1,k))))*vy(i,j,k) );
 }
 
 #endif
