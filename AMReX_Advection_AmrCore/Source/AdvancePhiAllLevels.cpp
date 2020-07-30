@@ -9,7 +9,7 @@ AmrCoreAdv::AdvancePhiAllLevels (Real time, Real dt_lev, int iteration, int ncyc
 {
   constexpr int num_grow = 3;
 
-  for (int lev = 0; lev <= max_level; lev++)
+  for (int lev = 0; lev <= finest_level; lev++)
   {
 
     std::swap(phi_old[lev], phi_new[lev]);
