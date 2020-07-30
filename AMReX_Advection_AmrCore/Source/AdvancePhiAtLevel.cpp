@@ -365,10 +365,10 @@ AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, i
     {
 #if (AMREX_SPACEDIM > 2)
         amrex::Print() << "umax = " << umax << ", vmax = " << vmax << ", wmax = " << wmax 
-                       << ", dt = " << dt_lev << " dx = " << dx[1] << " " << dx[2] << " " << dx[3] << std::endl;
+                       << ", dt = " << dt_lev << " dx = " << dx[0] << " " << dx[1] << " " << dx[2] << std::endl;
 #else
         amrex::Print() << "umax = " << umax << ", vmax = " << vmax 
-                       << ", dt = " << dt_lev << " dx = " << dx[1] << " " << dx[2] << " " << dx[3] << std::endl;
+                       << ", dt = " << dt_lev << " dx = " << dx[0] << " " << dx[1] << " " << dx[2] << std::endl;
 #endif
         amrex::Abort("CFL violation. use smaller adv.cfl.");
     }
