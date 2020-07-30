@@ -114,29 +114,29 @@ AmrCoreAdv::Evolve ()
     {
         amrex::Print() << "\nCoarse STEP " << step+1 << " starts ..." << std::endl;
 
-	ComputeDt();
+        ComputeDt();
 
-	int lev = 0;
-	int iteration = 1;
-	if (do_subcycle)
-	    timeStepWithSubcycling(lev, cur_time, iteration);
-	else
-	    timeStepNoSubcycling(cur_time, iteration);
+        int lev = 0;
+        int iteration = 1;
+        if (do_subcycle)
+            timeStepWithSubcycling(lev, cur_time, iteration);
+        else
+            timeStepNoSubcycling(cur_time, iteration);
 
-	cur_time += dt[0];
+        cur_time += dt[0];
 
         amrex::Print() << "Coarse STEP " << step+1 << " ends." << " TIME = " << cur_time
                        << " DT = " << dt[0]  << std::endl;
 
-	// sync up time
-	for (lev = 0; lev <= finest_level; ++lev) {
-	    t_new[lev] = cur_time;
-	}
+        // sync up time
+        for (lev = 0; lev <= finest_level; ++lev) {
+            t_new[lev] = cur_time;
+        }
 
-	if (plot_int > 0 && (step+1) % plot_int == 0) {
-	    last_plot_file_step = step+1;
-	    WritePlotFile();
-	}
+        if (plot_int > 0 && (step+1) % plot_int == 0) {
+            last_plot_file_step = step+1;
+            WritePlotFile();
+        }
 
         if (chk_int > 0 && (step+1) % chk_int == 0) {
             WriteCheckpointFile();
@@ -155,11 +155,11 @@ AmrCoreAdv::Evolve ()
         }
 #endif
 
-	if (cur_time >= stop_time - 1.e-6*dt[0]) break;
+        if (cur_time >= stop_time - 1.e-6*dt[0]) break;
     }
 
     if (plot_int > 0 && istep[0] > last_plot_file_step) {
-	WritePlotFile();
+        WritePlotFile();
     }
 
 #ifdef BL_USE_SENSEI_INSITU
