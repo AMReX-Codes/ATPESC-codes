@@ -666,28 +666,31 @@ AmrCoreAdv::ComputeDt ()
 
     for (int lev = 0; lev <= finest_level; ++lev)
     {
-	dt_tmp[lev] = EstTimeStep(lev, true);
+        dt_tmp[lev] = EstTimeStep(lev, true);
     }
     ParallelDescriptor::ReduceRealMin(&dt_tmp[0], dt_tmp.size());
 
     constexpr Real change_max = 1.1;
     Real dt_0 = dt_tmp[0];
     int n_factor = 1;
+
     for (int lev = 0; lev <= finest_level; ++lev) {
-	dt_tmp[lev] = std::min(dt_tmp[lev], change_max*dt[lev]);
-	n_factor *= nsubsteps[lev];
-	dt_0 = std::min(dt_0, n_factor*dt_tmp[lev]);
+        dt_tmp[lev] = std::min(dt_tmp[lev], change_max*dt[lev]);
+        n_factor *= nsubsteps[lev];
+        dt_0 = std::min(dt_0, n_factor*dt_tmp[lev]);
     }
 
     // Limit dt's by the value of stop_time.
     const Real eps = 1.e-3*dt_0;
+
     if (t_new[0] + dt_0 > stop_time - eps) {
-	dt_0 = stop_time - t_new[0];
+        dt_0 = stop_time - t_new[0];
     }
 
     dt[0] = dt_0;
+
     for (int lev = 1; lev <= finest_level; ++lev) {
-	dt[lev] = dt[lev-1] / nsubsteps[lev];
+        dt[lev] = dt[lev-1] / nsubsteps[lev];
     }
 }
 
