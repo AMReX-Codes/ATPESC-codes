@@ -5,7 +5,7 @@ using namespace amrex;
 
 // advance all levels for a single time step
 void
-AmrCoreAdv::AdvancePhiAllLevels (Real time, Real dt_lev, int iteration, int ncycle)
+AmrCoreAdv::AdvancePhiAllLevels (Real time, Real dt_lev, int iteration)
 {
   constexpr int num_grow = 3;
 

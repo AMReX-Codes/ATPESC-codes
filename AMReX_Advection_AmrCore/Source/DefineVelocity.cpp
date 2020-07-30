@@ -1,3 +1,5 @@
+#include <AMReX_MultiFabUtil.H>
+
 #include <AmrCoreAdv.H>
 #include <Kernels.H>
 
@@ -8,6 +10,14 @@ AmrCoreAdv::DefineVelocityAllLevels (Real time)
 {
     for (int lev = 0; lev <= max_level; ++lev) 
         DefineVelocityAtLevel(lev,time);
+
+    // Average down so that velocity on every "coarse" face is the 
+    // average of the fine faces "above" it
+    for (int lev = max_level; lev > 0; lev--) 
+    {
+        average_down_faces(GetArrOfConstPtrs(facevel[lev]), 
+                           GetArrOfPtrs(facevel[lev-1]), MaxRefRatio(lev-1),0);
+    }
 }
 
 void

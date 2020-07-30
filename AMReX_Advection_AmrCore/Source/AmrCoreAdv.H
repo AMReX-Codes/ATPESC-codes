@@ -69,7 +69,7 @@ public:
     void AdvancePhiAtLevel (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
 
     // Advance phi at all levels for a single time step
-    void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+    void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration);
 
     // compute dt from CFL considerations
     Real EstTimeStep (int lev, bool local=false);
@@ -145,7 +145,7 @@ private:
     amrex::Vector<amrex::Real> t_old;
     amrex::Vector<amrex::Real> dt;
 
-    // array of multifabs to store the solution at each level of refinement
+    // Array of multifabs to store the solution at each level of refinement
     // after advancing a level we use "swap".
     amrex::Vector<amrex::MultiFab> phi_new;
     amrex::Vector<amrex::MultiFab> phi_old;
@@ -163,7 +163,7 @@ private:
     amrex::Vector<std::unique_ptr<amrex::FluxRegister> > flux_reg; 
 
     // Velocity on all faces at all levels
-    amrex::Vector< Array<amrex::MultiFab, AMREX_SPACEDIM> > facevel;
+    amrex::Vector< amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> > facevel;
     
     ////////////////
     // runtime parameters

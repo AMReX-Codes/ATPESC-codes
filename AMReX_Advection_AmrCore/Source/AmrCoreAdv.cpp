@@ -36,9 +36,13 @@ AmrCoreAdv::AmrCoreAdv ()
 
     istep.resize(nlevs_max, 0);
     nsubsteps.resize(nlevs_max, 1);
-    for (int lev = 1; lev <= max_level; ++lev) {
-	nsubsteps[lev] = MaxRefRatio(lev-1);
-    }
+
+    if (do_subcycle)
+        for (int lev = 1; lev <= max_level; ++lev) 
+  	    nsubsteps[lev] = MaxRefRatio(lev-1);
+    else
+        for (int lev = 1; lev <= max_level; ++lev) 
+  	    nsubsteps[lev] = 1;
 
     t_new.resize(nlevs_max, 0.0);
     t_old.resize(nlevs_max, -1.e100);
@@ -211,7 +215,7 @@ AmrCoreAdv::MakeNewLevelFromCoarse (int lev, Real time, const BoxArray& ba,
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -245,7 +249,7 @@ AmrCoreAdv::RemakeLevel (int lev, Real time, const BoxArray& ba,
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -272,6 +276,8 @@ void AmrCoreAdv::MakeNewLevelFromScratch (int lev, Real time, const BoxArray& ba
     const int ncomp = 1;
     const int nghost = 0;
 
+    amrex::Print() << "NEW LEVEL FROM SCRATCH " << lev << " " << ba << std::endl;
+
     phi_new[lev].define(ba, dm, ncomp, nghost);
     phi_old[lev].define(ba, dm, ncomp, nghost);
 
@@ -281,7 +287,7 @@ void AmrCoreAdv::MakeNewLevelFromScratch (int lev, Real time, const BoxArray& ba
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -468,7 +474,7 @@ AmrCoreAdv::FillPatch (int lev, Real time, MultiFab& mf, int icomp, int ncomp)
     }
 }
 
-// fill an entire multifab by interpolating from the coarser level
+// Fill an entire multifab by interpolating from the coarser level
 // this comes into play when a new level of refinement appears
 void
 AmrCoreAdv::FillCoarsePatch (int lev, Real time, MultiFab& mf, int icomp, int ncomp)
@@ -607,7 +613,6 @@ AmrCoreAdv::timeStepWithSubcycling (int lev, Real time, int iteration)
 
 	AverageDownTo(lev); // average lev+1 down to lev
     }
-    
 }
 
 // Advance all the levels with the same dt
@@ -616,7 +621,7 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
 {
     if (max_level > 0 && regrid_int > 0)  // We may need to regrid
     {
-        if (istep[0] % regrid_int == 0)
+        if ( (istep[0] % regrid_int) == 0 )
         {
             // Regrid could add newly refine levels (if finest_level < max_level)
             // so we save the previous finest level index
@@ -635,11 +640,10 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
     }
 
     DefineVelocityAllLevels(time);
-    AdvancePhiAllLevels    (time, dt[0], iteration, nsubsteps[0]);
+    AdvancePhiAllLevels    (time, dt[0], iteration);
 
     // Make sure the coarser levels are consistent with the finer levels
-    for (int lev = max_level-1; lev >= 0; lev--)
-        AverageDownTo(lev); // average lev+1 down to lev
+    AverageDown(); 
 
     for (int lev = 0; lev < max_level; lev++)
         ++istep[lev];
