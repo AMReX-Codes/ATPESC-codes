@@ -633,7 +633,7 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
         {
            amrex::Print() << "[Level " << lev << " step " << istep[lev]+1 << "] ";
            amrex::Print() << "ADVANCE with time = " << t_new[lev] 
-                          << " dt = " << dt[lev] << std::endl;
+                          << " dt = " << dt[0] << std::endl;
         }
     }
 
@@ -717,7 +717,7 @@ AmrCoreAdv::EstTimeStep (int lev, bool local)
     // Currently, this never happens (function called with local = true).
     // Reduction occurs outside this function.
     if (!local) {
-	ParallelDescriptor::ReduceRealMin(dt_est);
+        ParallelDescriptor::ReduceRealMin(dt_est);
     }
 
     dt_est *= cfl;
