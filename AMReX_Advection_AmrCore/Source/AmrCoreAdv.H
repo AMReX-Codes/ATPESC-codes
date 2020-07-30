@@ -12,6 +12,11 @@
 #include <AMReX_AmrCore.H>
 #include <AMReX_FluxRegister.H>
 #include <AMReX_BCRec.H>
+#if defined(BL_USE_SENSEI_INSITU)
+namespace amrex {
+class AmrMeshInSituBridge;
+}
+#endif
 
 using namespace amrex;
 
@@ -34,13 +39,13 @@ public:
     // initializes multilevel data
     void InitData ();
 
-    // Make a new level using provided BoxArray and DistributionMapping and
+    // Make a new level using provided BoxArray and DistributionMapping and 
     // fill with interpolated coarse level data.
     // overrides the pure virtual function in AmrCore
     virtual void MakeNewLevelFromCoarse (int lev, amrex::Real time, const amrex::BoxArray& ba,
 					 const amrex::DistributionMapping& dm) override;
 
-    // Remake an existing level using provided BoxArray and DistributionMapping and
+    // Remake an existing level using provided BoxArray and DistributionMapping and 
     // fill with existing fine and coarse data.
     // overrides the pure virtual function in AmrCore
     virtual void RemakeLevel (int lev, amrex::Real time, const amrex::BoxArray& ba,
@@ -59,6 +64,15 @@ public:
     // tag all cells for refinement
     // overrides the pure virtual function in AmrCore
     virtual void ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real time, int ngrow) override;
+
+    // Advance phi at a single level for a single time step, update flux registers
+    void AdvancePhiAtLevel (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+
+    // Advance phi at all levels for a single time step
+    void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+
+    // compute dt from CFL considerations
+    Real EstTimeStep (int lev, bool local=false);
 
 private:
 
@@ -86,18 +100,18 @@ private:
     void GetData (int lev, amrex::Real time, amrex::Vector<amrex::MultiFab*>& data,
                   amrex::Vector<amrex::Real>& datatime);
 
-    // advance a level by dt
-    // includes a recursive call for finer levels
-    void timeStep (int lev, amrex::Real time, int iteration);
+    // Define the advection velocity as the curl of a scalar field
+    void DefineVelocityAtLevel (int lev, amrex::Real time);
+    void DefineVelocityAllLevels (amrex::Real time);
 
-    // advance a single level for a single time step, updates flux registers
-    void Advance (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+    // Advance a level by dt - includes a recursive call for finer levels
+    void timeStepWithSubcycling (int lev, amrex::Real time, int iteration);
+
+    // Advance all levels by the same dt
+    void timeStepNoSubcycling (amrex::Real time, int iteration);
 
     // a wrapper for EstTimeStep(0
     void ComputeDt ();
-
-    // compute dt from CFL considerations
-    Real EstTimeStep (int lev, bool local=false) const;
 
     // get plotfile name
     std::string PlotFileName (int lev) const;
@@ -127,7 +141,7 @@ private:
     amrex::Vector<int> nsubsteps;  // how many substeps on each level?
 
     // keep track of old time, new time, and time step at each level
-    amrex::Vector<amrex::Real> t_new;
+    amrex::Vector<amrex::Real> t_new;  
     amrex::Vector<amrex::Real> t_old;
     amrex::Vector<amrex::Real> dt;
 
@@ -136,7 +150,7 @@ private:
     amrex::Vector<amrex::MultiFab> phi_new;
     amrex::Vector<amrex::MultiFab> phi_old;
 
-    // BCRec is essentially a 2*DIM integer array storing the physical boundary
+    // this is essentially a 2*DIM integer array storing the physical boundary
     // condition types at the lo/hi walls in each direction
     amrex::Vector<BCRec> bcs;  // 1-component
 
@@ -144,10 +158,13 @@ private:
     // this will be sized "nlevs_max+1"
     // NOTE: the flux register associated with flux_reg[lev] is associated
     // with the lev/lev-1 interface (and has grid spacing associated with lev-1)
-    // therefore flux_reg[0] and flux_reg[nlevs_max] are never actually
+    // therefore flux_reg[0] and flux_reg[nlevs_max] are never actually 
     // used in the reflux operation
-    amrex::Vector<std::unique_ptr<amrex::FluxRegister> > flux_reg;
+    amrex::Vector<std::unique_ptr<amrex::FluxRegister> > flux_reg; 
 
+    // Velocity on all faces at all levels
+    amrex::Vector< Array<amrex::MultiFab, AMREX_SPACEDIM> > facevel;
+    
     ////////////////
     // runtime parameters
 
@@ -168,6 +185,9 @@ private:
     // hyperbolic refluxing as part of multilevel synchronization
     int do_reflux = 1;
 
+    // do we subcycle in time?
+    int do_subcycle = 1;
+
     // plotfile prefix and frequency
     std::string plot_file {"plt"};
     int plot_int = -1;
@@ -175,6 +195,10 @@ private:
     // checkpoint prefix and frequency
     std::string chk_file {"chk"};
     int chk_int = -1;
+
+#if defined(BL_USE_SENSEI_INSITU)
+    amrex::AmrMeshInSituBridge *insitu_bridge;
+#endif
 };
 
 #endif
