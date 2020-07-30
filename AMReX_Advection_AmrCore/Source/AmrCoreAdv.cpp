@@ -37,7 +37,7 @@ AmrCoreAdv::AmrCoreAdv ()
     istep.resize(nlevs_max, 0);
     nsubsteps.resize(nlevs_max, 1);
     for (int lev = 1; lev <= max_level; ++lev) {
-	nsubsteps[lev] = MaxRefRatio(lev-1);
+        nsubsteps[lev] = MaxRefRatio(lev-1);
     }
 
     t_new.resize(nlevs_max, 0.0);
@@ -559,25 +559,25 @@ AmrCoreAdv::timeStepWithSubcycling (int lev, Real time, int iteration)
             {
                 // regrid could add newly refine levels (if finest_level < max_level)
                 // so we save the previous finest level index
-		int old_finest = finest_level; 
-		regrid(lev, time);
+                int old_finest = finest_level; 
+                regrid(lev, time);
 
                 // mark that we have regridded this level already
-		for (int k = lev; k <= finest_level; ++k) {
-		    last_regrid_step[k] = istep[k];
-		}
+                for (int k = lev; k <= finest_level; ++k) {
+                    last_regrid_step[k] = istep[k];
+                }
 
                 // if there are newly created levels, set the time step
-		for (int k = old_finest+1; k <= finest_level; ++k) {
-		    dt[k] = dt[k-1] / MaxRefRatio(k-1);
-		}
-	    }
-	}
+                for (int k = old_finest+1; k <= finest_level; ++k) {
+                    dt[k] = dt[k-1] / MaxRefRatio(k-1);
+                }
+            }
+        }
     }
 
     if (Verbose()) {
-	amrex::Print() << "[Level " << lev << " step " << istep[lev]+1 << "] ";
-	amrex::Print() << "ADVANCE with time = " << t_new[lev] 
+        amrex::Print() << "[Level " << lev << " step " << istep[lev]+1 << "] ";
+        amrex::Print() << "ADVANCE with time = " << t_new[lev] 
                        << " dt = " << dt[lev] << std::endl;
     }
 
@@ -590,25 +590,25 @@ AmrCoreAdv::timeStepWithSubcycling (int lev, Real time, int iteration)
 
     if (Verbose())
     {
-	amrex::Print() << "[Level " << lev << " step " << istep[lev] << "] ";
+        amrex::Print() << "[Level " << lev << " step " << istep[lev] << "] ";
         amrex::Print() << "Advanced " << CountCells(lev) << " cells" << std::endl;
     }
 
     if (lev < finest_level)
     {
         // recursive call for next-finer level
-	for (int i = 1; i <= nsubsteps[lev+1]; ++i)
-	{
-	    timeStepWithSubcycling(lev+1, time+(i-1)*dt[lev+1], i);
-	}
+        for (int i = 1; i <= nsubsteps[lev+1]; ++i)
+        {
+            timeStepWithSubcycling(lev+1, time+(i-1)*dt[lev+1], i);
+        }
 
-	if (do_reflux)
-	{
+        if (do_reflux)
+        {
             // update lev based on coarse-fine flux mismatch
-	    flux_reg[lev+1]->Reflux(phi_new[lev], 1.0, 0, 0, phi_new[lev].nComp(), geom[lev]);
-	}
+            flux_reg[lev+1]->Reflux(phi_new[lev], 1.0, 0, 0, phi_new[lev].nComp(), geom[lev]);
+        }
 
-	AverageDownTo(lev); // average lev+1 down to lev
+        AverageDownTo(lev); // average lev+1 down to lev
     }
     
 }
@@ -707,6 +707,7 @@ AmrCoreAdv::EstTimeStep (int lev, bool local)
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = facevel[lev][idim].norm0(0,0,true);
+        // amrex::Print(static_cast<int>(ParallelDescriptor::MyProc()), amrex::OutStream()) << "in EstTimeStep from rank " << ParallelDescriptor::MyProc() << " with idim = " << idim << " and facevel est = " << est << "\n";
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
