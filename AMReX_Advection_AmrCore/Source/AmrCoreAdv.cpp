@@ -36,8 +36,10 @@ AmrCoreAdv::AmrCoreAdv ()
 
     istep.resize(nlevs_max, 0);
     nsubsteps.resize(nlevs_max, 1);
-    for (int lev = 1; lev <= max_level; ++lev) {
-        nsubsteps[lev] = MaxRefRatio(lev-1);
+    if (do_subcycle) {
+        for (int lev = 1; lev <= max_level; ++lev) {
+            nsubsteps[lev] = MaxRefRatio(lev-1);
+        }
     }
 
     t_new.resize(nlevs_max, 0.0);
