@@ -913,8 +913,15 @@ AmrCoreAdv::ReadCheckpointFile ()
         int nghost = 0;
         phi_old[lev].define(grids[lev], dmap[lev], ncomp, nghost);
         phi_new[lev].define(grids[lev], dmap[lev], ncomp, nghost);
+
         if (lev > 0 && do_reflux) {
             flux_reg[lev].reset(new FluxRegister(grids[lev], dmap[lev], refRatio(lev-1), lev, ncomp));
+        }
+
+        // build face velocity MultiFabs
+        for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
+        {
+            facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
         }
     }
 
