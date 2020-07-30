@@ -125,8 +125,11 @@ AmrCoreAdv::Evolve ()
 
         cur_time += dt[0];
 
+        // sum phi to check conservation
+        Real sum_phi = phi_new[0].sum();
+
         amrex::Print() << "Coarse STEP " << step+1 << " ends." << " TIME = " << cur_time
-                       << " DT = " << dt[0]  << std::endl;
+                       << " DT = " << dt[0] << " Sum(Phi) = " << sum_phi << std::endl;
 
         // sync up time
         for (lev = 0; lev <= finest_level; ++lev) {
