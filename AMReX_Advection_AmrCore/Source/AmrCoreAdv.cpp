@@ -629,7 +629,7 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
     }
 
     if (Verbose()) {
-        for (int lev = 0; lev < max_level; lev++)
+        for (int lev = 0; lev <= finest_level; lev++)
         {
            amrex::Print() << "[Level " << lev << " step " << istep[lev]+1 << "] ";
            amrex::Print() << "ADVANCE with time = " << t_new[lev] 
@@ -641,15 +641,15 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
     AdvancePhiAllLevels    (time, dt[0], iteration, nsubsteps[0]);
 
     // Make sure the coarser levels are consistent with the finer levels
-    for (int lev = max_level-1; lev >= 0; lev--)
+    for (int lev = finest_level-1; lev >= 0; lev--)
         AverageDownTo(lev); // average lev+1 down to lev
 
-    for (int lev = 0; lev < max_level; lev++)
+    for (int lev = 0; lev <= finest_level; lev++)
         ++istep[lev];
 
     if (Verbose())
     {
-        for (int lev = 0; lev < max_level; lev++)
+        for (int lev = 0; lev <= finest_level; lev++)
         {
             amrex::Print() << "[Level " << lev << " step " << istep[lev] << "] ";
             amrex::Print() << "Advanced " << CountCells(lev) << " cells" << std::endl;
