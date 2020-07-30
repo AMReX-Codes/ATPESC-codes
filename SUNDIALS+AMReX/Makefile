@@ -11,11 +11,10 @@
 
 # set default values for any unset environment variables
 ifeq ($(AMREX_INSTALL_DIR),)
-  AMREX_INSTALL_DIR = /lus/theta-fs0/projects/ATPESC2020/MathPackagesTraining2020/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-19.08-s7qw57lejtso4gglyl7wdezjq5qyzbdm
+  AMREX_INSTALL_DIR = /projects/ATPESC2020/MathPackagesTraining2020/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-19.08-s7qw57lejtso4gglyl7wdezjq5qyzbdm
 endif
 ifeq ($(SUNDIALS_INSTALL_DIR),)
-#  SUNDIALS_INSTALL_DIR = /projects/ATPESC2019/FASTMath/spack/opt/spack/linux-rhel7-x86_64/gcc-4.8.5/sundials-4.1.0-s7aljoyz5e53teghcs4miobyqszrphtt
-  SUNDIALS_INSTALL_DIR = /lus/theta-fs0/projects/ATPESC2020/MathPackagesTraining2020/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.0.0-owjigfwhk6wbvhjqt7xygjlgxlmcllbk
+  SUNDIALS_INSTALL_DIR = /projects/ATPESC2020/MathPackagesTraining2020/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.0.0-owjigfwhk6wbvhjqt7xygjlgxlmcllbk
 endif
 ifeq ($(MPICXX),)
   MPICXX = mpicxx
