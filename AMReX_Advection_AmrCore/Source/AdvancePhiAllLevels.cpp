@@ -291,7 +291,7 @@ AmrCoreAdv::AdvancePhiAllLevels (Real time, Real dt_lev, int iteration)
     {
        average_down_faces(amrex::GetArrOfConstPtrs(fluxes[lev  ]),
                           amrex::GetArrOfPtrs     (fluxes[lev-1]),
-                          MaxRefRatio(lev-1), 0);
+                          refRatio(lev-1), Geom(lev-1));
     } 
 
     for (int lev = 0; lev <= finest_level; lev++)
