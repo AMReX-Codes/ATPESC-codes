@@ -216,7 +216,7 @@ AmrCoreAdv::MakeNewLevelFromCoarse (int lev, Real time, const BoxArray& ba,
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -250,7 +250,7 @@ AmrCoreAdv::RemakeLevel (int lev, Real time, const BoxArray& ba,
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -286,7 +286,7 @@ void AmrCoreAdv::MakeNewLevelFromScratch (int lev, Real time, const BoxArray& ba
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -640,11 +640,10 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
     }
 
     DefineVelocityAllLevels(time);
-    AdvancePhiAllLevels    (time, dt[0], iteration, nsubsteps[0]);
+    AdvancePhiAllLevels (time, dt[0], iteration);
 
     // Make sure the coarser levels are consistent with the finer levels
-    for (int lev = finest_level-1; lev >= 0; lev--)
-        AverageDownTo(lev); // average lev+1 down to lev
+    AverageDown ();
 
     for (int lev = 0; lev <= finest_level; lev++)
         ++istep[lev];
@@ -668,7 +667,7 @@ AmrCoreAdv::ComputeDt ()
 
     for (int lev = 0; lev <= finest_level; ++lev)
     {
-        dt_tmp[lev] = EstTimeStep(lev, true);
+        dt_tmp[lev] = EstTimeStep(lev, t_new[lev], true);
     }
     ParallelDescriptor::ReduceRealMin(&dt_tmp[0], dt_tmp.size());
 
@@ -698,7 +697,7 @@ AmrCoreAdv::ComputeDt ()
 
 // compute dt from CFL considerations
 Real
-AmrCoreAdv::EstTimeStep (int lev, bool local)
+AmrCoreAdv::EstTimeStep (int lev, Real time, bool local)
 {
     BL_PROFILE("AmrCoreAdv::EstTimeStep()");
 
@@ -707,12 +706,16 @@ AmrCoreAdv::EstTimeStep (int lev, bool local)
     const Real* dx      =  geom[lev].CellSize();
     const Real cur_time = t_new[lev];
 
-    DefineVelocityAtLevel(lev,cur_time);
+    if (time == 0.0) {
+       DefineVelocityAtLevel(lev,time);
+    } else {
+       Real t_nph_predicted = time + 0.5 * dt[lev];
+       DefineVelocityAtLevel(lev,t_nph_predicted);
+    }
 
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = facevel[lev][idim].norm0(0,0,true);
-        // amrex::Print(static_cast<int>(ParallelDescriptor::MyProc()), amrex::OutStream()) << "in EstTimeStep from rank " << ParallelDescriptor::MyProc() << " with idim = " << idim << " and facevel est = " << est << "\n";
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
@@ -930,7 +933,7 @@ AmrCoreAdv::ReadCheckpointFile ()
         // build face velocity MultiFabs
         for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
         {
-            facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	    facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
         }
     }
 
