@@ -48,11 +48,7 @@ amr.regrid_int      = 2       # how often to regrid
 # *****************************************************************
 # Time step control
 # *****************************************************************
-adv.cfl            = 0.7     # cfl number for hyperbolic system
-                             # In this test problem, the velocity is
-			     # time-dependent.  We could use 0.9 in
-			     # the 3D test, but need to use 0.7 in 2D
-			     # to satisfy CFL condition.
+adv.cfl            = 0.9     # CFL constraint for explicit advection
 
 # *****************************************************************
 # Should we reflux at coarse-fine boundaries?
