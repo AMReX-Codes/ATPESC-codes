@@ -668,7 +668,7 @@ AmrCoreAdv::ComputeDt ()
 
     for (int lev = 0; lev <= finest_level; ++lev)
     {
-        dt_tmp[lev] = EstTimeStep(lev, true);
+        dt_tmp[lev] = EstTimeStep(lev, t_new[lev], true);
     }
     ParallelDescriptor::ReduceRealMin(&dt_tmp[0], dt_tmp.size());
 
@@ -698,7 +698,7 @@ AmrCoreAdv::ComputeDt ()
 
 // compute dt from CFL considerations
 Real
-AmrCoreAdv::EstTimeStep (int lev, bool local)
+AmrCoreAdv::EstTimeStep (int lev, Real time, bool local)
 {
     BL_PROFILE("AmrCoreAdv::EstTimeStep()");
 
@@ -707,7 +707,12 @@ AmrCoreAdv::EstTimeStep (int lev, bool local)
     const Real* dx      =  geom[lev].CellSize();
     const Real cur_time = t_new[lev];
 
-    DefineVelocityAtLevel(lev,cur_time);
+    if (time == 0.0) {
+       DefineVelocityAtLevel(lev,time);
+    } else {
+       Real t_nph_predicted = time + 0.5 * dt[lev];
+       DefineVelocityAtLevel(lev,t_nph_predicted);
+    }
 
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {

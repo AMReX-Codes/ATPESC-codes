@@ -72,7 +72,7 @@ public:
     void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
 
     // compute dt from CFL considerations
-    Real EstTimeStep (int lev, bool local=false);
+    Real EstTimeStep (int lev, amrex::Real time, bool local=false);
 
 private:
 
