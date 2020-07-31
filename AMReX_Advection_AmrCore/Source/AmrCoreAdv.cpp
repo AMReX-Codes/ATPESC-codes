@@ -667,7 +667,8 @@ AmrCoreAdv::ComputeDt ()
 
     for (int lev = 0; lev <= finest_level; ++lev)
     {
-        dt_tmp[lev] = EstTimeStep(lev, t_new[lev], true);
+        bool local = false;
+        dt_tmp[lev] = EstTimeStep(lev, t_new[lev], local);
     }
     ParallelDescriptor::ReduceRealMin(&dt_tmp[0], dt_tmp.size());
 
@@ -715,12 +716,10 @@ AmrCoreAdv::EstTimeStep (int lev, Real time, bool local)
 
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
-        Real est = facevel[lev][idim].norm0(0,0,true);
+        Real est = facevel[lev][idim].norm0(0,0,local);
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
-    // Currently, this never happens (function called with local = true).
-    // Reduction occurs outside this function.
     if (!local) {
         ParallelDescriptor::ReduceRealMin(dt_est);
     }
