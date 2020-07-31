@@ -69,7 +69,7 @@ public:
     void AdvancePhiAtLevel (int lev, amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
 
     // Advance phi at all levels for a single time step
-    void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration, int ncycle);
+    void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration);
 
     // compute dt from CFL considerations
     Real EstTimeStep (int lev, amrex::Real time, bool local=false);

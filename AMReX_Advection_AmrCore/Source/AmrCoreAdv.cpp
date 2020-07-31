@@ -640,11 +640,10 @@ AmrCoreAdv::timeStepNoSubcycling (Real time, int iteration)
     }
 
     DefineVelocityAllLevels(time);
-    AdvancePhiAllLevels    (time, dt[0], iteration, nsubsteps[0]);
+    AdvancePhiAllLevels (time, dt[0], iteration);
 
     // Make sure the coarser levels are consistent with the finer levels
-    for (int lev = finest_level-1; lev >= 0; lev--)
-        AverageDownTo(lev); // average lev+1 down to lev
+    AverageDown ();
 
     for (int lev = 0; lev <= finest_level; lev++)
         ++istep[lev];
