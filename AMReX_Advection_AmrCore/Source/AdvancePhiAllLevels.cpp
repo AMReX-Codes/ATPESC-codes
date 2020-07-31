@@ -1,6 +1,8 @@
 #include <AmrCoreAdv.H>
 #include <Kernels.H>
 
+#include <AMReX_MultiFabUtil.H>
+
 using namespace amrex;
 
 // advance all levels for a single time step
@@ -282,6 +284,15 @@ AmrCoreAdv::AdvancePhiAllLevels (Real time, Real dt_lev, int iteration, int ncyc
         } // end omp
     } // end lev
 
+    // =======================================================
+    // Average down the fluxes before using them to update phi 
+    // =======================================================
+    for (int lev = finest_level; lev > 0; lev--)
+    {
+       average_down_faces(amrex::GetArrOfConstPtrs(fluxes[lev  ]),
+                          amrex::GetArrOfPtrs     (fluxes[lev-1]),
+                          MaxRefRatio(lev-1), 0);
+    } 
 
     for (int lev = 0; lev <= finest_level; lev++)
     {

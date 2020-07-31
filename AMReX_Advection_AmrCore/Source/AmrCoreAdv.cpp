@@ -216,7 +216,7 @@ AmrCoreAdv::MakeNewLevelFromCoarse (int lev, Real time, const BoxArray& ba,
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -250,7 +250,7 @@ AmrCoreAdv::RemakeLevel (int lev, Real time, const BoxArray& ba,
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -286,7 +286,7 @@ void AmrCoreAdv::MakeNewLevelFromScratch (int lev, Real time, const BoxArray& ba
     // This clears the old MultiFab and allocates the new one
     for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
     {
-	facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
     }
 
     if (lev > 0 && do_reflux) {
@@ -717,7 +717,6 @@ AmrCoreAdv::EstTimeStep (int lev, Real time, bool local)
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = facevel[lev][idim].norm0(0,0,true);
-        // amrex::Print(static_cast<int>(ParallelDescriptor::MyProc()), amrex::OutStream()) << "in EstTimeStep from rank " << ParallelDescriptor::MyProc() << " with idim = " << idim << " and facevel est = " << est << "\n";
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
@@ -935,7 +934,7 @@ AmrCoreAdv::ReadCheckpointFile ()
         // build face velocity MultiFabs
         for (int idim = 0; idim < AMREX_SPACEDIM; idim++)
         {
-            facevel[lev][idim] = MultiFab((amrex::convert(ba,IntVect::TheDimensionVector(idim))).grow(1), dm, 1, 0);
+	    facevel[lev][idim] = MultiFab(amrex::convert(ba,IntVect::TheDimensionVector(idim)), dm, 1, 1);
         }
     }
 
