@@ -90,9 +90,4 @@ AmrCoreAdv::DefineVelocityAtLevel (int lev, Real time)
                         );
         }
     }
-
-#ifdef AMREX_USE_EB
-            // We can enforce that facevel is divergence-free ... even when flowing around an obstacle
-            mac_project_velocity();
-#endif
 }
