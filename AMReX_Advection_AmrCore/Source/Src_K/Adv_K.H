@@ -10,14 +10,14 @@ using namespace amrex;
 AMREX_GPU_DEVICE
 AMREX_FORCE_INLINE
 void conservative(int i, int j, int k, 
-                  Array4<Real> const& uin,
-                  Array4<Real> const& uout,
+                  Array4<Real> const& phi_in,
+                  Array4<Real> const& phi_out,
                   AMREX_D_DECL(Array4<Real> const& flxx,
                                Array4<Real> const& flxy,
                                Array4<Real> const& flxz),
                   const GpuArray<Real, AMREX_SPACEDIM>& dtdx)
 {
-    uout(i,j,k) = uin(i,j,k) + 
+    phi_out(i,j,k) = phi_in(i,j,k) + 
                 ( AMREX_D_TERM( (flxx(i,j,k) - flxx(i+1,j,k)) * dtdx[0],
                               + (flxy(i,j,k) - flxy(i,j+1,k)) * dtdx[1],
                               + (flxz(i,j,k) - flxz(i,j,k+1)) * dtdx[2] ) );
