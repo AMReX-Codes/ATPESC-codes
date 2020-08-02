@@ -71,6 +71,11 @@ public:
     // Advance phi at all levels for a single time step
     void AdvancePhiAllLevels (amrex::Real time, amrex::Real dt_lev, int iteration);
 
+    // Define the advection velocity as the curl of a scalar field
+    void DefineVelocityAtLevel (int lev, amrex::Real time);
+
+    void DefineVelocityAllLevels (amrex::Real time);
+
     // compute dt from CFL considerations
     Real EstTimeStep (int lev, amrex::Real time, bool local=false);
 
@@ -99,10 +104,6 @@ private:
     // utility to copy in data from phi_old and/or phi_new into another multifab
     void GetData (int lev, amrex::Real time, amrex::Vector<amrex::MultiFab*>& data,
                   amrex::Vector<amrex::Real>& datatime);
-
-    // Define the advection velocity as the curl of a scalar field
-    void DefineVelocityAtLevel (int lev, amrex::Real time);
-    void DefineVelocityAllLevels (amrex::Real time);
 
     // Advance a level by dt - includes a recursive call for finer levels
     void timeStepWithSubcycling (int lev, amrex::Real time, int iteration);
