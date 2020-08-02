@@ -17,24 +17,39 @@
 using namespace amrex;
 
 extern void make_eb_cylinder(const Geometry& geom);
-extern void define_velocity(const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel_out);
+extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out);
+
+Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
+{
+    Real cfl = 0.7;
+
+    Real dt_est = std::numeric_limits<Real>::max();
+
+    const Real* dx      =  geom.CellSize();
+
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        Real est = vel[idim].norm0(0,0,false);
+        dt_est = amrex::min(dt_est, dx[idim]/est);
+    }
+
+    ParallelDescriptor::ReduceRealMin(dt_est);
+
+    return dt_est*cfl;
+}
 
 void write_plotfile(int step, const Geometry& geom, MultiFab& plotmf, 
                     MyParticleContainer& pc, int write_ascii)
 {
 
-    // copy processor id into first component of plotfile_mf
+    // Copy processor id into first component of plotfile_mf
     for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
        plotmf[mfi].setVal(ParallelDescriptor::MyProc());
 
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step;
     std::string plotfile_name = sstream.str();
-
-    // amrex::Print() << "Writing " << plotfile_name << std::endl;    
     
-    if (step== 0)
-    {
 #if (AMREX_SPACEDIM == 2)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
                                    { "proc" ,"xvel", "yvel" },
@@ -44,7 +59,6 @@ void write_plotfile(int step, const Geometry& geom, MultiFab& plotmf,
                                    { "proc", "xvel", "yvel", "zvel" },
                                      geom, 0.0, 0);
 #endif
-    }
 
     pc.Checkpoint(plotfile_name, "particles", true); //Write Tracer particles to plotfile
 
@@ -200,14 +214,31 @@ int main (int argc, char* argv[])
         if (AMREX_SPACEDIM > 2)
            vel[2].setVal(0.0);
 
-        Print() << "Writing EB surface" << std::endl;
+        amrex::Print() << "Writing EB surface" << std::endl;
         const EBFArrayBoxFactory* ebfact = &(static_cast<amrex::EBFArrayBoxFactory const&>(*factory));
         WriteEBSurface (grids, dmap, geom, ebfact);
 
         Real time = 0.0;
+
+        // Write out the initial data
+        {
+           amrex::Print() << "Creating the initial velocity field " << std::endl;
+           define_velocity(time,geom,vel);
+           macproj.project(reltol, abstol);
+           average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+
+           amrex::Print() << "Writing the initial data into plt00000\n" << std::endl;
+           write_plotfile(0, geom, plotfile_mf, MyPC, write_ascii);
+        }
+
+        // This computes the first dt
+        dt = est_time_step(geom,vel);
+
         for (int i = 0; i < max_steps; i++)
         {
-            if (time < max_time) {
+            if (time < max_time)
+            {
+                amrex::Print() << "\nCoarse STEP " << i+1 << " starts ..." << std::endl;
 
                 Real dt = std::min(dt, max_time - time);
 
@@ -228,14 +259,19 @@ int main (int argc, char* argv[])
                 // Write to a plotfile
                 if (i%plot_int == 0)
                 {
-                   // Copy velocity into plotfile
                    average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
-
                    write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
                 }
 
                 // Increment time
                 time += dt;
+
+                amrex::Print() << "Coarse STEP " << i+1 << " ends." << " TIME = " << time
+//                             << " DT = " << dt << " Sum(Phi) = " << sum_phi << std::endl;
+                               << " DT = " << dt << std::endl;
+
+                // Compute lagged dt for next time step based on this half-time velocity
+                dt = est_time_step(geom,vel);
 
             } else {
 
