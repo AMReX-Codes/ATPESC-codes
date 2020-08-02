@@ -319,11 +319,16 @@ int main (int argc, char* argv[])
 
         int nstep = 0;
 
+        // Sum phi to check conservation
+        Real sum_phi = phi_mf.sum();
+        amrex::Print() << "Initial sum of phi is " << sum_phi << std::endl;
+
         for (int i = 0; i < max_steps; i++)
         {
             if (time < max_time)
             {
-                amrex::Print() << "\nSTEP " << i+1 << " starts ..." << std::endl;
+                amrex::Print() << "STEP " << i+1 << " starts at TIME = " << time
+                               << " DT = " << dt << std::endl;
 
                 dt = amrex::min(dt, max_time - time);
 
@@ -363,9 +368,11 @@ int main (int argc, char* argv[])
                    write_plotfile(i+1, time, geom, plotfile_mf, FPC, write_ascii);
                 }
 
-                amrex::Print() << "Coarse STEP " << i+1 << " ends." << " TIME = " << time
-//                             << " DT = " << dt << " Sum(Phi) = " << sum_phi << std::endl;
-                               << " DT = " << dt << std::endl;
+                // Sum phi to check conservation
+                sum_phi = phi_mf.sum();
+
+                amrex::Print() << "STEP " << i+1 << " ends   at TIME = " << time
+                               << " DT = " << dt << " Sum(Phi) = " << sum_phi << "\n" << std::endl;
 
                 // Compute lagged dt for next time step based on this half-time velocity
                 dt = est_time_step(dt, geom, vel);
@@ -383,7 +390,7 @@ int main (int argc, char* argv[])
     }
 
     Real stop_time = amrex::second() - strt_time;
-    amrex::Print() << "Time to create EB geometry " << eb_stop_time << std::endl;
+    amrex::Print() << "\nTime to create EB geometry " << eb_stop_time << std::endl;
     amrex::Print() << "Total run time             " << stop_time << std::endl;
 
     amrex::Finalize();
