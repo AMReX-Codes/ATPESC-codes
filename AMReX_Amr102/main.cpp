@@ -215,6 +215,8 @@ int main (int argc, char* argv[])
             });
         }
 
+        phi_mf.FillBoundary(geom.periodicity());
+
         {
             const std::string pfname = "initial_phi";
             WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, 0.0, 0);
