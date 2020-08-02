@@ -2,15 +2,19 @@ n_cell = 64                              # number of cells in each direction
 
 max_grid_size = 64                       # the maximum number of cells in any direction in a single grid
 
-plot_int = 10                            # frequency of writing plotfiles
-
-particle_file = initial_particles_3d     # name of file where we specify the initial positions of the particles
-
-time_step = 0.025                        # we advance the particles with a fixed time step of this size
+plot_int = 5                             # frequency of writing plotfiles
 
 max_time =  2.0                          # the final time (if max_time < max_steps * time_step)
 
-max_steps = 100                          # the maximum number of steps (if max_steps * time_step < max_time))
+max_steps = 200                          # the maximum number of steps (if max_steps * time_step < max_time))
+
+#####################################################################
+# Control the number of particles and the particle/mesh interpolation
+#####################################################################
+
+n_ppc = 100                              # number of particles per cell for representing the fluid
+
+pic_interpolation = 1                    # Particle In Cell interpolation scheme: 0 = nearest grid point, 1 = cloud in cell
 
 ###################################################
 # Control the verbosity and tolerance of the solver
@@ -27,8 +31,8 @@ mac_proj.rel_tol = 1.e-4
 ###############################################
 
 cylinder.direction = 2                  # cylinder axis aligns with z-axis
-cylinder.radius    = 0.05                  # cylinder axis aligns with z-axis
-cylinder.center    = 0.2 0.2 0.5
+cylinder.radius    = 0.1                # cylinder axis aligns with z-axis
+cylinder.center = 0.5 0.5 0.5
 
 cylinder.internal_flow = false          # we are computing flow around the cylinder, not inside it
 
