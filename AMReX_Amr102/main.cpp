@@ -28,10 +28,12 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 
     const Real* dx      =  geom.CellSize();
 
+    const Vector<std::string> coord_dir {AMREX_D_DECL("x", "y", "z")};
+
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = vel[idim].norm0(0,0,false);
-        amrex::Print() << "Max vel in " << idim << "direction is " << est << std::endl;
+        amrex::Print() << "Max vel in " << coord_dir[idim] << "-direction is " << est << std::endl;
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
@@ -298,7 +300,7 @@ int main (int argc, char* argv[])
         {
             if (time < max_time)
             {
-                amrex::Print() << "\nCoarse STEP " << i+1 << " starts ..." << std::endl;
+                amrex::Print() << "\nSTEP " << i+1 << " starts ..." << std::endl;
 
                 dt = amrex::min(dt, max_time - time);
 
