@@ -158,85 +158,52 @@ FluidParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
-#if (AMREX_SPACEDIM == 2)
-    const Real inv_cell_volume = dxi[0]*dxi[1];
+    const Real inv_cell_volume = AMREX_D_TERM(dxi[0], *dxi[1], *dxi[2]);
     amrex::ParticleToMesh(*this, phi, 0,
     [=] AMREX_GPU_DEVICE (const FluidParticleContainer::ParticleType& p,
                           amrex::Array4<amrex::Real> const& phi_arr)
     {
-        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
-        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
+        AMREX_D_TERM(
+            amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;,
+            amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;,
+            amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
+        );
 
-        int i = std::floor(lx);
-        int j = std::floor(ly);
+        int i = 0;
+        int j = 0;
         int k = 0;
 
-        amrex::Real xint = lx - i;
-        amrex::Real yint = ly - j;
+        AMREX_D_TERM(
+            i = std::floor(lx);,
+            j = std::floor(ly);,
+            k = std::floor(lz);
+        );
 
-        // Cloud In Cell interpolation
-        amrex::Real sx[] = {1.-xint, xint};
-        amrex::Real sy[] = {1.-yint, yint};
+        AMREX_D_TERM(
+            amrex::Real xint = lx - i;,
+            amrex::Real yint = ly - j;,
+            amrex::Real zint = lz - k;
+        );
 
-        // Nearest Grid Point Interpolation
-        if (interpolation == Interpolation::NGP) {
-            sx[0] = 0.0;
-            sy[0] = 0.0;
+        // Nearest Grid Point Interpolation (NGP)
+        amrex::Real sx[] = {0.0, 1.0};
+        amrex::Real sy[] = {0.0, 1.0};
+        amrex::Real sz[] = {0.0, 1.0};
 
-            sx[1] = 1.0;
-            sy[1] = 1.0;
+        // Cloud In Cell interpolation (CIC)
+        if (interpolation == Interpolation::CIC) {
+            AMREX_D_EXPR(sx[0] = 1.-xint, sy[0] = 1.-yint, sz[0] = 1.-zint);
+            AMREX_D_EXPR(sx[1] =    xint, sy[1] =    yint, sz[1] =    zint);
         }
 
         // Add up the number of physical particles represented by our particle weights to the grid
         // and divide by the cell volume to get the number density on the grid.
-        for (int jj = 0; jj <= 1; ++jj) { 
-        for (int ii = 0; ii <= 1; ++ii) {
-            amrex::Gpu::Atomic::Add(&phi_arr(i+ii-1, j+jj-1, k), sx[ii]*sy[jj] * p.rdata(PIdx::Weight) * inv_cell_volume);
-        }}
-    });
-#else
-    const Real inv_cell_volume = dxi[0]*dxi[1]*dxi[2];
-    amrex::ParticleToMesh(*this, phi, 0,
-    [=] AMREX_GPU_DEVICE (const FluidParticleContainer::ParticleType& p,
-                          amrex::Array4<amrex::Real> const& phi_arr)
-    {
-        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
-        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
-        amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
-
-        int i = std::floor(lx);
-        int j = std::floor(ly);
-        int k = std::floor(lz);
-
-        amrex::Real xint = lx - i;
-        amrex::Real yint = ly - j;
-        amrex::Real zint = lz - k;
-
-        // Cloud In Cell interpolation
-        amrex::Real sx[] = {1.-xint, xint};
-        amrex::Real sy[] = {1.-yint, yint};
-        amrex::Real sz[] = {1.-zint, zint};
-
-        // Nearest Grid Point Interpolation
-        if (interpolation == Interpolation::NGP) {
-            sx[0] = 0.0;
-            sy[0] = 0.0;
-            sz[0] = 0.0;
-
-            sx[1] = 1.0;
-            sy[1] = 1.0;
-            sz[1] = 1.0;
-        }
-
-        // Add up the number of physical particles represented by our particle weights to the grid
-        // and divide by the cell volume to get the number density on the grid.
-        for (int kk = 0; kk <= 1; ++kk) { 
-        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int kk = AMREX_D_PICK(1, 1, 0); kk <= 1; ++kk) { 
+        for (int jj = AMREX_D_PICK(1, 0, 0); jj <= 1; ++jj) {
         for (int ii = 0; ii <= 1; ++ii) {
             amrex::Gpu::Atomic::Add(&phi_arr(i+ii-1, j+jj-1, k+kk-1), sx[ii]*sy[jj]*sz[kk] * p.rdata(PIdx::Weight) * inv_cell_volume);
         }}}
     });
-#endif
 }
 
 //
@@ -249,35 +216,44 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
     const auto dx  = geom.CellSizeArray();
-#if (AMREX_SPACEDIM == 2)
-    const Real cell_volume = dx[0]*dx[1];
+    const Real cell_volume = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
     const Real volume_per_particle = cell_volume / NumParticlesPerCell();
 
     amrex::MeshToParticle(*this, phi, 0,
     [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
                           amrex::Array4<const amrex::Real> const& phi_arr)
     {
-        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
-        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
+        AMREX_D_TERM(
+            amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;,
+            amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;,
+            amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
+        );
 
-        int i = std::floor(lx);
-        int j = std::floor(ly);
+        int i = 0;
+        int j = 0;
         int k = 0;
 
-        amrex::Real xint = lx - i;
-        amrex::Real yint = ly - j;
+        AMREX_D_TERM(
+            i = std::floor(lx);,
+            j = std::floor(ly);,
+            k = std::floor(lz);
+        );
 
-        // Cloud In Cell interpolation (CIC)
-        amrex::Real sx[] = {1.-xint, xint};
-        amrex::Real sy[] = {1.-yint, yint};
+        AMREX_D_TERM(
+            amrex::Real xint = lx - i;,
+            amrex::Real yint = ly - j;,
+            amrex::Real zint = lz - k;
+        );
 
         // Nearest Grid Point Interpolation (NGP)
-        if (interpolation == Interpolation::NGP) {
-            sx[0] = 0.0;
-            sy[0] = 0.0;
+        amrex::Real sx[] = {0.0, 1.0};
+        amrex::Real sy[] = {0.0, 1.0};
+        amrex::Real sz[] = {0.0, 1.0};
 
-            sx[1] = 1.0;
-            sy[1] = 1.0;
+        // Cloud In Cell interpolation (CIC)
+        if (interpolation == Interpolation::CIC) {
+            AMREX_D_EXPR(sx[0] = 1.-xint, sy[0] = 1.-yint, sz[0] = 1.-zint);
+            AMREX_D_EXPR(sx[1] =    xint, sy[1] =    yint, sz[1] =    zint);
         }
 
         // The particle weight is the number of physical particles it represents.
@@ -285,57 +261,8 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
 
         // Step 1: interpolate number density phi using the particle shape factor for CIC or NGP
         amrex::Real interpolated_phi = 0.0;
-        for (int jj = 0; jj <= 1; ++jj) { 
-        for (int ii = 0; ii <= 1; ++ii) {
-            interpolated_phi += sx[ii]*sy[jj] * phi_arr(i+ii-1,j+jj-1,k);
-        }}
-
-        // Step 2: scale interpolated number density by the volume per particle and set particle weight
-        p.rdata(PIdx::Weight) = interpolated_phi * volume_per_particle;
-    });
-#else
-    const Real cell_volume = dx[0]*dx[1]*dx[2];
-    const Real volume_per_particle = cell_volume / NumParticlesPerCell();
-
-    amrex::MeshToParticle(*this, phi, 0,
-    [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
-                          amrex::Array4<const amrex::Real> const& phi_arr)
-    {
-        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
-        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
-        amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
-
-        int i = std::floor(lx);
-        int j = std::floor(ly);
-        int k = std::floor(lz);
-
-        amrex::Real xint = lx - i;
-        amrex::Real yint = ly - j;
-        amrex::Real zint = lz - k;
-
-        // Cloud In Cell interpolation (CIC)
-        amrex::Real sx[] = {1.-xint, xint};
-        amrex::Real sy[] = {1.-yint, yint};
-        amrex::Real sz[] = {1.-zint, zint};
-
-        // Nearest Grid Point Interpolation (NGP)
-        if (interpolation == Interpolation::NGP) {
-            sx[0] = 0.0;
-            sy[0] = 0.0;
-            sz[0] = 0.0;
-
-            sx[1] = 1.0;
-            sy[1] = 1.0;
-            sz[1] = 1.0;
-        }
-
-        // The particle weight is the number of physical particles it represents.
-        // This is set from the number density in the grid phi in 2 steps:
-
-        // Step 1: interpolate number density phi using the particle shape factor for CIC or NGP
-        amrex::Real interpolated_phi = 0.0;
-        for (int kk = 0; kk <= 1; ++kk) { 
-        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int kk = AMREX_D_PICK(1, 1, 0); kk <= 1; ++kk) { 
+        for (int jj = AMREX_D_PICK(1, 0, 0); jj <= 1; ++jj) {
         for (int ii = 0; ii <= 1; ++ii) {
             interpolated_phi += sx[ii]*sy[jj]*sz[kk] * phi_arr(i+ii-1,j+jj-1,k+kk-1);
         }}}
@@ -343,7 +270,6 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
         // Step 2: scale interpolated number density by the volume per particle and set particle weight
         p.rdata(PIdx::Weight) = interpolated_phi * volume_per_particle;
     });
-#endif
 }
 
 //
@@ -360,13 +286,21 @@ FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol)
     [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
                           amrex::Array4<const amrex::Real> const& vol_arr)
     {
-        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
-        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
-        amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
+        AMREX_D_TERM(
+            amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;,
+            amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;,
+            amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
+        );
 
-        int i = std::floor(lx);
-        int j = std::floor(ly);
-        int k = std::floor(lz);
+        int i = 0;
+        int j = 0;
+        int k = 0;
+
+        AMREX_D_TERM(
+            i = std::floor(lx);,
+            j = std::floor(ly);,
+            k = std::floor(lz);
+        );
 
         // Get the EB volume fraction of the cell this particle is in
         amrex::Real cell_vol = vol_arr(i,j,k);
