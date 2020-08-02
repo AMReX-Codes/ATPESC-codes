@@ -38,17 +38,17 @@ public:
 
     ~MyParticleContainer () {}
 
-    void InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol);
+    void InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation=Interpolation::CIC);
 
     int NumParticlesPerCell() { return m_number_particles_per_cell; }
 
     void AdvectWithUmac (MultiFab* umac, int lev, Real dt);
 
-    void DepositToMesh (MultiFab& phi, int interpolation=Interpolation::NGP);
+    void DepositToMesh (MultiFab& phi, int interpolation=Interpolation::CIC);
 
-    void InterpolateFromMesh (const MultiFab& phi, int interpolation=Interpolation::NGP);
+    void InterpolateFromMesh (const MultiFab& phi, int interpolation=Interpolation::CIC);
 
-    void RemoveCoveredParticles (const MultiFab& ebvol, int interpolation=Interpolation::NGP);
+    void RemoveCoveredParticles (const MultiFab& ebvol, int interpolation=Interpolation::CIC);
 };
 
 }

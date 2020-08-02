@@ -7,7 +7,7 @@ namespace amrex {
 // Initialize a random number of particles per cell determined by nppc
 //
 void
-MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol)
+MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation)
 {
     // Save the number of particles per cell we are using for the particle-mesh operations
     m_number_particles_per_cell = nppc;
@@ -26,10 +26,10 @@ MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab
     }
 
     // Interpolate from density field phi to set particle weights
-    InterpolateFromMesh(phi, Interpolation::CIC);
+    InterpolateFromMesh(phi, interpolation);
 
     // Set invalid particle IDs for particles from cells covered by the embedded geometry
-    RemoveCoveredParticles(ebvol, Interpolation::CIC);
+    RemoveCoveredParticles(ebvol, interpolation);
 
     // Redistribute to remove the EB-covered particles based on the invalid IDs 
     Redistribute();
