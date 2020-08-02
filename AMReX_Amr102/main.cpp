@@ -79,6 +79,8 @@ int main (int argc, char* argv[])
     amrex::Initialize(argc, argv);
 
     Real strt_time = amrex::second();
+    Real eb_strt_time;
+    Real eb_stop_time;
     
     {
         int n_cell = 128;
@@ -146,7 +148,10 @@ int main (int argc, char* argv[])
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
 
+        eb_strt_time = amrex::second();
         make_eb_cylinder(geom);
+        eb_stop_time = amrex::second() - eb_strt_time;
+
         std::unique_ptr<amrex::FabFactory<amrex::FArrayBox> > factory =
            makeEBFabFactory(geom, grids, dmap, {4, 4, 2}, EBSupport::full);
 
@@ -234,6 +239,8 @@ int main (int argc, char* argv[])
         // This computes the first dt
         dt = est_time_step(geom,vel);
 
+        int nstep = 0;
+
         for (int i = 0; i < max_steps; i++)
         {
             if (time < max_time)
@@ -265,6 +272,7 @@ int main (int argc, char* argv[])
 
                 // Increment time
                 time += dt;
+                nstep++;
 
                 amrex::Print() << "Coarse STEP " << i+1 << " ends." << " TIME = " << time
 //                             << " DT = " << dt << " Sum(Phi) = " << sum_phi << std::endl;
@@ -283,10 +291,15 @@ int main (int argc, char* argv[])
                 break;
             }
         }
+
+        // Write plotfile at final tim
+        average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+        write_plotfile(nstep, geom, plotfile_mf, MyPC, write_ascii);
     }
-  
+
     Real stop_time = amrex::second() - strt_time;
-    amrex::Print() << "Total run time " << stop_time << std::endl;
+    amrex::Print() << "Time to create EB geometry " << eb_stop_time << std::endl;
+    amrex::Print() << "Total run time             " << stop_time << std::endl;
 
     amrex::Finalize();
 }
