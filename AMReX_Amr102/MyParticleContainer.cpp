@@ -10,19 +10,21 @@ void
 MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol)
 {
     // Save the number of particles per cell we are using for the particle-mesh operations
-    m_number_particles_per_cell = nppc;
+    // m_number_particles_per_cell = nppc;
+    m_number_particles_per_cell = 1;
 
     // Construct a ParticleInitData containing only zeros for the particle buffers and weights
     amrex::ParticleInitType<PIdx::NStructReal, 0, 0, 0> pdata {};
 
     // Create nppc random particles per cell, initialized with zero real struct data
-    InitNRandomPerCell(nppc, pdata);
+    // InitNRandomPerCell(nppc, pdata);
+    InitOnePerCell(0.5, 0.5, 0.5, pdata);
 
     // Interpolate from density field phi to set particle weights
-    InterpolateFromMesh(phi);
+    InterpolateFromMesh(phi, Interpolation::CIC);
 
     // Set invalid particle IDs for particles from cells covered by the embedded geometry
-    RemoveCoveredParticles(ebvol);
+    RemoveCoveredParticles(ebvol, Interpolation::CIC);
 
     // Redistribute to remove the EB-covered particles based on the invalid IDs 
     Redistribute();
