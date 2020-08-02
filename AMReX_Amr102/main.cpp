@@ -20,9 +20,10 @@ using namespace amrex;
 extern void make_eb_cylinder(const Geometry& geom);
 extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out, const MultiFab& phi);
 
-Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
+Real est_time_step(const Real current_dt, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 {
-    Real cfl = 0.7;
+    const Real cfl = 0.7;
+    const Real change_max = 1.1;
 
     Real dt_est = std::numeric_limits<Real>::max();
 
@@ -39,7 +40,13 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 
     ParallelDescriptor::ReduceRealMin(dt_est);
 
-    return dt_est*cfl;
+    // Apply our CFL
+    dt_est *= cfl;
+
+    // Do not grow the timestep by more than a ratio of change_max
+    dt_est = std::min(dt_est, current_dt * change_max);
+
+    return dt_est;
 }
 
 void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf, 
@@ -90,12 +97,13 @@ int main (int argc, char* argv[])
         int n_cell = 128;
         int max_grid_size = 32;
         int n_ppc = 4;
+        int pic_interpolation = Interpolation::CIC;
         Real max_time = 1000.0;
         int max_steps = 100;
         int plot_int  = 1;
         int write_ascii  = 0;
         int use_hypre  = 0;
-        Real dt = 0.01;
+        Real dt = std::numeric_limits<Real>::max();
 
         Real particle_radius = 0.02;
 
@@ -107,6 +115,7 @@ int main (int argc, char* argv[])
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
             pp.query("n_ppc", n_ppc);
+            pp.query("pic_interpolation", pic_interpolation);
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
@@ -132,7 +141,7 @@ int main (int argc, char* argv[])
         {
             RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.0,1.0,0.125)});
 
-            Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)};
+            Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,1)};
             Geometry::Setup(&rb, 0, is_periodic.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
                        IntVect{AMREX_D_DECL(n_cell_x-1,n_cell_y-1,n_cell_z-1)});
@@ -196,13 +205,12 @@ int main (int argc, char* argv[])
                 Real z = plo[2] + (0.5+k) * dx[2];
                 Real y = plo[1] + (0.5+j) * dx[1];
                 Real x = plo[0] + (0.5+i) * dx[0]; 
-                Real r2 = (pow(x-0.5, 2) + pow((y-0.75),2)) / 0.01;
+                Real r2 = (pow(x-0.5, 2) + pow(y-0.75,2)) / 0.01;
 
                 const Real threshold = 0.1;
                 Real gauss = std::exp(-r2);
                 gauss = gauss >= threshold ? gauss : 0.0;
 
-                // phi(i,j,k) = (1.0 + gauss) * vol(i,j,k);
                 phi(i,j,k) = gauss * vol(i,j,k);
             });
         }
@@ -212,18 +220,15 @@ int main (int argc, char* argv[])
             WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, 0.0, 0);
         }
 
-        // copy initial phi into the plotfile
-        MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
-
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
 
         // Initialize n_ppc randomly located particles per cell.
         // Particles are weighted by interpolated density field phi.
         // Only creates particles in regions not covered by the embedded geometry.
-        MyPC.InitParticles(n_ppc, phi_mf, vol_mf);
+        MyPC.InitParticles(n_ppc, phi_mf, vol_mf, pic_interpolation);
 
-        MyPC.DepositToMesh(phi_mf, Interpolation::CIC);
+        MyPC.DepositToMesh(phi_mf, pic_interpolation);
 
         {
             const std::string pfname = "initial_phi_after_deposit";
@@ -255,10 +260,10 @@ int main (int argc, char* argv[])
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
                                           LinOpBCType::Neumann,
-                                          LinOpBCType::Neumann)},
+                                          LinOpBCType::Periodic)},
             {AMREX_D_DECL(LinOpBCType::Neumann,
                           LinOpBCType::Neumann,
-                          LinOpBCType::Neumann)});
+                          LinOpBCType::Periodic)});
 
         Real reltol = 1.e-8;
         Real abstol = 1.e-12;
@@ -287,17 +292,20 @@ int main (int argc, char* argv[])
 
         // Write out the initial data
         {
-           amrex::Print() << "Creating the initial velocity field " << std::endl;
-           define_velocity(time,geom,vel,phi_mf);
-           macproj.project(reltol, abstol);
-           EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
+            amrex::Print() << "Creating the initial velocity field " << std::endl;
+            define_velocity(time,geom,vel,phi_mf);
+            macproj.project(reltol, abstol);
+            EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
-           amrex::Print() << "Writing the initial data into plt00000\n" << std::endl;
-           write_plotfile(0, time, geom, plotfile_mf, MyPC, write_ascii);
+            // copy initial deposited phi into the plotfile
+            MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
+
+            amrex::Print() << "Writing the initial data into plt00000\n" << std::endl;
+            write_plotfile(0, time, geom, plotfile_mf, MyPC, write_ascii);
         }
 
         // This computes the first dt
-        dt = est_time_step(geom,vel);
+        dt = est_time_step(dt, geom, vel);
 
         int nstep = 0;
 
@@ -325,12 +333,7 @@ int main (int argc, char* argv[])
                 MyPC.Redistribute();
 
                 // Deposit Particles to the grid to update phi
-                MyPC.DepositToMesh(phi_mf);
-
-                {
-                    const std::string pfname = amrex::Concatenate("phi",i+1,7);
-                    WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, time+dt, i+1);
-                }
+                MyPC.DepositToMesh(phi_mf, pic_interpolation);
 
                 // Increment time
                 time += dt;
@@ -354,7 +357,7 @@ int main (int argc, char* argv[])
                                << " DT = " << dt << std::endl;
 
                 // Compute lagged dt for next time step based on this half-time velocity
-                dt = est_time_step(geom,vel);
+                dt = est_time_step(dt, geom,vel);
 
             } else {
 
@@ -366,10 +369,6 @@ int main (int argc, char* argv[])
                 break;
             }
         }
-
-        // Write plotfile at final tim
-        EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
-        write_plotfile(nstep, time, geom, plotfile_mf, MyPC, write_ascii);
     }
 
     Real stop_time = amrex::second() - strt_time;
