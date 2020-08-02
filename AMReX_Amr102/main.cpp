@@ -12,6 +12,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_WriteEBSurface.H>
 
+#include <Indexing.H>
 #include <MyParticleContainer.H>
 
 using namespace amrex;
@@ -42,7 +43,7 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf, 
                     MyParticleContainer& pc, int write_ascii)
 {
-    // Copy processor id into last component of plotfile_mf
+    // Copy processor id into the component of plotfile_mf immediately following velocities
     int proc_comp = AMREX_SPACEDIM; 
     for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
        plotmf[mfi].setVal(ParallelDescriptor::MyProc(),mfi.validbox(),proc_comp,1);
@@ -53,11 +54,11 @@ void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf,
     
 #if (AMREX_SPACEDIM == 2)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                   { "xvel", "yvel", "proc" },
+                                   { "xvel", "yvel", "proc", "phi" },
                                      geom, time, 0);
 #elif (AMREX_SPACEDIM == 3)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                   { "xvel", "yvel", "zvel", "proc" },
+                                   { "xvel", "yvel", "zvel", "proc", "phi" },
                                      geom, time, 0);
 #endif
 
@@ -86,7 +87,7 @@ int main (int argc, char* argv[])
     {
         int n_cell = 128;
         int max_grid_size = 32;
-        std::string particle_file = "";
+        int n_ppc = 4;
         Real max_time = 1000.0;
         int max_steps = 100;
         int plot_int  = 1;
@@ -103,7 +104,7 @@ int main (int argc, char* argv[])
             ParmParse pp;
             pp.query("n_cell", n_cell);
             pp.query("max_grid_size", max_grid_size);
-            pp.query("particle_file", particle_file);
+            pp.query("n_ppc", n_ppc);
             pp.query("max_time", max_time);
             pp.query("max_steps", max_steps);
             pp.query("plot_int", plot_int);
@@ -145,6 +146,7 @@ int main (int argc, char* argv[])
         Array<MultiFab,AMREX_SPACEDIM> vel;
         Array<MultiFab,AMREX_SPACEDIM> beta;
         MultiFab plotfile_mf;
+        MultiFab phi_mf;
 
         int required_coarsening_level = 0; // typically the same as the max AMR level index
         int max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
@@ -157,19 +159,54 @@ int main (int argc, char* argv[])
            makeEBFabFactory(geom, grids, dmap, {4, 4, 2}, EBSupport::full);
         const EBFArrayBoxFactory* ebfact = &(static_cast<amrex::EBFArrayBoxFactory const&>(*factory));
 
-	// Velocities and Beta are face-centered
+        // Velocities and Beta are face-centered
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), *factory);
             beta[idim].define(amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 0, MFInfo(), *factory);
             beta[idim].setVal(1.0);
         }
 
-        // store plotfile variables; velocity, volfrac and processor id
-        plotfile_mf.define(grids, dmap, AMREX_SPACEDIM+1, 0, MFInfo(), *factory);
+        // store plotfile variables; velocity, processor id, and phi (the EB writer appends volfrac)
+        plotfile_mf.define(grids, dmap, AMREX_SPACEDIM+2, 0, MFInfo(), *factory);
+        
+        // make a separate phi MultiFab for the particle-mesh operations because we need a ghost cell
+        phi_mf.define(grids, dmap, 1, 1, MFInfo(), *factory);
+
+        // Get volume fraction for the embedded geometry
+        // volume fraction = 0 for cells covered by the embedded geometry
+        // volume fraction = 1 for cells not covered by the embedded geometry
+        // 0 < volume fraction < 1 for cells cut by the embedded geometry
+        const MultiFab& vol_mf = ebfact->getVolFrac();
+
+        // Initialize a gaussian density profile in the domain for cells
+        // not covered by the embedded geometry by multiplying phi
+        // by the volume fraction.
+        for (MFIter mfi(phi_mf); mfi.isValid(); ++mfi)
+        {
+            const Box& box = mfi.tilebox();
+            Array4<Real> phi = plotfile_mf[mfi].array();
+            Array4<const Real> vol = vol_mf[mfi].array();
+            const auto plo = geom.ProbLoArray();
+            const auto dx = geom.CellSizeArray();
+
+            amrex::ParallelFor(box,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                Real z = plo[2] + (0.5+k) * dx[2];
+                Real y = plo[1] + (0.5+j) * dx[1];
+                Real x = plo[0] + (0.5+i) * dx[0]; 
+                Real r2 = (pow(x-0.5, 2) + pow((y-0.75),2)) / 0.01;
+                phi(i,j,k) = (1.0 + std::exp(-r2)) * vol(i,j,k);
+            });
+        }
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitParticles(particle_file);
+
+        // Initialize n_ppc randomly located particles per cell.
+        // Particles are weighted by interpolated density field phi.
+        // Only creates particles in regions not covered by the embedded geometry.
+        MyPC.InitParticles(n_ppc, phi_mf, vol_mf);
 
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
@@ -262,16 +299,23 @@ int main (int argc, char* argv[])
                 // Step Particles
                 MyPC.AdvectWithUmac(vel.data(), 0, dt);
 
+                // Redistribute Particles across MPI ranks with their new positions
                 MyPC.Redistribute();
 
                 // Increment time
                 time += dt;
                 nstep++;
+                // Deposit Particles to the grid to update phi
+                MyPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
                 if (i%plot_int == 0)
                 {
                    average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
+
+                   // copy phi into the plotfile
+                   MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
+
                    write_plotfile(i, time, geom, plotfile_mf, MyPC, write_ascii);
                 }
 
