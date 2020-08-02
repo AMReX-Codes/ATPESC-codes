@@ -102,6 +102,7 @@ int main (int argc, char* argv[])
         int max_steps = 100;
         int plot_int  = 1;
         int write_ascii  = 0;
+        int write_initial_phi  = 0;
         int use_hypre  = 0;
         Real dt = std::numeric_limits<Real>::max();
 
@@ -121,6 +122,7 @@ int main (int argc, char* argv[])
             pp.query("plot_int", plot_int);
             pp.query("use_hypre", use_hypre);
             pp.query("write_ascii", write_ascii);
+            pp.query("write_initial_phi", write_initial_phi);
         }
 
 #ifndef AMREX_USE_HYPRE
@@ -217,7 +219,7 @@ int main (int argc, char* argv[])
 
         phi_mf.FillBoundary(geom.periodicity());
 
-        {
+        if (write_initial_phi) {
             const std::string pfname = "initial_phi";
             WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, 0.0, 0);
         }
@@ -232,7 +234,7 @@ int main (int argc, char* argv[])
 
         FPC.DepositToMesh(phi_mf, pic_interpolation);
 
-        {
+        if (write_initial_phi) {
             const std::string pfname = "initial_phi_after_deposit";
             WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, 0.0, 0);
         }
