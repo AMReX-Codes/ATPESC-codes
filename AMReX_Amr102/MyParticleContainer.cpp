@@ -10,8 +10,7 @@ void
 MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol)
 {
     // Save the number of particles per cell we are using for the particle-mesh operations
-    // m_number_particles_per_cell = nppc;
-    m_number_particles_per_cell = 1;
+    m_number_particles_per_cell = nppc;
 
     // Construct a ParticleInitData containing only zeros for the particle buffers and weights
     amrex::ParticleInitType<PIdx::NStructReal, 0, 0, 0> pdata {};
