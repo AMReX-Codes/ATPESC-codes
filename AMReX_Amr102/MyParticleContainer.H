@@ -2,8 +2,11 @@
 #define BL_MYPARTICLES_H_
 
 #include <AMReX_Particles.H>
+#include <AMReX_ParticleMesh.H>
+#include <AMReX_TracerParticle_mod_K.H>
+#include <Indexing.H>
 
-namespace InterpolationType {
+namespace Interpolation {
     enum {NGP=0, CIC};
 }
 
@@ -35,13 +38,17 @@ public:
 
     ~MyParticleContainer () {}
 
-    void InitParticles(int nppc);
+    void InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol);
 
     int NumParticlesPerCell() { return m_number_particles_per_cell; }
 
     void AdvectWithUmac (MultiFab* umac, int lev, Real dt);
 
-    void DepositToMesh (MultiFab& phi, int interpolation=InterpolationType::NGP);
+    void DepositToMesh (MultiFab& phi, int interpolation=Interpolation::NGP);
+
+    void InterpolateFromMesh (const MultiFab& phi, int interpolation=Interpolation::NGP);
+
+    void RemoveCoveredParticles (const MultiFab& ebvol, int interpolation=Interpolation::NGP);
 };
 
 }

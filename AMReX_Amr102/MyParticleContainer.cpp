@@ -7,7 +7,7 @@ namespace amrex {
 // Initialize a random number of particles per cell determined by nppc
 //
 void
-MyParticleContainer::InitParticles(int nppc)
+MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol)
 {
     // Save the number of particles per cell we are using for the particle-mesh operations
     m_number_particles_per_cell = nppc;
@@ -17,6 +17,15 @@ MyParticleContainer::InitParticles(int nppc)
 
     // Create nppc random particles per cell, initialized with zero real struct data
     InitNRandomPerCell(nppc, pdata);
+
+    // Interpolate from density field phi to set particle weights
+    InterpolateFromMesh(phi);
+
+    // Set invalid particle IDs for particles from cells covered by the embedded geometry
+    RemoveCoveredParticles(ebvol);
+
+    // Redistribute to remove the EB-covered particles based on the invalid IDs 
+    Redistribute();
 }
 
 //
@@ -244,6 +253,67 @@ MyParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolation
 
         // Step 2: scale interpolated number density by the volume per particle and set particle weight
         p.rdata(PIdx::Weight) = interpolated_phi * volume_per_particle;
+    });
+}
+
+//
+// Remove particles covered by the embedded geometry 
+//
+void
+MyParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int interpolation)
+{
+    const auto geom = Geom(0);
+    const auto plo = geom.ProbLoArray();
+    const auto dxi = geom.InvCellSizeArray();
+    const auto dx  = geom.CellSizeArray();
+    const Real cell_volume = dx[0]*dx[1]*dx[2];
+    const Real volume_per_particle = cell_volume / NumParticlesPerCell();
+
+    amrex::MeshToParticle(*this, ebvol, 0,
+    [=] AMREX_GPU_DEVICE (MyParticleContainer::ParticleType& p,
+                          amrex::Array4<const amrex::Real> const& vol_arr)
+    {
+        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
+        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
+        amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
+
+        int i = std::floor(lx);
+        int j = std::floor(ly);
+        int k = std::floor(lz);
+
+        amrex::Real xint = lx - i;
+        amrex::Real yint = ly - j;
+        amrex::Real zint = lz - k;
+
+        // Cloud In Cell interpolation (CIC)
+        amrex::Real sx[] = {1.-xint, xint};
+        amrex::Real sy[] = {1.-yint, yint};
+        amrex::Real sz[] = {1.-zint, zint};
+
+        // Nearest Grid Point Interpolation (NGP)
+        if (interpolation == Interpolation::NGP) {
+            sx[0] = 0.0;
+            sy[0] = 0.0;
+            sz[0] = 0.0;
+
+            sx[1] = 1.0;
+            sy[1] = 1.0;
+            sz[1] = 1.0;
+        }
+
+        // Interpolate the EB volume fraction to the particle
+        amrex::Real interpolated_vol = 0.0;
+        for (int kk = 0; kk <= 1; ++kk) { 
+        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int ii = 0; ii <= 1; ++ii) {
+            interpolated_vol += sx[ii]*sy[jj]*sz[kk] * vol_arr(i+ii-1,j+jj-1,k+kk-1);
+        }}}
+
+        // If the interpolated volume = 0, then the particle is covered by the EB
+        // so we want to delete the particle in the next call to Redistribute()
+        if (interpolated_vol == 0.0) {
+            p.id() = -1;
+        }
     });
 }
 
