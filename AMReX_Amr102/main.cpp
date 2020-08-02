@@ -198,7 +198,7 @@ int main (int argc, char* argv[])
                 Real x = plo[0] + (0.5+i) * dx[0]; 
                 Real r2 = (pow(x-0.5, 2) + pow((y-0.75),2)) / 0.01;
 
-                const Real threshold = 0.5;
+                const Real threshold = 0.1;
                 Real gauss = std::exp(-r2);
                 gauss = gauss >= threshold ? gauss : 0.0;
 
