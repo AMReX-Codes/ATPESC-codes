@@ -30,6 +30,7 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = vel[idim].norm0(0,0,false);
+        amrex::Print() << "Max vel in " << idim << "direction is " << est << std::endl;
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
@@ -41,10 +42,10 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 void write_plotfile(int step, const Geometry& geom, MultiFab& plotmf, 
                     MyParticleContainer& pc, int write_ascii)
 {
-
-    // Copy processor id into first component of plotfile_mf
+    // Copy processor id into last component of plotfile_mf
+    int proc_comp = AMREX_SPACEDIM; 
     for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
-       plotmf[mfi].setVal(ParallelDescriptor::MyProc());
+       plotmf[mfi].setVal(ParallelDescriptor::MyProc(),mfi.validbox(),proc_comp,1);
 
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step;
@@ -52,11 +53,11 @@ void write_plotfile(int step, const Geometry& geom, MultiFab& plotmf,
     
 #if (AMREX_SPACEDIM == 2)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                   { "proc" ,"xvel", "yvel" },
+                                   { "xvel", "yvel", "proc" },
                                      geom, 0.0, 0);
 #elif (AMREX_SPACEDIM == 3)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                   { "proc", "xvel", "yvel", "zvel" },
+                                   { "xvel", "yvel", "zvel", "proc" },
                                      geom, 0.0, 0);
 #endif
 
@@ -154,6 +155,7 @@ int main (int argc, char* argv[])
 
         std::unique_ptr<amrex::FabFactory<amrex::FArrayBox> > factory =
            makeEBFabFactory(geom, grids, dmap, {4, 4, 2}, EBSupport::full);
+        const EBFArrayBoxFactory* ebfact = &(static_cast<amrex::EBFArrayBoxFactory const&>(*factory));
 
 	// Velocities and Beta are face-centered
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -162,7 +164,7 @@ int main (int argc, char* argv[])
             beta[idim].setVal(1.0);
         }
 
-        // store plotfile variables; velocity and processor id
+        // store plotfile variables; velocity, volfrac and processor id
         plotfile_mf.define(grids, dmap, AMREX_SPACEDIM+1, 0, MFInfo(), *factory);
 
         // Initialize Particles
@@ -220,7 +222,6 @@ int main (int argc, char* argv[])
            vel[2].setVal(0.0);
 
         amrex::Print() << "Writing EB surface" << std::endl;
-        const EBFArrayBoxFactory* ebfact = &(static_cast<amrex::EBFArrayBoxFactory const&>(*factory));
         WriteEBSurface (grids, dmap, geom, ebfact);
 
         Real time = 0.0;
@@ -229,8 +230,8 @@ int main (int argc, char* argv[])
         {
            amrex::Print() << "Creating the initial velocity field " << std::endl;
            define_velocity(time,geom,vel);
-           macproj.project(reltol, abstol);
-           average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+           // macproj.project(reltol, abstol);
+           EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
            amrex::Print() << "Writing the initial data into plt00000\n" << std::endl;
            write_plotfile(0, geom, plotfile_mf, MyPC, write_ascii);
@@ -252,7 +253,7 @@ int main (int argc, char* argv[])
                 Real t_nph = time + 0.5 * dt;
 
                 define_velocity(t_nph,geom,vel);
-                macproj.project(reltol, abstol);
+                // macproj.project(reltol, abstol);
 
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     vel[idim].FillBoundary(geom.periodicity());
@@ -266,7 +267,7 @@ int main (int argc, char* argv[])
                 // Write to a plotfile
                 if (i%plot_int == 0)
                 {
-                   average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+                   average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
                    write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
                 }
 
@@ -284,7 +285,7 @@ int main (int argc, char* argv[])
             } else {
 
                 // Copy velocity into plotfile
-                average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+                average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
                 // Write to a plotfile
                 write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
@@ -293,7 +294,7 @@ int main (int argc, char* argv[])
         }
 
         // Write plotfile at final tim
-        average_face_to_cellcenter(plotfile_mf,1,amrex::GetArrOfConstPtrs(vel));
+        EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
         write_plotfile(nstep, geom, plotfile_mf, MyPC, write_ascii);
     }
 
