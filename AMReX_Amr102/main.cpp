@@ -26,7 +26,7 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 
     Real dt_est = std::numeric_limits<Real>::max();
 
-    const Real* dx      =  geom.CellSize();
+    const Real* dx =  geom.CellSize();
 
     const Vector<std::string> coord_dir {AMREX_D_DECL("x", "y", "z")};
 
@@ -112,7 +112,6 @@ int main (int argc, char* argv[])
             pp.query("plot_int", plot_int);
             pp.query("use_hypre", use_hypre);
             pp.query("write_ascii", write_ascii);
-            pp.query("time_step", dt);
         }
 
 #ifndef AMREX_USE_HYPRE
@@ -198,7 +197,13 @@ int main (int argc, char* argv[])
                 Real y = plo[1] + (0.5+j) * dx[1];
                 Real x = plo[0] + (0.5+i) * dx[0]; 
                 Real r2 = (pow(x-0.5, 2) + pow((y-0.75),2)) / 0.01;
-                phi(i,j,k) = (1.0 + std::exp(-r2)) * vol(i,j,k);
+
+                const Real threshold = 0.5;
+                Real gauss = std::exp(-r2);
+                gauss = gauss >= threshold ? gauss : 0.0;
+
+                // phi(i,j,k) = (1.0 + gauss) * vol(i,j,k);
+                phi(i,j,k) = gauss * vol(i,j,k);
             });
         }
 
