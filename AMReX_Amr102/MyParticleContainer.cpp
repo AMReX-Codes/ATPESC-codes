@@ -16,9 +16,15 @@ MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab
     // Construct a ParticleInitData containing only zeros for the particle buffers and weights
     amrex::ParticleInitType<PIdx::NStructReal, 0, 0, 0> pdata {};
 
-    // Create nppc random particles per cell, initialized with zero real struct data
-    // InitNRandomPerCell(nppc, pdata);
-    InitOnePerCell(0.5, 0.5, 0.5, pdata);
+    if (nppc > 1) {
+        // Create nppc random particles per cell, initialized with zero real struct data
+        InitNRandomPerCell(nppc, pdata);
+    } else if (nppc == 1) {
+        // Or ... create just one particle per cell centered in the cell
+        InitOnePerCell(0.5, 0.5, 0.5, pdata);
+    } else {
+        Print() << "No particles initialized.\n";
+    }
 
     // Interpolate from density field phi to set particle weights
     InterpolateFromMesh(phi, Interpolation::CIC);
@@ -312,8 +318,9 @@ MyParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int interpol
         }}}
 
         // If the interpolated volume = 0, then the particle is covered by the EB
-        // so we want to delete the particle in the next call to Redistribute()
-        if (interpolated_vol == 0.0) {
+        // so we want to delete the particle in the next call to Redistribute().
+        // We also delete the particle if the weight is zero.
+        if (interpolated_vol == 0.0 || p.rdata(PIdx::Weight) == 0.0) {
             p.id() = -1;
         }
     });
