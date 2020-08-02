@@ -48,7 +48,7 @@ public:
 
     void InterpolateFromMesh (const MultiFab& phi, int interpolation=Interpolation::CIC);
 
-    void RemoveCoveredParticles (const MultiFab& ebvol, int interpolation=Interpolation::CIC);
+    void RemoveCoveredParticles (const MultiFab& ebvol);
 };
 
 }

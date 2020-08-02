@@ -29,7 +29,7 @@ FluidParticleContainer::InitParticles(int nppc, const MultiFab& phi, const Multi
     InterpolateFromMesh(phi, interpolation);
 
     // Set invalid particle IDs for particles from cells covered by the embedded geometry
-    RemoveCoveredParticles(ebvol, interpolation);
+    RemoveCoveredParticles(ebvol);
 
     // Redistribute to remove the EB-covered particles based on the invalid IDs 
     Redistribute();
@@ -350,14 +350,11 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
 // Remove particles covered by the embedded geometry 
 //
 void
-FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int interpolation)
+FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol)
 {
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
-    const auto dx  = geom.CellSizeArray();
-    const Real cell_volume = dx[0]*dx[1]*dx[2];
-    const Real volume_per_particle = cell_volume / NumParticlesPerCell();
 
     amrex::MeshToParticle(*this, ebvol, 0,
     [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
@@ -371,38 +368,13 @@ FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int inter
         int j = std::floor(ly);
         int k = std::floor(lz);
 
-        amrex::Real xint = lx - i;
-        amrex::Real yint = ly - j;
-        amrex::Real zint = lz - k;
+        // Get the EB volume fraction of the cell this particle is in
+        amrex::Real cell_vol = vol_arr(i,j,k);
 
-        // Cloud In Cell interpolation (CIC)
-        amrex::Real sx[] = {1.-xint, xint};
-        amrex::Real sy[] = {1.-yint, yint};
-        amrex::Real sz[] = {1.-zint, zint};
-
-        // Nearest Grid Point Interpolation (NGP)
-        if (interpolation == Interpolation::NGP) {
-            sx[0] = 0.0;
-            sy[0] = 0.0;
-            sz[0] = 0.0;
-
-            sx[1] = 1.0;
-            sy[1] = 1.0;
-            sz[1] = 1.0;
-        }
-
-        // Interpolate the EB volume fraction to the particle
-        amrex::Real interpolated_vol = 0.0;
-        for (int kk = 0; kk <= 1; ++kk) { 
-        for (int jj = 0; jj <= 1; ++jj) { 
-        for (int ii = 0; ii <= 1; ++ii) {
-            interpolated_vol += sx[ii]*sy[jj]*sz[kk] * vol_arr(i+ii-1,j+jj-1,k+kk-1);
-        }}}
-
-        // If the interpolated volume = 0, then the particle is covered by the EB
+        // If the cell volume = 0, then the particle is covered by the EB
         // so we want to delete the particle in the next call to Redistribute().
         // We also delete the particle if the weight is zero.
-        if (interpolated_vol == 0.0 || p.rdata(PIdx::Weight) == 0.0) {
+        if (cell_vol == 0.0 || p.rdata(PIdx::Weight) == 0.0) {
             p.id() = -1;
         }
     });
