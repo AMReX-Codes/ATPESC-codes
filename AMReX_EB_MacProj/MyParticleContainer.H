@@ -3,29 +3,43 @@
 
 #include <AMReX_TracerParticles.H>
 
+namespace InterpolationType {
+    enum {NGP=0, CIC};
+}
+
+namespace PIdx {
+    enum {BufferX=0, BufferY, BufferZ, Weight};
+}
+
 namespace amrex {
 
 class MyParticleContainer
-    : public TracerParticleContainer
+    : public ParticleContainer<1>
 {
+private:
+    int m_number_particles_per_cell;
+
 public:
 
     MyParticleContainer (ParGDBBase* gdb)
-        : TracerParticleContainer(gdb)
+        : ParticleContainer<1>(gdb),
+          m_number_particles_per_cell(0)
         {}
 
     MyParticleContainer (const Geometry            & geom,
                          const DistributionMapping & dmap,
                          const BoxArray            & ba)
-        : TracerParticleContainer(geom,dmap,ba)
+        : ParticleContainer<1>(geom,dmap,ba),
+          m_number_particles_per_cell(0)
         {}
 
     ~MyParticleContainer () {}
 
-    Real FindWinner (int n);
+    void InitParticles(int nppc);
 
-    void InitParticles (std::string initial_particle_file, Real zlen);
+    void AdvectWithUmac (MultiFab* umac, int lev, Real dt);
 
+    void DepositToMesh (MultiFab& phi, int interpolation=InterpolationType::NGP);
 };
 
 }

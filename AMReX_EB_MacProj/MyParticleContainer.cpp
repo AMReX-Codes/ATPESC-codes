@@ -3,43 +3,228 @@
 
 namespace amrex {
 
+//
+// Initialize a random number of particles per cell determined by nppc
+//
 void
-MyParticleContainer::InitParticles (std::string initial_particle_file, Real zlen)
+MyParticleContainer::InitParticles(int nppc)
 {
-    BL_PROFILE("MyParticleContainer::InitParticles()");
 
-    InitFromAsciiFile(initial_particle_file,0);
+}
 
-    int lev = 0;
-    auto& pmap = GetParticles(lev);
-    for (auto& kv : pmap) {
-       int grid = kv.first.first;
-       auto& pbox = kv.second.GetArrayOfStructs();
-       const int n = pbox.size();
+//
+// Uses midpoint method to advance particles using umac.
+//
+void
+MyParticleContainer::AdvectWithUmac (MultiFab* umac, int lev, Real dt)
+{
+    BL_PROFILE("MyParticleContainer::AdvectWithUmac()");
+    AMREX_ASSERT(OK(lev, lev, umac[0].nGrow()-1));
+    AMREX_ASSERT(lev >= 0 && lev < GetParticles().size());
 
-       for (int i = 0; i < n; i++)
-       {
-            ParticleType& p = pbox[i];
+    AMREX_D_TERM(AMREX_ASSERT(umac[0].nGrow() >= 1);,
+                 AMREX_ASSERT(umac[1].nGrow() >= 1);,
+                 AMREX_ASSERT(umac[2].nGrow() >= 1););
 
-            // We over-write the z-locations to make sure they're in the domain
-            p.pos(2) = 0.5 * zlen;
-       }
+    AMREX_D_TERM(AMREX_ASSERT(!umac[0].contains_nan());,
+                 AMREX_ASSERT(!umac[1].contains_nan());,
+                 AMREX_ASSERT(!umac[2].contains_nan()););
+
+    const Real      strttime = amrex::second();
+    const Geometry& geom     = m_gdb->Geom(lev);
+    const auto          plo      = geom.ProbLoArray();
+    const auto          dxi      = geom.InvCellSizeArray();
+
+    Vector<std::unique_ptr<MultiFab> > raii_umac(AMREX_SPACEDIM);
+    Vector<MultiFab*> umac_pointer(AMREX_SPACEDIM);
+    if (OnSameGrids(lev, umac[0]))
+    {
+        for (int i = 0; i < AMREX_SPACEDIM; i++) {
+	    umac_pointer[i] = &umac[i];
+	}
+    }
+    else
+    {
+        for (int i = 0; i < AMREX_SPACEDIM; i++)
+        {
+	    int ng = umac[i].nGrow();
+	    raii_umac[i].reset(new MultiFab(amrex::convert(m_gdb->ParticleBoxArray(lev),
+                                                           IntVect::TheDimensionVector(i)),
+
+					                   m_gdb->ParticleDistributionMap(lev),
+					                   umac[i].nComp(), ng));
+
+
+	    umac_pointer[i] = raii_umac[i].get();
+	    umac_pointer[i]->copy(umac[i],0,0,umac[i].nComp(),ng,ng);
+        }
+    }
+
+    for (int ipass = 0; ipass < 2; ipass++)
+    {
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
+        for (ParIterType pti(*this, lev); pti.isValid(); ++pti)
+        {
+            int grid    = pti.index();
+            auto& ptile = ParticlesAt(lev, pti);
+            auto& aos  = ptile.GetArrayOfStructs();
+            const int n = aos.numParticles();
+            auto p_pbox = aos().data();
+            const FArrayBox* fab[AMREX_SPACEDIM] = { AMREX_D_DECL(&((*umac_pointer[0])[grid]),
+                                                                  &((*umac_pointer[1])[grid]),
+                                                                  &((*umac_pointer[2])[grid])) };
+
+            //array of these pointers to pass to the GPU
+            amrex::GpuArray<amrex::Array4<const Real>, AMREX_SPACEDIM>
+                const umacarr {{AMREX_D_DECL((*fab[0]).array(),
+                                             (*fab[1]).array(),
+                                             (*fab[2]).array() )}};
+
+            amrex::ParallelFor(n,
+                               [=] AMREX_GPU_DEVICE (int i)
+            {
+                ParticleType& p = p_pbox[i];
+                if (p.id() <= 0) return;
+                Real v[AMREX_SPACEDIM];
+                mac_interpolate(p, plo, dxi, umacarr, v);
+                if (ipass == 0)
+                {
+                    for (int dim=0; dim < AMREX_SPACEDIM; dim++)
+                    {
+                        p.rdata(dim) = p.pos(dim);
+                        p.pos(dim) += 0.5*dt*v[dim];
+                    }
+                }
+                else
+                {
+                    for (int dim=0; dim < AMREX_SPACEDIM; dim++)
+                    {
+                        p.pos(dim) = p.rdata(dim) + dt*v[dim];
+                        p.rdata(dim) = v[dim];
+                    }
+                }
+            });
+        }
+    }
+
+    if (m_verbose > 1)
+    {
+        Real stoptime = amrex::second() - strttime;
+
+#ifdef AMREX_LAZY
+	Lazy::QueueReduction( [=] () mutable {
+#endif
+                ParallelReduce::Max(stoptime, ParallelContext::IOProcessorNumberSub(),
+                                    ParallelContext::CommunicatorSub());
+
+                amrex::Print() << "MyParticleContainer::AdvectWithUmac() time: " << stoptime << '\n';
+#ifdef AMREX_LAZY
+	});
+#endif
     }
 }
 
-Real 
-MyParticleContainer::FindWinner (int n)
+//
+// Deposit the particle weights to the mesh to set the number density phi
+//
+void
+MyParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
 {
-    BL_PROFILE("MyParticleContainer::FindWinner()");
+    const auto geom = Geom(0);
+    const auto plo = geom.ProbLoArray();
+    const auto dxi = geom.InvCellSizeArray();
 
-    using ParticleType = MyParticleContainer::ParticleType;
-    int nghost = 0;
-    Real x = amrex::ReduceMax(*this, nghost,
-       [=] AMREX_GPU_HOST_DEVICE (const ParticleType& p) noexcept -> Real
-                                  { return p.pos(n); });
+    amrex::ParticleToMesh(*this, phi, 0,
+    [=] AMREX_GPU_DEVICE (const MyParticleContainer::ParticleType& p,
+                          amrex::Array4<amrex::Real> const& phi_arr)
+    {
+        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
+        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
+        amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
 
-    ParallelDescriptor::ReduceRealMax(x);
-    return x;
+        int i = std::floor(lx);
+        int j = std::floor(ly);
+        int k = std::floor(lz);
+
+        amrex::Real xint = lx - i;
+        amrex::Real yint = ly - j;
+        amrex::Real zint = lz - k;
+
+        // Cloud In Cell interpolation
+        amrex::Real sx[] = {1.-xint, xint};
+        amrex::Real sy[] = {1.-yint, yint};
+        amrex::Real sz[] = {1.-zint, zint};
+
+        // Nearest Grid Point Interpolation
+        if (interpolation == Interpolation::NGP) {
+            sx[0] = 0.0;
+            sy[0] = 0.0;
+            sz[0] = 0.0;
+
+            sx[1] = 1.0;
+            sy[1] = 1.0;
+            sz[1] = 1.0;
+        }
+
+        for (int kk = 0; kk <= 1; ++kk) { 
+        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int ii = 0; ii <= 1; ++ii) {
+            amrex::Gpu::Atomic::Add(&phi_arr(i+ii-1, j+jj-1, k+kk-1), sx[ii]*sy[jj]*sz[kk] * p.rdata(PIdx::Weight));
+        }}}
+    });
+}
+
+//
+// Interpolate number density phi to the particles to set their weights
+//
+void
+MyParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolation)
+{
+    const auto geom = Geom(0);
+    const auto plo = geom.ProbLoArray();
+    const auto dxi = geom.InvCellSizeArray();
+    const auto dx  = geom.CellSizeArray();
+    const Real cell_volume = dx[0]*dx[1]*dx[2];
+
+    amrex::MeshToParticle(*this, phi, 0,
+    [=] AMREX_GPU_DEVICE (MyParticleContainer::ParticleType& p,
+                          amrex::Array4<const amrex::Real> const& phi_arr)
+    {
+        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
+        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
+        amrex::Real lz = (p.pos(2) - plo[2]) * dxi[2] + 0.5;
+
+        int i = std::floor(lx);
+        int j = std::floor(ly);
+        int k = std::floor(lz);
+
+        amrex::Real xint = lx - i;
+        amrex::Real yint = ly - j;
+        amrex::Real zint = lz - k;
+
+        // Cloud In Cell interpolation
+        amrex::Real sx[] = {1.-xint, xint};
+        amrex::Real sy[] = {1.-yint, yint};
+        amrex::Real sz[] = {1.-zint, zint};
+
+        // Nearest Grid Point Interpolation
+        if (interpolation == Interpolation::NGP) {
+            sx[0] = 0.0;
+            sy[0] = 0.0;
+            sz[0] = 0.0;
+
+            sx[1] = 1.0;
+            sy[1] = 1.0;
+            sz[1] = 1.0;
+        }
+
+        for (int kk = 0; kk <= 1; ++kk) { 
+        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int ii = 0; ii <= 1; ++ii) {
+        }}}
+    });
 }
 
 }
