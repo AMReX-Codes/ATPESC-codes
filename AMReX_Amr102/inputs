@@ -1,13 +1,12 @@
 n_cell = 64                              # number of cells in x- and y-directions; z-dir has 1/8 n_cell
 
-max_grid_size = 64                       # the maximum number of cells in any direction in a single grid
+max_grid_size = 32                       # the maximum number of cells in any direction in a single grid
 
-plot_int = 5                             # frequency of writing plotfiles
+plot_int = 10                            # frequency of writing plotfiles
 
 max_time =  2.0                          # the final time (if max_time < max_steps * time_step)
 
 max_steps = 200                          # the maximum number of steps (if max_steps * time_step < max_time))
-max_steps = 0                          
 
 #####################################################################
 # Control the number of particles and the particle/mesh interpolation
@@ -23,11 +22,10 @@ write_initial_phi = 1
 # Control the verbosity and tolerance of the solver
 ###################################################
 
-mac_proj.verbose = 1
+mac_proj.verbose = 0
 mac_proj.bottom_verbose = 0
  
 use_hypre = 0                            # use hypre instead of native GMG to solve the problem  
-mac_proj.rel_tol = 1.e-4
 
 ###############################################
 # Specify the location and size of the cylinder
@@ -35,7 +33,8 @@ mac_proj.rel_tol = 1.e-4
 
 cylinder.direction = 2                  # cylinder axis aligns with z-axis
 cylinder.radius    = 0.1                # cylinder axis aligns with z-axis
-cylinder.center = 0.25 0.25 0.5
+cylinder.center    = 0.7 0.5 0.5
 
 cylinder.internal_flow = false          # we are computing flow around the cylinder, not inside it
 
+write_eb_geom = 0

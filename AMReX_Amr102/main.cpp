@@ -4,7 +4,6 @@
 #include <AMReX_EB2.H>
 #include <AMReX_EB2_IF.H>
 #include <AMReX_EBFabFactory.H>
-#include <AMReX_MacProjector.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_TagBox.H>
@@ -19,6 +18,7 @@ using namespace amrex;
 
 extern void make_eb_cylinder(const Geometry& geom);
 extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out, const MultiFab& phi);
+extern void mac_project_velocity(Array<MultiFab,AMREX_SPACEDIM>& vel_out, const Geometry& geom, int use_hypre); 
 
 Real est_time_step(const Real current_dt, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 {
@@ -160,7 +160,6 @@ int main (int argc, char* argv[])
         }
 
         Array<MultiFab,AMREX_SPACEDIM> vel;
-        Array<MultiFab,AMREX_SPACEDIM> beta;
         MultiFab plotfile_mf;
         MultiFab phi_mf;
 
@@ -175,11 +174,9 @@ int main (int argc, char* argv[])
            makeEBFabFactory(geom, grids, dmap, {4, 4, 2}, EBSupport::full);
         const EBFArrayBoxFactory* ebfact = &(static_cast<amrex::EBFArrayBoxFactory const&>(*factory));
 
-        // Velocities and Beta are face-centered
+        // Velocities are face-centered
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             vel[idim].define (amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 1, MFInfo(), *factory);
-            beta[idim].define(amrex::convert(grids,IntVect::TheDimensionVector(idim)), dmap, 1, 0, MFInfo(), *factory);
-            beta[idim].setVal(1.0);
         }
 
         // store plotfile variables; velocity, processor id, and phi (the EB writer appends volfrac)
@@ -222,6 +219,7 @@ int main (int argc, char* argv[])
         }
 
         phi_mf.FillBoundary(geom.periodicity());
+        EB_set_covered(phi_mf,-1.0);
 
         if (write_initial_phi) {
             const std::string pfname = "initial_phi";
@@ -237,6 +235,7 @@ int main (int argc, char* argv[])
         FPC.InitParticles(n_ppc, phi_mf, vol_mf, pic_interpolation);
 
         FPC.DepositToMesh(phi_mf, pic_interpolation);
+        EB_set_covered(phi_mf,-1.0);
 
         if (write_initial_phi) {
             const std::string pfname = "initial_phi_after_deposit";
@@ -247,34 +246,6 @@ int main (int argc, char* argv[])
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
                      vel[2].setVal(0.0););
-
-        LPInfo lp_info;
-
-        // If we want to use hypre to solve the full problem we need to not coarsen inside AMReX
-        if (use_hypre) 
-            lp_info.setMaxCoarseningLevel(0);
-
-        MacProjector macproj({amrex::GetArrOfPtrs(vel)},       // mac velocity
-			     MLMG::Location::FaceCenter,       // velocity located on face centers
-                             {amrex::GetArrOfConstPtrs(beta)}, // beta
-			     MLMG::Location::FaceCenter,       // beta located on face centers
-			     MLMG::Location::CellCenter,       // location of velocity divergence
-                             {geom},
-                             lp_info);                          // structure for passing info to the operator
-
-        // Set bottom-solver to use hypre instead of native BiCGStab 
-        if (use_hypre) 
-           macproj.getMLMG().setBottomSolver(MLMG::BottomSolver::hypre);
-
-        macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
-                                          LinOpBCType::Neumann,
-                                          LinOpBCType::Periodic)},
-            {AMREX_D_DECL(LinOpBCType::Neumann,
-                          LinOpBCType::Neumann,
-                          LinOpBCType::Periodic)});
-
-        Real reltol = 1.e-8;
-        Real abstol = 1.e-12;
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -304,7 +275,7 @@ int main (int argc, char* argv[])
         {
             amrex::Print() << "Creating the initial velocity field " << std::endl;
             define_velocity(time,geom,vel,phi_mf);
-            macproj.project(reltol, abstol);
+            mac_project_velocity(vel,geom,use_hypre);
             EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
             // copy initial deposited phi into the plotfile
@@ -335,7 +306,7 @@ int main (int argc, char* argv[])
                 Real t_nph = time + 0.5 * dt;
 
                 define_velocity(t_nph,geom,vel,phi_mf);
-                macproj.project(reltol, abstol);
+                mac_project_velocity(vel,geom,use_hypre);
 
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     vel[idim].FillBoundary(geom.periodicity());
@@ -349,6 +320,8 @@ int main (int argc, char* argv[])
 
                 // Deposit Particles to the grid to update phi
                 FPC.DepositToMesh(phi_mf, pic_interpolation);
+
+                EB_set_covered(phi_mf,-1.0);
 
                 // Increment time
                 time += dt;
