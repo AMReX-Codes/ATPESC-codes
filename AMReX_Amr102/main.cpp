@@ -18,7 +18,7 @@
 using namespace amrex;
 
 extern void make_eb_cylinder(const Geometry& geom);
-extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out);
+extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out, const MultiFab& phi);
 
 Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 {
@@ -183,8 +183,8 @@ int main (int argc, char* argv[])
         // by the volume fraction.
         for (MFIter mfi(phi_mf); mfi.isValid(); ++mfi)
         {
-            const Box& box = mfi.tilebox();
-            Array4<Real> phi = plotfile_mf[mfi].array();
+            const Box& box = mfi.validbox();
+            Array4<Real> phi = phi_mf[mfi].array();
             Array4<const Real> vol = vol_mf[mfi].array();
             const auto plo = geom.ProbLoArray();
             const auto dx = geom.CellSizeArray();
@@ -200,6 +200,14 @@ int main (int argc, char* argv[])
             });
         }
 
+        {
+            const std::string pfname = "initial_phi";
+            WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, 0.0, 0);
+        }
+
+        // copy initial phi into the plotfile
+        MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
+
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
 
@@ -207,6 +215,13 @@ int main (int argc, char* argv[])
         // Particles are weighted by interpolated density field phi.
         // Only creates particles in regions not covered by the embedded geometry.
         MyPC.InitParticles(n_ppc, phi_mf, vol_mf);
+
+        MyPC.DepositToMesh(phi_mf, Interpolation::CIC);
+
+        {
+            const std::string pfname = "initial_phi_after_deposit";
+            WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, 0.0, 0);
+        }
 
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
@@ -266,7 +281,7 @@ int main (int argc, char* argv[])
         // Write out the initial data
         {
            amrex::Print() << "Creating the initial velocity field " << std::endl;
-           define_velocity(time,geom,vel);
+           define_velocity(time,geom,vel,phi_mf);
            macproj.project(reltol, abstol);
            EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
@@ -289,7 +304,7 @@ int main (int argc, char* argv[])
 
                 Real t_nph = time + 0.5 * dt;
 
-                define_velocity(t_nph,geom,vel);
+                define_velocity(t_nph,geom,vel,phi_mf);
                 macproj.project(reltol, abstol);
 
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -302,6 +317,14 @@ int main (int argc, char* argv[])
                 // Redistribute Particles across MPI ranks with their new positions
                 MyPC.Redistribute();
 
+                // Deposit Particles to the grid to update phi
+                MyPC.DepositToMesh(phi_mf);
+
+                {
+                    const std::string pfname = amrex::Concatenate("phi",i+1,7);
+                    WriteSingleLevelPlotfile(pfname, phi_mf, {"phi"}, geom, time+dt, i+1);
+                }
+
                 // Increment time
                 time += dt;
                 nstep++;
@@ -309,14 +332,14 @@ int main (int argc, char* argv[])
                 MyPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
-                if (i%plot_int == 0)
+                if ((i+1) % plot_int == 0)
                 {
                    average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
                    // copy phi into the plotfile
                    MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
 
-                   write_plotfile(i, time, geom, plotfile_mf, MyPC, write_ascii);
+                   write_plotfile(i+1, time, geom, plotfile_mf, MyPC, write_ascii);
                 }
 
                 amrex::Print() << "Coarse STEP " << i+1 << " ends." << " TIME = " << time
@@ -332,7 +355,7 @@ int main (int argc, char* argv[])
                 average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
                 // Write to a plotfile
-                write_plotfile(i, time, geom, plotfile_mf, MyPC, write_ascii);
+                write_plotfile(i+1, time, geom, plotfile_mf, MyPC, write_ascii);
                 break;
             }
         }

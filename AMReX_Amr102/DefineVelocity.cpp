@@ -4,7 +4,7 @@
 using namespace amrex;
 
 void
-define_velocity (const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel_out)
+define_velocity (const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel_out, const MultiFab& phi)
 {
     const auto      dx = geom.CellSizeArray();
     const auto prob_lo = geom.ProbLoArray();
@@ -17,7 +17,7 @@ define_velocity (const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPA
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
     {
-        for (MFIter mfi(vel_out[0],TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        for (MFIter mfi(phi,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             GpuArray<Box, AMREX_SPACEDIM> nbx;
             AMREX_D_TERM(nbx[0] = mfi.tilebox(IntVect(1,0,0));,   // x-face-based tilebox
