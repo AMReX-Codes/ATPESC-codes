@@ -17,7 +17,7 @@
 using namespace amrex;
 
 extern void make_eb_cylinder(const Geometry& geom);
-extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out, const MultiFab& ccmf);
+extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out);
 
 Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
 {
@@ -169,8 +169,7 @@ int main (int argc, char* argv[])
 
         // Initialize Particles
         MyParticleContainer MyPC(geom, dmap, grids);
-        MyPC.InitOnePerCell(0.5, 0.5, 0.5, {});
-        // MyPC.InitParticles(particle_file);
+        MyPC.InitParticles(particle_file);
 
         // set initial velocity to u=(1,0,0)
         AMREX_D_TERM(vel[0].setVal(1.0);,
@@ -230,7 +229,7 @@ int main (int argc, char* argv[])
         // Write out the initial data
         {
            amrex::Print() << "Creating the initial velocity field " << std::endl;
-           define_velocity(time,geom,vel,plotfile_mf);
+           define_velocity(time,geom,vel);
            macproj.project(reltol, abstol);
            EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
@@ -253,7 +252,7 @@ int main (int argc, char* argv[])
 
                 Real t_nph = time + 0.5 * dt;
 
-                define_velocity(t_nph,geom,vel,plotfile_mf);
+                define_velocity(t_nph,geom,vel);
                 macproj.project(reltol, abstol);
 
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
