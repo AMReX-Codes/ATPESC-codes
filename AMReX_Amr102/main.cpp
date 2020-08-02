@@ -84,7 +84,7 @@ int main (int argc, char* argv[])
         int n_cell = 128;
         int max_grid_size = 32;
         std::string particle_file = "";
-        Real max_time = 1.0;
+        Real max_time = 1000.0;
         int max_steps = 100;
         int plot_int  = 1;
         int write_ascii  = 0;
@@ -240,7 +240,7 @@ int main (int argc, char* argv[])
             {
                 amrex::Print() << "\nCoarse STEP " << i+1 << " starts ..." << std::endl;
 
-                Real dt = std::min(dt, max_time - time);
+                dt = amrex::min(dt, max_time - time);
 
                 Real t_nph = time + 0.5 * dt;
 
