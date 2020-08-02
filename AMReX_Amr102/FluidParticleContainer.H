@@ -1,5 +1,5 @@
-#ifndef BL_MYPARTICLES_H_
-#define BL_MYPARTICLES_H_
+#ifndef BL_FLUIDPARTICLES_H_
+#define BL_FLUIDPARTICLES_H_
 
 #include <AMReX_Particles.H>
 #include <AMReX_ParticleMesh.H>
@@ -16,7 +16,7 @@ namespace PIdx {
 
 namespace amrex {
 
-class MyParticleContainer
+class FluidParticleContainer
     : public ParticleContainer<PIdx::NStructReal>
 {
 private:
@@ -24,19 +24,19 @@ private:
 
 public:
 
-    MyParticleContainer (ParGDBBase* gdb)
+    FluidParticleContainer (ParGDBBase* gdb)
         : ParticleContainer<PIdx::NStructReal>(gdb),
           m_number_particles_per_cell(0)
         {}
 
-    MyParticleContainer (const Geometry            & geom,
+    FluidParticleContainer (const Geometry            & geom,
                          const DistributionMapping & dmap,
                          const BoxArray            & ba)
         : ParticleContainer<PIdx::NStructReal>(geom,dmap,ba),
           m_number_particles_per_cell(0)
         {}
 
-    ~MyParticleContainer () {}
+    ~FluidParticleContainer () {}
 
     void InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation=Interpolation::CIC);
 

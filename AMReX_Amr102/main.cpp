@@ -13,7 +13,7 @@
 #include <AMReX_WriteEBSurface.H>
 
 #include <Indexing.H>
-#include <MyParticleContainer.H>
+#include <FluidParticleContainer.H>
 
 using namespace amrex;
 
@@ -50,7 +50,7 @@ Real est_time_step(const Real current_dt, const Geometry& geom, Array<MultiFab,A
 }
 
 void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf, 
-                    MyParticleContainer& pc, int write_ascii)
+                    FluidParticleContainer& pc, int write_ascii)
 {
     // Copy processor id into the component of plotfile_mf immediately following velocities
     int proc_comp = AMREX_SPACEDIM; 
@@ -221,14 +221,14 @@ int main (int argc, char* argv[])
         }
 
         // Initialize Particles
-        MyParticleContainer MyPC(geom, dmap, grids);
+        FluidParticleContainer FPC(geom, dmap, grids);
 
         // Initialize n_ppc randomly located particles per cell.
         // Particles are weighted by interpolated density field phi.
         // Only creates particles in regions not covered by the embedded geometry.
-        MyPC.InitParticles(n_ppc, phi_mf, vol_mf, pic_interpolation);
+        FPC.InitParticles(n_ppc, phi_mf, vol_mf, pic_interpolation);
 
-        MyPC.DepositToMesh(phi_mf, pic_interpolation);
+        FPC.DepositToMesh(phi_mf, pic_interpolation);
 
         {
             const std::string pfname = "initial_phi_after_deposit";
@@ -301,7 +301,7 @@ int main (int argc, char* argv[])
             MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
 
             amrex::Print() << "Writing the initial data into plt00000\n" << std::endl;
-            write_plotfile(0, time, geom, plotfile_mf, MyPC, write_ascii);
+            write_plotfile(0, time, geom, plotfile_mf, FPC, write_ascii);
         }
 
         // This computes the first dt
@@ -327,13 +327,13 @@ int main (int argc, char* argv[])
                 }
 
                 // Step Particles
-                MyPC.AdvectWithUmac(vel.data(), 0, dt);
+                FPC.AdvectWithUmac(vel.data(), 0, dt);
 
                 // Redistribute Particles across MPI ranks with their new positions
-                MyPC.Redistribute();
+                FPC.Redistribute();
 
                 // Deposit Particles to the grid to update phi
-                MyPC.DepositToMesh(phi_mf, pic_interpolation);
+                FPC.DepositToMesh(phi_mf, pic_interpolation);
 
                 // Increment time
                 time += dt;
@@ -349,7 +349,7 @@ int main (int argc, char* argv[])
                    // copy phi into the plotfile
                    MultiFab::Copy(plotfile_mf, phi_mf, 0, Idx::phi, 1, 0);
 
-                   write_plotfile(i+1, time, geom, plotfile_mf, MyPC, write_ascii);
+                   write_plotfile(i+1, time, geom, plotfile_mf, FPC, write_ascii);
                 }
 
                 amrex::Print() << "Coarse STEP " << i+1 << " ends." << " TIME = " << time
@@ -365,7 +365,7 @@ int main (int argc, char* argv[])
                 average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
                 // Write to a plotfile
-                write_plotfile(i+1, time, geom, plotfile_mf, MyPC, write_ascii);
+                write_plotfile(i+1, time, geom, plotfile_mf, FPC, write_ascii);
                 break;
             }
         }

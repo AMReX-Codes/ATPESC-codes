@@ -1,5 +1,5 @@
 
-#include <MyParticleContainer.H>
+#include <FluidParticleContainer.H>
 
 namespace amrex {
 
@@ -7,7 +7,7 @@ namespace amrex {
 // Initialize a random number of particles per cell determined by nppc
 //
 void
-MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation)
+FluidParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation)
 {
     // Save the number of particles per cell we are using for the particle-mesh operations
     m_number_particles_per_cell = nppc;
@@ -39,9 +39,9 @@ MyParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab
 // Uses midpoint method to advance particles using umac.
 //
 void
-MyParticleContainer::AdvectWithUmac (MultiFab* umac, int lev, Real dt)
+FluidParticleContainer::AdvectWithUmac (MultiFab* umac, int lev, Real dt)
 {
-    BL_PROFILE("MyParticleContainer::AdvectWithUmac()");
+    BL_PROFILE("FluidParticleContainer::AdvectWithUmac()");
     AMREX_ASSERT(OK(lev, lev, umac[0].nGrow()-1));
     AMREX_ASSERT(lev >= 0 && lev < GetParticles().size());
 
@@ -142,7 +142,7 @@ MyParticleContainer::AdvectWithUmac (MultiFab* umac, int lev, Real dt)
                 ParallelReduce::Max(stoptime, ParallelContext::IOProcessorNumberSub(),
                                     ParallelContext::CommunicatorSub());
 
-                amrex::Print() << "MyParticleContainer::AdvectWithUmac() time: " << stoptime << '\n';
+                amrex::Print() << "FluidParticleContainer::AdvectWithUmac() time: " << stoptime << '\n';
 #ifdef AMREX_LAZY
 	});
 #endif
@@ -153,7 +153,7 @@ MyParticleContainer::AdvectWithUmac (MultiFab* umac, int lev, Real dt)
 // Deposit the particle weights to the mesh to set the number density phi
 //
 void
-MyParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
+FluidParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
 {
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
@@ -161,7 +161,7 @@ MyParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
     const Real inv_cell_volume = dxi[0]*dxi[1]*dxi[2];
 
     amrex::ParticleToMesh(*this, phi, 0,
-    [=] AMREX_GPU_DEVICE (const MyParticleContainer::ParticleType& p,
+    [=] AMREX_GPU_DEVICE (const FluidParticleContainer::ParticleType& p,
                           amrex::Array4<amrex::Real> const& phi_arr)
     {
         amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
@@ -206,7 +206,7 @@ MyParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
 // Interpolate number density phi to the particles to set their weights
 //
 void
-MyParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolation)
+FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolation)
 {
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
@@ -216,7 +216,7 @@ MyParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolation
     const Real volume_per_particle = cell_volume / NumParticlesPerCell();
 
     amrex::MeshToParticle(*this, phi, 0,
-    [=] AMREX_GPU_DEVICE (MyParticleContainer::ParticleType& p,
+    [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
                           amrex::Array4<const amrex::Real> const& phi_arr)
     {
         amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
@@ -267,7 +267,7 @@ MyParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolation
 // Remove particles covered by the embedded geometry 
 //
 void
-MyParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int interpolation)
+FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int interpolation)
 {
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
@@ -277,7 +277,7 @@ MyParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, int interpol
     const Real volume_per_particle = cell_volume / NumParticlesPerCell();
 
     amrex::MeshToParticle(*this, ebvol, 0,
-    [=] AMREX_GPU_DEVICE (MyParticleContainer::ParticleType& p,
+    [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
                           amrex::Array4<const amrex::Real> const& vol_arr)
     {
         amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
