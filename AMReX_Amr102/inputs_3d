@@ -1,6 +1,6 @@
-n_cell = 64                              # number of cells in each direction
+n_cell = 64                              # number of cells in x- and y-directions; z-dir has 1/8 n_cell
 
-max_grid_size = 64                       # the maximum number of cells in any direction in a single grid
+max_grid_size = 32                       # the maximum number of cells in any direction in a single grid
 
 plot_int = 5                             # frequency of writing plotfiles
 
