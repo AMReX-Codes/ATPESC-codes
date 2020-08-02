@@ -338,8 +338,9 @@ int main (int argc, char* argv[])
                 // Increment time
                 time += dt;
                 nstep++;
+
                 // Deposit Particles to the grid to update phi
-                MyPC.DepositToMesh(phi_mf);
+                FPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
                 if ((i+1) % plot_int == 0)
@@ -357,7 +358,7 @@ int main (int argc, char* argv[])
                                << " DT = " << dt << std::endl;
 
                 // Compute lagged dt for next time step based on this half-time velocity
-                dt = est_time_step(dt, geom,vel);
+                dt = est_time_step(dt, geom, vel);
 
             } else {
 
