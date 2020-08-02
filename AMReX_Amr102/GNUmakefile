@@ -43,13 +43,13 @@ LIBRARIES += -lpthread
 
 default: main$(DIM)d.exe
 
-main$(DIM)d.exe: main.o MyParticleContainer.o 
+main$(DIM)d.exe: main.o FluidParticleContainer.o 
 	$(MPICXX) -o $@ $(CXXFLAGS) $^ $(LDFLAGS) $(LIBRARIES)
 
-main.o: main.cpp MyParticleContainer.H 
+main.o: main.cpp FluidParticleContainer.H 
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
-MyParticleContainer.o: MyParticleContainer.cpp MyParticleContainer.H
+FluidParticleContainer.o: FluidParticleContainer.cpp FluidParticleContainer.H
 	$(MPICXX) -o $@ -c $(CXXFLAGS) $(CPPFLAGS) $<
 
 .PHONY: clean realclean pltclean
