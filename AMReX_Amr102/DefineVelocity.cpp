@@ -8,6 +8,10 @@ define_velocity (const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPA
 {
     const auto      dx = geom.CellSizeArray();
     const auto prob_lo = geom.ProbLoArray();
+    const Box& domain  = geom.Domain();
+
+    const auto domlo = amrex::lbound(domain);
+    const auto domhi = amrex::ubound(domain);
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -51,18 +55,21 @@ define_velocity (const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPA
                          [=] AMREX_GPU_DEVICE (int i, int j, int k)
                          {
                              get_face_velocity_x(i, j, k, vel[0], psi, prob_lo, dx); 
+                             if (i == domlo.x or i == domhi.x+1) vel[0](i,j,k) = 0.;
                          });,
 
                          amrex::ParallelFor(ngbxy,
                          [=] AMREX_GPU_DEVICE (int i, int j, int k)
                          {
                              get_face_velocity_y(i, j, k, vel[1], psi, prob_lo, dx);
+                             if (j == domlo.y or j == domhi.y+1) vel[1](i,j,k) = 0.;
                          });,
 
                          amrex::ParallelFor(ngbxz,
                          [=] AMREX_GPU_DEVICE (int i, int j, int k)
                          {
                              get_face_velocity_z(i, j, k, vel[2], psi, prob_lo, dx);
+                             if (k == domlo.z or k == domhi.z+1) vel[2](i,j,k) = 0.;
                          });
                         );
         }

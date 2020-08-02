@@ -39,7 +39,7 @@ Real est_time_step(const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
     return dt_est*cfl;
 }
 
-void write_plotfile(int step, const Geometry& geom, MultiFab& plotmf, 
+void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf, 
                     MyParticleContainer& pc, int write_ascii)
 {
     // Copy processor id into last component of plotfile_mf
@@ -54,11 +54,11 @@ void write_plotfile(int step, const Geometry& geom, MultiFab& plotmf,
 #if (AMREX_SPACEDIM == 2)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
                                    { "xvel", "yvel", "proc" },
-                                     geom, 0.0, 0);
+                                     geom, time, 0);
 #elif (AMREX_SPACEDIM == 3)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
                                    { "xvel", "yvel", "zvel", "proc" },
-                                     geom, 0.0, 0);
+                                     geom, time, 0);
 #endif
 
     pc.Checkpoint(plotfile_name, "particles", true); //Write Tracer particles to plotfile
@@ -130,8 +130,8 @@ int main (int argc, char* argv[])
         {
             RealBox rb({AMREX_D_DECL(0.,0.,0.)}, {AMREX_D_DECL(1.0,1.0,0.125)});
 
-            Array<int,AMREX_SPACEDIM> isp{AMREX_D_DECL(0,1,1)};
-            Geometry::Setup(&rb, 0, isp.data());
+            Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)};
+            Geometry::Setup(&rb, 0, is_periodic.data());
             Box domain(IntVect{AMREX_D_DECL(0,0,0)},
                        IntVect{AMREX_D_DECL(n_cell_x-1,n_cell_y-1,n_cell_z-1)});
             geom.define(domain);
@@ -195,11 +195,11 @@ int main (int argc, char* argv[])
            macproj.getMLMG().setBottomSolver(MLMG::BottomSolver::hypre);
 
         macproj.setDomainBC({AMREX_D_DECL(LinOpBCType::Neumann,
-                                          LinOpBCType::Periodic,
-                                          LinOpBCType::Periodic)},
-            {AMREX_D_DECL(LinOpBCType::Dirichlet,
-                          LinOpBCType::Periodic,
-                          LinOpBCType::Periodic)});
+                                          LinOpBCType::Neumann,
+                                          LinOpBCType::Neumann)},
+            {AMREX_D_DECL(LinOpBCType::Neumann,
+                          LinOpBCType::Neumann,
+                          LinOpBCType::Neumann)});
 
         Real reltol = 1.e-8;
         Real abstol = 1.e-12;
@@ -230,11 +230,11 @@ int main (int argc, char* argv[])
         {
            amrex::Print() << "Creating the initial velocity field " << std::endl;
            define_velocity(time,geom,vel);
-           // macproj.project(reltol, abstol);
+           macproj.project(reltol, abstol);
            EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
            amrex::Print() << "Writing the initial data into plt00000\n" << std::endl;
-           write_plotfile(0, geom, plotfile_mf, MyPC, write_ascii);
+           write_plotfile(0, time, geom, plotfile_mf, MyPC, write_ascii);
         }
 
         // This computes the first dt
@@ -253,7 +253,7 @@ int main (int argc, char* argv[])
                 Real t_nph = time + 0.5 * dt;
 
                 define_velocity(t_nph,geom,vel);
-                // macproj.project(reltol, abstol);
+                macproj.project(reltol, abstol);
 
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     vel[idim].FillBoundary(geom.periodicity());
@@ -264,16 +264,16 @@ int main (int argc, char* argv[])
 
                 MyPC.Redistribute();
 
+                // Increment time
+                time += dt;
+                nstep++;
+
                 // Write to a plotfile
                 if (i%plot_int == 0)
                 {
                    average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
-                   write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
+                   write_plotfile(i, time, geom, plotfile_mf, MyPC, write_ascii);
                 }
-
-                // Increment time
-                time += dt;
-                nstep++;
 
                 amrex::Print() << "Coarse STEP " << i+1 << " ends." << " TIME = " << time
 //                             << " DT = " << dt << " Sum(Phi) = " << sum_phi << std::endl;
@@ -288,14 +288,14 @@ int main (int argc, char* argv[])
                 average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
                 // Write to a plotfile
-                write_plotfile(i, geom, plotfile_mf, MyPC, write_ascii);
+                write_plotfile(i, time, geom, plotfile_mf, MyPC, write_ascii);
                 break;
             }
         }
 
         // Write plotfile at final tim
         EB_average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
-        write_plotfile(nstep, geom, plotfile_mf, MyPC, write_ascii);
+        write_plotfile(nstep, time, geom, plotfile_mf, MyPC, write_ascii);
     }
 
     Real stop_time = amrex::second() - strt_time;
