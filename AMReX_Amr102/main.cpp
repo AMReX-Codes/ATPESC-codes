@@ -103,6 +103,7 @@ int main (int argc, char* argv[])
         int plot_int  = 1;
         int write_ascii  = 0;
         int write_initial_phi  = 0;
+        int write_eb_geom      = 1;
         int use_hypre  = 0;
         Real dt = std::numeric_limits<Real>::max();
 
@@ -123,6 +124,7 @@ int main (int argc, char* argv[])
             pp.query("use_hypre", use_hypre);
             pp.query("write_ascii", write_ascii);
             pp.query("write_initial_phi", write_initial_phi);
+            pp.query("write_eb_geom", write_eb_geom);
         }
 
 #ifndef AMREX_USE_HYPRE
@@ -135,7 +137,9 @@ int main (int argc, char* argv[])
 
         int n_cell_x = n_cell;
         int n_cell_y = n_cell;
+#if (AMREX_SPACEDIM == 3)
         int n_cell_z = n_cell/8;
+#endif
 
         Geometry geom;
         BoxArray grids;
@@ -195,18 +199,18 @@ int main (int argc, char* argv[])
         // by the volume fraction.
         for (MFIter mfi(phi_mf); mfi.isValid(); ++mfi)
         {
-            const Box& box = mfi.validbox();
+            const Box& bx = mfi.validbox();
             Array4<Real> phi = phi_mf[mfi].array();
             Array4<const Real> vol = vol_mf[mfi].array();
             const auto plo = geom.ProbLoArray();
             const auto dx = geom.CellSizeArray();
 
-            amrex::ParallelFor(box,
+            amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                Real z = plo[2] + (0.5+k) * dx[2];
-                Real y = plo[1] + (0.5+j) * dx[1];
                 Real x = plo[0] + (0.5+i) * dx[0]; 
+                Real y = plo[1] + (0.5+j) * dx[1];
+
                 Real r2 = (pow(x-0.5, 2) + pow(y-0.75,2)) / 0.01;
 
                 const Real threshold = 0.1;
@@ -286,11 +290,13 @@ int main (int argc, char* argv[])
         Real dt_limit = std::min(dt_x, dt_y);
         dt = 0.1 * dt_limit;
 
-        if (AMREX_SPACEDIM > 2)
-           vel[2].setVal(0.0);
-
-        amrex::Print() << "Writing EB surface" << std::endl;
-        WriteEBSurface (grids, dmap, geom, ebfact);
+#if (AMREX_SPACEDIM == 3)
+        if (write_eb_geom) 
+        {
+            amrex::Print() << "Writing EB surface" << std::endl;
+            WriteEBSurface (grids, dmap, geom, ebfact);
+        }
+#endif
 
         Real time = 0.0;
 

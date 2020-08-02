@@ -20,9 +20,9 @@ define_velocity (const Real time, const Geometry& geom, Array<MultiFab,AMREX_SPA
         for (MFIter mfi(phi,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             GpuArray<Box, AMREX_SPACEDIM> nbx;
-            AMREX_D_TERM(nbx[0] = mfi.tilebox(IntVect(1,0,0));,   // x-face-based tilebox
-                         nbx[1] = mfi.tilebox(IntVect(0,1,0));,   // y-face-based tilebox
-                         nbx[2] = mfi.tilebox(IntVect(0,0,1)););  // z-face-based tilebox
+            AMREX_D_TERM(nbx[0] = mfi.tilebox(IntVect{AMREX_D_DECL(1,0,0)});,   // x-face-based tilebox
+                         nbx[1] = mfi.tilebox(IntVect{AMREX_D_DECL(0,1,0)});,   // y-face-based tilebox
+                         nbx[2] = mfi.tilebox(IntVect{AMREX_D_DECL(0,0,1)}););  // z-face-based tilebox
 
             AMREX_D_TERM(const Box& ngbxx = amrex::grow(mfi.nodaltilebox(0),1);,
                          const Box& ngbxy = amrex::grow(mfi.nodaltilebox(1),1);,

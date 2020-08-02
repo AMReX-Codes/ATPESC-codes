@@ -158,8 +158,44 @@ FluidParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
-    const Real inv_cell_volume = dxi[0]*dxi[1]*dxi[2];
+#if (AMREX_SPACEDIM == 2)
+    const Real inv_cell_volume = dxi[0]*dxi[1];
+    amrex::ParticleToMesh(*this, phi, 0,
+    [=] AMREX_GPU_DEVICE (const FluidParticleContainer::ParticleType& p,
+                          amrex::Array4<amrex::Real> const& phi_arr)
+    {
+        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
+        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
 
+        int i = std::floor(lx);
+        int j = std::floor(ly);
+        int k = 0;
+
+        amrex::Real xint = lx - i;
+        amrex::Real yint = ly - j;
+
+        // Cloud In Cell interpolation
+        amrex::Real sx[] = {1.-xint, xint};
+        amrex::Real sy[] = {1.-yint, yint};
+
+        // Nearest Grid Point Interpolation
+        if (interpolation == Interpolation::NGP) {
+            sx[0] = 0.0;
+            sy[0] = 0.0;
+
+            sx[1] = 1.0;
+            sy[1] = 1.0;
+        }
+
+        // Add up the number of physical particles represented by our particle weights to the grid
+        // and divide by the cell volume to get the number density on the grid.
+        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int ii = 0; ii <= 1; ++ii) {
+            amrex::Gpu::Atomic::Add(&phi_arr(i+ii-1, j+jj-1, k), sx[ii]*sy[jj] * p.rdata(PIdx::Weight) * inv_cell_volume);
+        }}
+    });
+#else
+    const Real inv_cell_volume = dxi[0]*dxi[1]*dxi[2];
     amrex::ParticleToMesh(*this, phi, 0,
     [=] AMREX_GPU_DEVICE (const FluidParticleContainer::ParticleType& p,
                           amrex::Array4<amrex::Real> const& phi_arr)
@@ -200,6 +236,7 @@ FluidParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
             amrex::Gpu::Atomic::Add(&phi_arr(i+ii-1, j+jj-1, k+kk-1), sx[ii]*sy[jj]*sz[kk] * p.rdata(PIdx::Weight) * inv_cell_volume);
         }}}
     });
+#endif
 }
 
 //
@@ -212,6 +249,51 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
     const auto dx  = geom.CellSizeArray();
+#if (AMREX_SPACEDIM == 2)
+    const Real cell_volume = dx[0]*dx[1];
+    const Real volume_per_particle = cell_volume / NumParticlesPerCell();
+
+    amrex::MeshToParticle(*this, phi, 0,
+    [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
+                          amrex::Array4<const amrex::Real> const& phi_arr)
+    {
+        amrex::Real lx = (p.pos(0) - plo[0]) * dxi[0] + 0.5;
+        amrex::Real ly = (p.pos(1) - plo[1]) * dxi[1] + 0.5;
+
+        int i = std::floor(lx);
+        int j = std::floor(ly);
+        int k = 0;
+
+        amrex::Real xint = lx - i;
+        amrex::Real yint = ly - j;
+
+        // Cloud In Cell interpolation (CIC)
+        amrex::Real sx[] = {1.-xint, xint};
+        amrex::Real sy[] = {1.-yint, yint};
+
+        // Nearest Grid Point Interpolation (NGP)
+        if (interpolation == Interpolation::NGP) {
+            sx[0] = 0.0;
+            sy[0] = 0.0;
+
+            sx[1] = 1.0;
+            sy[1] = 1.0;
+        }
+
+        // The particle weight is the number of physical particles it represents.
+        // This is set from the number density in the grid phi in 2 steps:
+
+        // Step 1: interpolate number density phi using the particle shape factor for CIC or NGP
+        amrex::Real interpolated_phi = 0.0;
+        for (int jj = 0; jj <= 1; ++jj) { 
+        for (int ii = 0; ii <= 1; ++ii) {
+            interpolated_phi += sx[ii]*sy[jj] * phi_arr(i+ii-1,j+jj-1,k);
+        }}
+
+        // Step 2: scale interpolated number density by the volume per particle and set particle weight
+        p.rdata(PIdx::Weight) = interpolated_phi * volume_per_particle;
+    });
+#else
     const Real cell_volume = dx[0]*dx[1]*dx[2];
     const Real volume_per_particle = cell_volume / NumParticlesPerCell();
 
@@ -261,6 +343,7 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
         // Step 2: scale interpolated number density by the volume per particle and set particle weight
         p.rdata(PIdx::Weight) = interpolated_phi * volume_per_particle;
     });
+#endif
 }
 
 //
