@@ -584,7 +584,12 @@ AmrCoreAdv::timeStepWithSubcycling (int lev, Real time, int iteration)
     }
 
     // Advance a single level for a single time step, and update flux registers
-    Real t_nph = 0.5 * (t_old[lev] + t_new[lev]);
+
+    t_old[lev] = t_new[lev];
+    t_new[lev] += dt[lev];
+
+    Real t_nph = t_old[lev] + 0.5*dt[lev]; 
+
     DefineVelocityAtLevel(lev, t_nph);
     AdvancePhiAtLevel(lev, time, dt[lev], iteration, nsubsteps[lev]);
 
@@ -714,9 +719,12 @@ AmrCoreAdv::EstTimeStep (int lev, Real time, bool local)
        DefineVelocityAtLevel(lev,t_nph_predicted);
     }
 
+    const Vector<std::string> coord_dir {AMREX_D_DECL("x", "y", "z")};
+
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = facevel[lev][idim].norm0(0,0,local);
+        // amrex::Print() << "Max vel in " << coord_dir[idim] << "-direction is " << est << std::endl;
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
