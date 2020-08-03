@@ -34,7 +34,7 @@ Real est_time_step(const Real current_dt, const Geometry& geom, Array<MultiFab,A
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         Real est = vel[idim].norm0(0,0,false);
-        amrex::Print() << "Max vel in " << coord_dir[idim] << "-direction is " << est << std::endl;
+        // amrex::Print() << "Max vel in " << coord_dir[idim] << "-direction is " << est << std::endl;
         dt_est = amrex::min(dt_est, dx[idim]/est);
     }
 
@@ -331,7 +331,7 @@ int main (int argc, char* argv[])
                 FPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
-                if ((i+1) % plot_int == 0)
+                if (plot_int > 0 && (i+1)%plot_int == 0)
                 {
                    average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
