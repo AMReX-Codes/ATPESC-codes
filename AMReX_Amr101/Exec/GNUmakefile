@@ -22,4 +22,4 @@ USE_SENSEI_INSITU = FALSE
 Bpack   := ./Make.package 
 Blocs   := . 
 
-include ../Make.Adv
+include Make.Adv
