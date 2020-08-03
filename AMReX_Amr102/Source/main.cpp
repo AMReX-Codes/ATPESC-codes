@@ -331,7 +331,7 @@ int main (int argc, char* argv[])
                 FPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
-                if ((i+1) % plot_int == 0)
+                if (plot_int > 0 && (i+1)%plot_int == 0)
                 {
                    average_face_to_cellcenter(plotfile_mf,0,amrex::GetArrOfConstPtrs(vel));
 
