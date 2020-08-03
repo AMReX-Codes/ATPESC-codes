@@ -42,4 +42,4 @@ write_eb_geom = 0
 ######
 # Misc
 ######
-amrex.fpe_trap_invalid=1                # generate a backtrace if any floating point errors are encountered
+amrex.fpe_trap_invalid = 1              # generate a backtrace if any floating point errors are encountered
