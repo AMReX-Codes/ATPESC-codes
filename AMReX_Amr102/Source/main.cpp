@@ -105,6 +105,7 @@ int main (int argc, char* argv[])
         int write_initial_phi  = 0;
         int write_eb_geom      = 1;
         int use_hypre  = 0;
+        Real phi_cutoff = 0.1;
         Real dt = std::numeric_limits<Real>::max();
 
         Real particle_radius = 0.02;
@@ -125,6 +126,7 @@ int main (int argc, char* argv[])
             pp.query("write_ascii", write_ascii);
             pp.query("write_initial_phi", write_initial_phi);
             pp.query("write_eb_geom", write_eb_geom);
+            pp.query("phi_cutoff", phi_cutoff);
         }
 
 #ifndef AMREX_USE_HYPRE
@@ -210,9 +212,8 @@ int main (int argc, char* argv[])
 
                 Real r2 = (pow(x-0.5, 2) + pow(y-0.75,2)) / 0.01;
 
-                const Real threshold = 0.1;
                 Real gauss = std::exp(-r2);
-                gauss = gauss >= threshold ? gauss : 0.0;
+                gauss = gauss >= phi_cutoff ? gauss : 0.0;
 
                 phi(i,j,k) = gauss * vol(i,j,k);
             });
@@ -232,7 +233,7 @@ int main (int argc, char* argv[])
         // Initialize n_ppc randomly located particles per cell.
         // Particles are weighted by interpolated density field phi.
         // Only creates particles in regions not covered by the embedded geometry.
-        FPC.InitParticles(n_ppc, phi_mf, vol_mf, pic_interpolation);
+        FPC.InitParticles(phi_mf, vol_mf, phi_cutoff, n_ppc, pic_interpolation);
 
         FPC.DepositToMesh(phi_mf, pic_interpolation);
         EB_set_covered(phi_mf,-1.0);
