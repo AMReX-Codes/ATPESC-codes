@@ -219,7 +219,7 @@ int main (int argc, char* argv[])
         }
 
         phi_mf.FillBoundary(geom.periodicity());
-        EB_set_covered(phi_mf,-1.0);
+        EB_set_covered(phi_mf,0.0);
 
         if (write_initial_phi) {
             const std::string pfname = "initial_phi";
@@ -306,15 +306,11 @@ int main (int argc, char* argv[])
 
                 // Deposit Particles to the grid to update phi
                 FPC.DepositToMesh(phi_mf, pic_interpolation);
-
                 EB_set_covered(phi_mf,-1.0);
 
                 // Increment time
                 time += dt;
                 nstep++;
-
-                // Deposit Particles to the grid to update phi
-                FPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
                 if (plot_int > 0 && (i+1)%plot_int == 0)
