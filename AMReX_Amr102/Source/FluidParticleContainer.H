@@ -38,7 +38,7 @@ public:
 
     ~FluidParticleContainer () {}
 
-    void InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation=Interpolation::CIC);
+    void InitParticles(const MultiFab& phi, const MultiFab& ebvol, Real density_cutoff, int nppc, int interpolation=Interpolation::CIC);
 
     int NumParticlesPerCell() { return m_number_particles_per_cell; }
 
@@ -48,7 +48,7 @@ public:
 
     void InterpolateFromMesh (const MultiFab& phi, int interpolation=Interpolation::CIC);
 
-    void RemoveCoveredParticles (const MultiFab& ebvol);
+    void RemoveCoveredParticles (const MultiFab& ebvol, Real density_cutoff);
 };
 
 }

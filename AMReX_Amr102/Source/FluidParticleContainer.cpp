@@ -7,7 +7,7 @@ namespace amrex {
 // Initialize a random number of particles per cell determined by nppc
 //
 void
-FluidParticleContainer::InitParticles(int nppc, const MultiFab& phi, const MultiFab& ebvol, int interpolation)
+FluidParticleContainer::InitParticles(const MultiFab& phi, const MultiFab& ebvol, Real density_cutoff, int nppc, int interpolation)
 {
     // Save the number of particles per cell we are using for the particle-mesh operations
     m_number_particles_per_cell = nppc;
@@ -29,7 +29,8 @@ FluidParticleContainer::InitParticles(int nppc, const MultiFab& phi, const Multi
     InterpolateFromMesh(phi, interpolation);
 
     // Set invalid particle IDs for particles from cells covered by the embedded geometry
-    RemoveCoveredParticles(ebvol);
+    // or where density < density_cutoff
+    RemoveCoveredParticles(ebvol, density_cutoff);
 
     // Redistribute to remove the EB-covered particles based on the invalid IDs 
     Redistribute();
@@ -277,11 +278,17 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
 // Remove particles covered by the embedded geometry 
 //
 void
-FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol)
+FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol, const Real density_cutoff)
 {
     const auto geom = Geom(0);
     const auto plo = geom.ProbLoArray();
     const auto dxi = geom.InvCellSizeArray();
+    const auto dx  = geom.CellSizeArray();
+    const Real cell_volume = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
+    const Real volume_per_particle = cell_volume / NumParticlesPerCell();
+
+    // Get the particle weight corresponding to the density cutoff on the grid
+    const amrex::Real weight_cutoff = density_cutoff * volume_per_particle;
 
     amrex::MeshToParticle(*this, ebvol, 0,
     [=] AMREX_GPU_DEVICE (FluidParticleContainer::ParticleType& p,
@@ -304,12 +311,12 @@ FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol)
         );
 
         // Get the EB volume fraction of the cell this particle is in
-        amrex::Real cell_vol = vol_arr(i,j,k);
+        const amrex::Real cell_vol = vol_arr(i,j,k);
 
         // If the cell volume = 0, then the particle is covered by the EB
         // so we want to delete the particle in the next call to Redistribute().
-        // We also delete the particle if the weight is zero.
-        if (cell_vol == 0.0 || p.rdata(PIdx::Weight) == 0.0) {
+        // We also delete the particle if the weight is zero or less than the cutoff weight.
+        if (cell_vol == 0.0 || p.rdata(PIdx::Weight) == 0.0 || p.rdata(PIdx::Weight) < weight_cutoff) {
             p.id() = -1;
         }
     });
