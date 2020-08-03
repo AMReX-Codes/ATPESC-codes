@@ -1,5 +1,8 @@
 #include <AMReX_Particles.H>
 #include <AMReX.H>
+#include <AMReX_BC_TYPES.H>
+#include <AMReX_BCRec.H>
+#include <AMReX_BCUtil.H>
 #include <AMReX_EBMultiFabUtil.H>
 #include <AMReX_EB2.H>
 #include <AMReX_EB2_IF.H>
@@ -71,14 +74,15 @@ void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf,
                                      geom, time, 0);
 #endif
 
-    pc.Checkpoint(plotfile_name, "particles", true); //Write Tracer particles to plotfile
+    pc.Checkpoint(plotfile_name, "particles", true); // Write particles to plotfile
 
     std::stringstream pstream;
     pstream << "part" << std::setw(5) << std::setfill('0') << step;
     const std::string ascii_filename = pstream.str();
 
-    if (write_ascii)
+    if (write_ascii) {
        pc.WriteAsciiFile(ascii_filename);
+    }
 
 }
 
@@ -161,6 +165,30 @@ int main (int argc, char* argv[])
             dmap.define(grids);
         }
 
+        const int ncomp_phi = 1;
+        Vector<BCRec> phi_bc(ncomp_phi);
+        for (int n = 0; n < ncomp_phi; ++n)
+        {
+            for (int i = 0; i < AMREX_SPACEDIM; ++i)
+            {
+                // is_periodic overrides inputs in domain_(lo/hi)_bc_type
+                if (geom.isPeriodic(i))
+                {
+                    // Set the BCs to interior Dirichlet if we are periodic
+                    // in this dimension:
+                    phi_bc[n].setLo(i, BCType::int_dir);
+                    phi_bc[n].setHi(i, BCType::int_dir);
+                }
+                else
+                {
+                    // Use first order extrapolation to enforce Neumann BCs with 0 gradient
+                    // at the boundaries if we are not periodic in this dimension:
+                    phi_bc[n].setLo(i, BCType::foextrap);
+                    phi_bc[n].setHi(i, BCType::foextrap);
+                }
+            }
+        }
+
         Array<MultiFab,AMREX_SPACEDIM> vel;
         MultiFab plotfile_mf;
         MultiFab phi_mf;
@@ -219,7 +247,14 @@ int main (int argc, char* argv[])
             });
         }
 
+        // Fill periodic BCs and interior ghost cells
         phi_mf.FillBoundary(geom.periodicity());
+
+        // Fill non-periodic domain BCs (e.g. Neumann in x & y dimensions)
+        FillDomainBoundary(phi_mf, geom, phi_bc);
+
+        // Set cells covered by the embedded boundary to phi = 0 so
+        // when we interpolate to particles, the covered cells do not contribute.
         EB_set_covered(phi_mf,0.0);
 
         if (write_initial_phi) {
