@@ -23,9 +23,8 @@ extern void make_eb_cylinder(const Geometry& geom);
 extern void define_velocity(const Real time, const Geometry& geo, Array<MultiFab,AMREX_SPACEDIM>& vel_out, const MultiFab& phi);
 extern void mac_project_velocity(Array<MultiFab,AMREX_SPACEDIM>& vel_out, const Geometry& geom, int use_hypre); 
 
-Real est_time_step(const Real current_dt, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel)
+Real est_time_step(const Real current_dt, const Geometry& geom, Array<MultiFab,AMREX_SPACEDIM>& vel, const Real cfl)
 {
-    const Real cfl = 0.7;
     const Real change_max = 1.1;
 
     Real dt_est = std::numeric_limits<Real>::max();
@@ -110,11 +109,9 @@ int main (int argc, char* argv[])
         int write_eb_geom      = 1;
         int use_hypre  = 0;
         Real phi_cutoff = 0.1;
+        Real cfl = 0.7;
+
         Real dt = std::numeric_limits<Real>::max();
-
-        Real particle_radius = 0.02;
-
-        amrex::Vector<int> ob_id;
 
         // read parameters
         {
@@ -131,6 +128,7 @@ int main (int argc, char* argv[])
             pp.query("write_initial_phi", write_initial_phi);
             pp.query("write_eb_geom", write_eb_geom);
             pp.query("phi_cutoff", phi_cutoff);
+            pp.query("cfl", cfl);
         }
 
 #ifndef AMREX_USE_HYPRE
@@ -308,7 +306,7 @@ int main (int argc, char* argv[])
         }
 
         // This computes the first dt
-        dt = est_time_step(dt, geom, vel);
+        dt = est_time_step(dt, geom, vel, cfl);
 
         int nstep = 0;
 
@@ -366,7 +364,7 @@ int main (int argc, char* argv[])
                                << " DT = " << dt << " Sum(Phi) = " << sum_phi << "\n" << std::endl;
 
                 // Compute lagged dt for next time step based on this half-time velocity
-                dt = est_time_step(dt, geom, vel);
+                dt = est_time_step(dt, geom, vel, cfl);
 
             } else {
 
