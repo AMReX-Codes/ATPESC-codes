@@ -14,7 +14,9 @@ max_steps = 200                          # the maximum number of steps (if max_s
 
 n_ppc = 100                              # number of particles per cell for representing the fluid
 
-pic_interpolation = 1                    # Particle In Cell interpolation scheme: 0 = nearest grid point, 1 = cloud in cell
+pic_interpolation = 1                    # Particle In Cell interpolation scheme:
+                                         # 0 = nearest grid point
+                                         # 1 = cloud in cell
 
 write_initial_phi = 1
 
