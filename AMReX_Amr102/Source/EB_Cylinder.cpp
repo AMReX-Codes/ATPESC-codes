@@ -34,11 +34,19 @@ make_eb_cylinder(const Geometry& geom)
     amrex::Print() << " Internal Flow: " << inside << std::endl;
     amrex::Print() << " Radius:    " << radius << std::endl;
     amrex::Print() << " Direction: " << direction << std::endl;
-    amrex::Print() << " Center:    " << center[0] << ", " << center[1] << ", " << center[2]
-				   << std::endl;
+    amrex::Print() << " Center:    " << center[0] << ", " << center[1] 
+#if (AMREX_SPACEDIM == 3)
+                   << ", " << center[2]
+#endif
+		   << std::endl;
 
-    // Build the Cylinder implficit function representing the curved walls     
+    // Build the Cylinder implicit function representing the curved walls     
+#if (AMREX_SPACEDIM == 2)
+    // In 2D the sphere becomes a circle
+    EB2::SphereIF my_cyl(radius, center, inside);
+#else
     EB2::CylinderIF my_cyl(radius, direction, center, inside);
+#endif
 
     // Generate GeometryShop
     auto gshop = EB2::makeShop(my_cyl);
