@@ -10,16 +10,12 @@ AmrCoreAdv::AdvancePhiAtLevel (int lev, Real time, Real dt_lev, int iteration, i
     constexpr int num_grow = 3;
 
     std::swap(phi_old[lev], phi_new[lev]);
-    t_old[lev] = t_new[lev];
-    t_new[lev] += dt_lev;
 
     MultiFab& S_new = phi_new[lev];
 
     const Real old_time = t_old[lev];
     const Real new_time = t_new[lev];
     const Real ctr_time = 0.5*(old_time+new_time);
-
-    DefineVelocityAtLevel(lev,ctr_time);
 
     const auto dx = geom[lev].CellSizeArray();
     GpuArray<Real, AMREX_SPACEDIM> dtdx;
