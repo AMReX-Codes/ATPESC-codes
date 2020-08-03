@@ -16,7 +16,7 @@ n_ppc = 100                              # number of particles per cell for repr
 
 pic_interpolation = 1                    # Particle In Cell interpolation scheme: 0 = nearest grid point, 1 = cloud in cell
 
-write_initial_phi = 1
+write_initial_phi = 0
 
 ###################################################
 # Control the verbosity and tolerance of the solver
