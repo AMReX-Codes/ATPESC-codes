@@ -14,7 +14,7 @@ stop_time = 2.0
 # Problem size and geometry
 # *****************************************************************
 geometry.prob_lo     =  0.0  0.0  0.0 
-geometry.prob_hi     =  1.0  1.0  0.25
+geometry.prob_hi     =  1.0  1.0  0.125
 geometry.is_periodic =  1    1    1
 
 # *****************************************************************
@@ -25,7 +25,7 @@ amr.v              = 1       # verbosity in Amr
 # *****************************************************************
 # Resolution and refinement
 # *****************************************************************
-amr.n_cell          = 32   32   8
+amr.n_cell          = 64 64 8
 amr.max_level       = 3       # maximum level number allowed -- 
                               # number of levels = max_level + 1
 
@@ -48,7 +48,7 @@ amr.regrid_int      = 2       # how often to regrid
 # *****************************************************************
 # Time step control
 # *****************************************************************
-adv.cfl            = 0.9     # CFL constraint for explicit advection
+adv.cfl            = 0.7     # CFL constraint for explicit advection
 
 adv.do_subcycle    = 1       # Do we subcycle in time?
 
@@ -68,7 +68,7 @@ adv.phierr = 1.01  1.1  1.5
 # Plotfile name and frequency
 # *****************************************************************
 amr.plot_file  = plt    # root name of plot file
-amr.plot_int   = 10     # number of timesteps between plot files
+amr.plot_int   =  10    # number of timesteps between plot files
                         # if negative then no plot files will be written
 
 # *****************************************************************
