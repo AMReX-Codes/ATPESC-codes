@@ -219,7 +219,7 @@ int main (int argc, char* argv[])
         }
 
         phi_mf.FillBoundary(geom.periodicity());
-        EB_set_covered(phi_mf,-1.0);
+        EB_set_covered(phi_mf,0.0);
 
         if (write_initial_phi) {
             const std::string pfname = "initial_phi";
@@ -246,20 +246,6 @@ int main (int argc, char* argv[])
         AMREX_D_TERM(vel[0].setVal(1.0);,
                      vel[1].setVal(0.0);,
                      vel[2].setVal(0.0););
-
-#ifdef _OPENMP
-#pragma omp parallel if (Gpu::notInLaunchRegion())
-#endif
-
-        // get max velocity on grid vx_max, vy_max
-        Real vx_max = vel[0].max(0, 0);
-        Real vy_max = vel[1].max(0, 0);
-        // calculate dt_x = dx/vx_max and dt_y
-        Real dt_x = geom.CellSize(0)/vx_max;
-        Real dt_y = geom.CellSize(1)/vy_max;
-        // dt_limit = min(dt_x, dt_y)
-        Real dt_limit = std::min(dt_x, dt_y);
-        dt = 0.1 * dt_limit;
 
 #if (AMREX_SPACEDIM == 3)
         if (write_eb_geom) 
@@ -320,15 +306,11 @@ int main (int argc, char* argv[])
 
                 // Deposit Particles to the grid to update phi
                 FPC.DepositToMesh(phi_mf, pic_interpolation);
-
                 EB_set_covered(phi_mf,-1.0);
 
                 // Increment time
                 time += dt;
                 nstep++;
-
-                // Deposit Particles to the grid to update phi
-                FPC.DepositToMesh(phi_mf);
 
                 // Write to a plotfile
                 if (plot_int > 0 && (i+1)%plot_int == 0)

@@ -38,3 +38,8 @@ cylinder.center    = 0.7 0.5 0.5
 cylinder.internal_flow = false          # we are computing flow around the cylinder, not inside it
 
 write_eb_geom = 0
+
+######
+# Misc
+######
+amrex.fpe_trap_invalid = 1              # generate a backtrace if any floating point errors are encountered
