@@ -174,9 +174,9 @@ FluidParticleContainer::DepositToMesh (MultiFab& phi, int interpolation)
         int k = 0;
 
         AMREX_D_TERM(
-            i = std::floor(lx);,
-            j = std::floor(ly);,
-            k = std::floor(lz);
+            i = amrex::Math::floor(lx);,
+            j = amrex::Math::floor(ly);,
+            k = amrex::Math::floor(lz);
         );
 
         AMREX_D_TERM(
@@ -234,9 +234,9 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
         int k = 0;
 
         AMREX_D_TERM(
-            i = std::floor(lx);,
-            j = std::floor(ly);,
-            k = std::floor(lz);
+            i = amrex::Math::floor(lx);,
+            j = amrex::Math::floor(ly);,
+            k = amrex::Math::floor(lz);
         );
 
         AMREX_D_TERM(
@@ -261,6 +261,7 @@ FluidParticleContainer::InterpolateFromMesh (const MultiFab& phi, int interpolat
 
         // Step 1: interpolate number density phi using the particle shape factor for CIC or NGP
         amrex::Real interpolated_phi = 0.0;
+
         for (int kk = AMREX_D_PICK(1, 1, 0); kk <= 1; ++kk) { 
         for (int jj = AMREX_D_PICK(1, 0, 0); jj <= 1; ++jj) {
         for (int ii = 0; ii <= 1; ++ii) {
@@ -297,9 +298,9 @@ FluidParticleContainer::RemoveCoveredParticles (const MultiFab& ebvol)
         int k = 0;
 
         AMREX_D_TERM(
-            i = std::floor(lx);,
-            j = std::floor(ly);,
-            k = std::floor(lz);
+            i = amrex::Math::floor(lx);,
+            j = amrex::Math::floor(ly);,
+            k = amrex::Math::floor(lz);
         );
 
         // Get the EB volume fraction of the cell this particle is in
