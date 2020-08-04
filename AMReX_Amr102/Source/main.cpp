@@ -101,8 +101,8 @@ int main (int argc, char* argv[])
         int max_grid_size = 32;
         int n_ppc = 4;
         int pic_interpolation = Interpolation::CIC;
-        Real max_time = 1000.0;
-        int max_steps = 100;
+        Real stop_time = 1000.0;
+        int max_step = 100;
         int plot_int  = 1;
         int write_ascii  = 0;
         int write_initial_phi  = 0;
@@ -120,8 +120,8 @@ int main (int argc, char* argv[])
             pp.query("max_grid_size", max_grid_size);
             pp.query("n_ppc", n_ppc);
             pp.query("pic_interpolation", pic_interpolation);
-            pp.query("max_time", max_time);
-            pp.query("max_steps", max_steps);
+            pp.query("stop_time", stop_time);
+            pp.query("max_step", max_step);
             pp.query("plot_int", plot_int);
             pp.query("use_hypre", use_hypre);
             pp.query("write_ascii", write_ascii);
@@ -314,14 +314,14 @@ int main (int argc, char* argv[])
         Real sum_phi = phi_mf.sum();
         amrex::Print() << "Initial sum of phi is " << sum_phi << std::endl;
 
-        for (int i = 0; i < max_steps; i++)
+        for (int i = 0; i < max_step; i++)
         {
-            if (time < max_time)
+            if (time < stop_time)
             {
                 amrex::Print() << "STEP " << i+1 << " starts at TIME = " << time
                                << " DT = " << dt << std::endl;
 
-                dt = amrex::min(dt, max_time - time);
+                dt = amrex::min(dt, stop_time - time);
 
                 Real t_nph = time + 0.5 * dt;
 

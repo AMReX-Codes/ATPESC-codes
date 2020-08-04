@@ -1,12 +1,11 @@
-n_cell = 64                              # number of cells in x- and y-directions; z-dir has 1/8 n_cell
+max_step  = 200
+stop_time = 2.0
+
+n_cell    = 64                           # number of cells in x- and y-directions; z-dir has 1/8 n_cell
 
 max_grid_size = 32                       # the maximum number of cells in any direction in a single grid
 
 plot_int = 10                            # frequency of writing plotfiles
-
-max_time =  2.0                          # the final time (if max_time < max_steps * time_step)
-
-max_steps = 200                          # the maximum number of steps (if max_steps * time_step < max_time))
 
 #####################################################################
 # Control the number of particles and the particle/mesh interpolation
