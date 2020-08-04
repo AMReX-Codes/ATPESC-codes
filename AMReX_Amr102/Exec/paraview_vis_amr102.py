@@ -40,6 +40,7 @@ def generate_movie_3D(AllPlotFiles):
     renderView1 = GetActiveViewOrCreate('RenderView')
     # uncomment following to set a specific view size
     # renderView1.ViewSize = [1166, 1176]
+    renderView1.ViewSize = [1200, 1200]
 
     # get layout
     layout1 = GetLayout()
@@ -135,6 +136,17 @@ def generate_movie_3D(AllPlotFiles):
 
     # get opacity transfer function/opacity map for 'phi'
     phiPWF = GetOpacityTransferFunction('phi')
+
+    # show color bar/color legend
+    slice1Display.SetScalarBarVisibility(renderView1, True)
+
+    # get color legend/bar for phiLUT in view renderView1
+    phiLUTColorBar = GetScalarBar(phiLUT, renderView1)
+
+    # change scalar bar placement
+    phiLUTColorBar.WindowLocation = 'AnyLocation'
+    phiLUTColorBar.Position = [0, 0.75]
+    phiLUTColorBar.ScalarBarLength = 0.2
 
     # create a new 'AMReX/BoxLib Particles Reader'
     plt00_1 = AMReXBoxLibParticlesReader(FileNames=AllPlotFiles)
@@ -257,21 +269,9 @@ def generate_movie_3D(AllPlotFiles):
     output_movie = output_movie_base + ".avi"
     SaveAnimation(output_movie,
                 renderView1,
-                ImageResolution=[args.resolution, args.resolution],
+                ImageResolution=[1200, 1200],
                 FrameRate=args.frame_rate,
                 FrameWindow=[0, len(AllPlotFiles)-1])
-
-    #### saving camera placements for all active views
-
-    # current camera placement for renderView1
-    renderView1.CameraPosition = [0.806487938976244, 0.6098478265765159, 2.3240231832552687]
-    renderView1.CameraFocalPoint = [0.4999999999999996, 0.49999999999999956, 0.06249999999999997]
-    renderView1.CameraViewUp = [-0.004859468445493335, 0.9988423431014976, -0.04785769733216954]
-    renderView1.CameraParallelScale = 0.7159515667518355
-
-    #### uncomment the following to render all views
-    # RenderAllViews()
-    # alternatively, if you want to write images, you can use SaveScreenshot(...).
 
     return output_movie_base, output_movie
 
@@ -299,6 +299,7 @@ def generate_movie_2D(AllPlotFiles):
     renderView1 = GetActiveViewOrCreate('RenderView')
     # uncomment following to set a specific view size
     # renderView1.ViewSize = [1166, 1176]
+    renderView1.ViewSize = [1200, 1200]
 
     # get layout
     layout1 = GetLayout()
@@ -352,6 +353,17 @@ def generate_movie_2D(AllPlotFiles):
 
     # get opacity transfer function/opacity map for 'phi'
     phiPWF = GetOpacityTransferFunction('phi')
+
+    # show color bar/color legend
+    plt00Display.SetScalarBarVisibility(renderView1, True)
+
+    # get color legend/bar for phiLUT in view renderView1
+    phiLUTColorBar = GetScalarBar(phiLUT, renderView1)
+
+    # change scalar bar placement
+    phiLUTColorBar.WindowLocation = 'AnyLocation'
+    phiLUTColorBar.Position = [0, 0.75]
+    phiLUTColorBar.ScalarBarLength = 0.2
 
     # create a new 'AMReX/BoxLib Particles Reader'
     plt00_1 = AMReXBoxLibParticlesReader(FileNames=AllPlotFiles)
@@ -493,27 +505,15 @@ def generate_movie_2D(AllPlotFiles):
     output_movie = output_movie_base + ".avi"
     SaveAnimation(output_movie,
                   renderView1,
-                  ImageResolution=[args.resolution, args.resolution],
+                  ImageResolution=[1200, 1200],
                   FrameRate=args.frame_rate,
                   FrameWindow=[0, len(AllPlotFiles)-1])
-
-    #### saving camera placements for all active views
-
-    # current camera placement for renderView1
-    renderView1.InteractionMode = '2D'
-    renderView1.CameraPosition = [0.5, 0.5, 10000.0]
-    renderView1.CameraFocalPoint = [0.5, 0.5, 0.0]
-    renderView1.CameraParallelScale = 0.5893976543919168
-
-    #### uncomment the following to render all views
-    # RenderAllViews()
-    # alternatively, if you want to write images, you can use SaveScreenshot(...).
 
     return output_movie_base, output_movie
 
 def convert_avi_to_gif(output_movie_base, output_movie):
     # use ffmpeg to convert the avi movie into an animated gif
-    ffmpeg_convert_to_gif = 'ffmpeg -y -i {} -vf "fps=35,scale=1024:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 {}.gif'.format(output_movie, output_movie_base)
+    ffmpeg_convert_to_gif = 'ffmpeg -y -i {} -vf "fps=35,scale={}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 {}.gif'.format(output_movie, args.resolution, output_movie_base)
     subprocess.run(ffmpeg_convert_to_gif, shell=True)
 
 if __name__ == "__main__":
