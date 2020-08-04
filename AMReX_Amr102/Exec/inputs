@@ -5,7 +5,7 @@ n_cell    = 64                           # number of cells in x- and y-direction
 
 max_grid_size = 32                       # the maximum number of cells in any direction in a single grid
 
-plot_int = 10                            # frequency of writing plotfiles
+plot_int = 5                             # frequency of writing plotfiles
 
 #####################################################################
 # Control the number of particles and the particle/mesh interpolation
