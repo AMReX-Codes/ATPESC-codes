@@ -37,6 +37,26 @@ FluidParticleContainer::InitParticles(const MultiFab& phi, const MultiFab& ebvol
 }
 
 //
+// Sum up particle phi across the domain from the weights
+//
+Real
+FluidParticleContainer::SumPhi()
+{
+    const auto geom = Geom(0);
+    const auto plo = geom.ProbLoArray();
+    const auto dxi = geom.InvCellSizeArray();
+    const auto dx  = geom.CellSizeArray();
+    const Real cell_volume = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
+    const Real volume_per_particle = cell_volume / NumParticlesPerCell();
+
+    using PType = typename FluidParticleContainer::SuperParticleType;
+    Real sum_phi = amrex::ReduceSum(*this, [=] AMREX_GPU_HOST_DEVICE (const PType& p) -> Real { return p.rdata(PIdx::Weight) / volume_per_particle; });
+
+    ParallelDescriptor::ReduceRealSum(sum_phi);
+    return sum_phi;
+}
+
+//
 // Uses midpoint method to advance particles using umac.
 //
 void

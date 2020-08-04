@@ -42,6 +42,8 @@ public:
 
     int NumParticlesPerCell() { return m_number_particles_per_cell; }
 
+    Real SumPhi();
+
     void AdvectWithUmac (MultiFab* umac, int lev, Real dt);
 
     void DepositToMesh (MultiFab& phi, int interpolation=Interpolation::CIC);

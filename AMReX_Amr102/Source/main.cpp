@@ -311,7 +311,9 @@ int main (int argc, char* argv[])
         int nstep = 0;
 
         // Sum phi to check conservation
-        Real sum_phi = phi_mf.sum();
+        // Real sum_phi = phi_mf.sum();
+        Real sum_phi = FPC.SumPhi();
+
         amrex::Print() << "Initial sum of phi is " << sum_phi << std::endl;
 
         for (int i = 0; i < max_step; i++)
@@ -358,7 +360,8 @@ int main (int argc, char* argv[])
                 }
 
                 // Sum phi to check conservation
-                sum_phi = phi_mf.sum();
+                // sum_phi = phi_mf.sum();
+                sum_phi = FPC.SumPhi();
 
                 amrex::Print() << "STEP " << i+1 << " ends   at TIME = " << time
                                << " DT = " << dt << " Sum(Phi) = " << sum_phi << "\n" << std::endl;
