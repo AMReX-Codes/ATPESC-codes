@@ -14,6 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--frame_rate', type=int, default=15, help="Frame rate for generating movies, i.e. number of plots per second in the movie.")
 parser.add_argument('-r', '--resolution', type=int, default=1024, help="(Square) resolution of output movie.")
 parser.add_argument('-d', '--spacedim', type=int, default=3, help="Dimensionality of the problem: 2 or 3")
+parser.add_argument('-w', '--shade_weights', type=int, default=0, help="Toggle on (1) or off (0) shading particles by their weights.")
 args = parser.parse_args()
 
 def generate_movie_3D(AllPlotFiles):
@@ -231,6 +232,30 @@ def generate_movie_3D(AllPlotFiles):
 
     # set scalar coloring
     ColorBy(glyph1Display, ('FIELD', 'vtkBlockColors'))
+
+    if args.shade_weights:
+        # set scalar coloring
+        ColorBy(glyph1Display, ('POINTS', 'real_comp3'))
+
+        # rescale color and/or opacity maps used to include current data range
+        glyph1Display.RescaleTransferFunctionToDataRange(True, False)
+
+        # get color transfer function/color map for 'real_comp3'
+        real_comp3LUT = GetColorTransferFunction('real_comp3')
+
+        # get opacity transfer function/opacity map for 'real_comp3'
+        real_comp3PWF = GetOpacityTransferFunction('real_comp3')
+
+        # show color bar/color legend
+        glyph1Display.SetScalarBarVisibility(renderView1, True)
+
+        # get color legend/bar for real_comp3LUT in view renderView1
+        real_comp3LUTColorBar = GetScalarBar(real_comp3LUT, renderView1)
+
+        # change scalar bar placement
+        real_comp3LUTColorBar.WindowLocation = 'AnyLocation'
+        real_comp3LUTColorBar.Position = [0, 0.4]
+        real_comp3LUTColorBar.ScalarBarLength = 0.2
 
     # create a new 'XML Partitioned Polydata Reader'
     ebpvtp = XMLPartitionedPolydataReader(FileName=['eb.pvtp'])
@@ -455,6 +480,30 @@ def generate_movie_2D(AllPlotFiles):
     # set scalar coloring
     ColorBy(glyph1Display, ('FIELD', 'vtkBlockColors'))
 
+    if args.shade_weights:
+        # set scalar coloring
+        ColorBy(glyph1Display, ('POINTS', 'real_comp2'))
+
+        # rescale color and/or opacity maps used to include current data range
+        glyph1Display.RescaleTransferFunctionToDataRange(True, False)
+
+        # get color transfer function/color map for 'real_comp2'
+        real_comp2LUT = GetColorTransferFunction('real_comp2')
+
+        # get opacity transfer function/opacity map for 'real_comp2'
+        real_comp2PWF = GetOpacityTransferFunction('real_comp2')
+
+        # show color bar/color legend
+        glyph1Display.SetScalarBarVisibility(renderView1, True)
+
+        # get color legend/bar for real_comp2LUT in view renderView1
+        real_comp2LUTColorBar = GetScalarBar(real_comp2LUT, renderView1)
+
+        # change scalar bar placement
+        real_comp2LUTColorBar.WindowLocation = 'AnyLocation'
+        real_comp2LUTColorBar.Position = [0, 0.4]
+        real_comp2LUTColorBar.ScalarBarLength = 0.2
+
     # create a new 'XML Partitioned Polydata Reader'
     ebpvtp = XMLPartitionedPolydataReader(FileName=['eb.pvtp'])
 
@@ -527,6 +576,10 @@ if __name__ == "__main__":
 
     if args.resolution <= 0:
         print("Please specify --resolution R (with R > 0)")
+        exit()
+
+    if not (args.shade_weights == 0 or args.shade_weights == 1):
+        print("Please specify --shade_weights S (with S = 0 or S = 1)")
         exit()
 
     # get all the plotfiles
