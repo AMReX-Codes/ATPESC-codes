@@ -14,7 +14,7 @@
 
 using namespace amrex;
 
-void write_plotfile(int step_counter, const auto& geom, const auto& plotmf, auto& pc,
+void write_plotfile(int step_counter, const Geometry& geom, const MultiFab& plotmf, MyParticleContainer& pc,
                     const int ascii_particle_output)
 {
     std::stringstream sstream;
