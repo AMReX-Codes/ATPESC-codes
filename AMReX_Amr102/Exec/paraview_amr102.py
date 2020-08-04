@@ -268,10 +268,10 @@ def generate_movie_3D(AllPlotFiles):
     output_movie_base = "amr102_3D"
     output_movie = output_movie_base + ".avi"
     SaveAnimation(output_movie,
-                renderView1,
-                ImageResolution=[1200, 1200],
-                FrameRate=args.frame_rate,
-                FrameWindow=[0, len(AllPlotFiles)-1])
+                  renderView1,
+                  ImageResolution=[1200, 1200],
+                  FrameRate=args.frame_rate,
+                  FrameWindow=[0, len(AllPlotFiles)-1])
 
     return output_movie_base, output_movie
 
