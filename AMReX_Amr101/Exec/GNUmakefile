@@ -17,8 +17,6 @@ USE_CUDA   = FALSE
 
 BL_NO_FORT = TRUE
 
-USE_SENSEI_INSITU = FALSE
-
 Bpack   := ./Make.package 
 Blocs   := . 
 
