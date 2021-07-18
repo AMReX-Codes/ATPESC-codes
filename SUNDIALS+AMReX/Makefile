@@ -11,17 +11,17 @@
 
 # set default values for any unset environment variables
 ifeq ($(AMREX_INSTALL_DIR),)
-  AMREX_INSTALL_DIR = /projects/ATPESC2020/MathPackagesTraining2020/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-19.08-s7qw57lejtso4gglyl7wdezjq5qyzbdm
+  AMREX_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-21.07-d7jo24niuhwcbetn2xlfywtzbpmjd4th
 endif
 ifeq ($(SUNDIALS_INSTALL_DIR),)
-  SUNDIALS_INSTALL_DIR = /projects/ATPESC2020/MathPackagesTraining2020/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.0.0-bsgk7m6ucgpa5kzo67c6776pjaw4nhtm
+  SUNDIALS_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.7.0-65uxu6ysj4l5ytbfpdpidbvoc727qtnn
 endif
 ifeq ($(MPICXX),)
   MPICXX = mpicxx
 endif
 
 CPPFLAGS = -Ishared -I$(AMREX_INSTALL_DIR)/include -I$(SUNDIALS_INSTALL_DIR)/include
-CXXFLAGS = -O2 -std=c++11
+CXXFLAGS = -O2 -std=c++14
 FFLAGS = -O2
 LDFLAGS = -L$(AMREX_INSTALL_DIR)/lib -L$(SUNDIALS_INSTALL_DIR)/lib -L$(SUNDIALS_INSTALL_DIR)/lib64 -Wl,-rpath,$(AMREX_INSTALL_DIR)/lib,-rpath,$(SUNDIALS_INSTALL_DIR)/lib,-rpath,$(SUNDIALS_INSTALL_DIR)/lib64
 
