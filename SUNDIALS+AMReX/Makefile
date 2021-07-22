@@ -11,7 +11,7 @@
 
 # set default values for any unset environment variables
 ifeq ($(AMREX_INSTALL_DIR),)
-  AMREX_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-21.07-d7jo24niuhwcbetn2xlfywtzbpmjd4th
+  AMREX_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-21.07-5zqi6hw5mzgyof6xddypdjj4tdxsbk75
 endif
 ifeq ($(SUNDIALS_INSTALL_DIR),)
   SUNDIALS_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.7.0-65uxu6ysj4l5ytbfpdpidbvoc727qtnn
