@@ -11,10 +11,12 @@
 
 # set default values for any unset environment variables
 ifeq ($(AMREX_INSTALL_DIR),)
-  AMREX_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-21.07-5zqi6hw5mzgyof6xddypdjj4tdxsbk75
+#  AMREX_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-21.07-5zqi6hw5mzgyof6xddypdjj4tdxsbk75
+  AMREX_INSTALL_DIR = /lus/grand/projects/ATPESC2021/usr/MathPackages/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/amrex-21.07-iwaygptbziyyoogyo55ktavrf7vrfoqa
 endif
 ifeq ($(SUNDIALS_INSTALL_DIR),)
-  SUNDIALS_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.7.0-65uxu6ysj4l5ytbfpdpidbvoc727qtnn
+  #SUNDIALS_INSTALL_DIR = /gpfs/mira-home/balay/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.7.0-65uxu6ysj4l5ytbfpdpidbvoc727qtnn
+  SUNDIALS_INSTALL_DIR = /lus/grand/projects/ATPESC2021/usr/MathPackages/spack/opt/spack/linux-rhel7-haswell/gcc-8.2.0/sundials-5.7.0-5pkorbm47t33a3ljsu2dljseiyawscvu
 endif
 ifeq ($(MPICXX),)
   MPICXX = mpicxx
