@@ -4,10 +4,9 @@
 # ------------------------------------------------------------------------------
 plot_int = 1
 arkode_order = 4
-nls_method = 0
 nls_max_iter = 3
 ls_max_iter = 100
-rhs_adv = 2
+rhs_adv = 1
 rtol = 1.0e-4
 atol = 1.0e-9
 tfinal = 1.0e4

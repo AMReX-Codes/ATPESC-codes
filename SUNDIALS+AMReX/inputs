@@ -4,11 +4,8 @@
 n_cell = 128
 max_grid_size = 64
 plot_int = 1
-stepper = 1
-cvode_method = 0
 arkode_order = 4
-rhs_adv = 1
-rhs_diff = 0
+rhs_adv = 0
 rtol = 1.0e-4
 atol = 1.0e-9
 tfinal = 1.0e4
@@ -17,7 +14,6 @@ advCoeffx = 5.0e-4
 advCoeffy = 2.5e-4
 diffCoeffx = 1.0e-6
 diffCoeffy = 1.0e-6
-nls_method = 0
 use_preconditioner = 1
 
 
