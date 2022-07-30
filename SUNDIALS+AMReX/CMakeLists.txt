@@ -32,6 +32,7 @@ endif()
 if(ENABLE_CUDA)
   enable_language(CUDA)
   set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+  find_package(CUDAToolkit REQUIRED)
 endif()
 
 # Check for AMReX
@@ -79,9 +80,11 @@ foreach(target ${targets})
   add_executable(${target}.exe ${target}.cpp HandsOn_main.cpp)
 
   if(ENABLE_CUDA)
-    set_source_files_properties(${target}.cpp PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(${target}.cpp HandsOn_main.cpp
+      PROPERTIES LANGUAGE CUDA)
     # Add -dc flag
-    set_target_properties(${target}.exe PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    set_target_properties(${target}.exe
+      PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   endif()
 
   target_link_libraries(${target}.exe PRIVATE
@@ -92,7 +95,11 @@ foreach(target ${targets})
     m)
 
   if(ENABLE_CUDA)
-    target_link_libraries(${target}.exe PRIVATE SUNDIALS::nveccuda)
+    target_link_libraries(${target}.exe PRIVATE
+      SUNDIALS::nveccuda
+      CUDA::cusparse
+      CUDA::curand
+      CUDA::nvToolsExt)
   endif()
 
   install(TARGETS ${target}.exe RUNTIME DESTINATION bin)
