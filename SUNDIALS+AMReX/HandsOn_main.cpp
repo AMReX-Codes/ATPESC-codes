@@ -165,9 +165,9 @@ int ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
 
 void FillInitConds2D(MultiFab& sol, const Geometry& geom)
 {
-  const auto dx = geom.CellSize();
-  const auto prob_lo = geom.ProbLo();
-  const auto prob_hi = geom.ProbHi();
+  const auto dx = geom.CellSizeArray();
+  const auto prob_lo = geom.ProbLoArray();
+  const auto prob_hi = geom.ProbHiArray();
 
   Real sigma = 0.1;
   Real a = 1.0/(sigma*sqrt(2*M_PI));
