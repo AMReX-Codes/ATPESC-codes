@@ -25,7 +25,7 @@ mkdir build
 cd build
 cmake .. \
   -DAMREX_ROOT=<path to AMReX installation directory> \
-  -DSUNDIALS_ROOT=<paht to SUNDIALS installation directory>
+  -DSUNDIALS_ROOT=<path to SUNDIALS installation directory>
 make
 ```
 Additionally, if SUNDIALS and AMReX were installed with CUDA support enabled,
