@@ -124,3 +124,12 @@ foreach(target ${targets})
   install(TARGETS ${target}.exe RUNTIME DESTINATION bin)
 
 endforeach()
+
+# Add target to clean up plots when running in the build directory
+add_custom_target(pltclean
+  COMMAND ${CMAKE_COMMAND} -E rm -rf plt*/ *.png *_diagnostics.txt __pycache__)
+
+if (UNIX)
+  add_custom_target(movie
+    COMMAND ls -1 plt*/Header | tee movie.visit)
+endif()
