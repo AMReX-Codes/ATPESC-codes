@@ -125,10 +125,13 @@ foreach(target ${targets})
 
 endforeach()
 
+install(FILES diag_tools.py process_ARKStep_diags.py DESTINATION bin)
+
 # Add target to clean up plots when running in the build directory
 add_custom_target(pltclean
   COMMAND ${CMAKE_COMMAND} -E rm -rf plt*/ *.png *_diagnostics.txt __pycache__)
 
+# Add target with list of plot headers for making a movie in Visit
 if (UNIX)
   add_custom_target(movie
     COMMAND ls -1 plt*/Header | tee movie.visit)
