@@ -140,7 +140,15 @@ foreach(target ${targets})
 
 endforeach()
 
-install(FILES diag_tools.py process_ARKStep_diags.py DESTINATION bin)
+# Install input files and postprocessing scripts
+install(FILES
+  diag_tools.py
+  process_ARKStep_diags.py
+  inputs
+  inputs-1
+  inputs-2
+  inputs-3
+  DESTINATION bin)
 
 # Add target to clean up plots when running in the build directory
 add_custom_target(pltclean
