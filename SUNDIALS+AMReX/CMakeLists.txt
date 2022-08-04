@@ -37,9 +37,9 @@ endif()
 
 # Check for AMReX
 
-# determine AMReX components needed
+# Determine AMReX components needed
 if(NOT AMREX_FIND_COMPONENTS)
-  set(AMREX_FIND_COMPONENTS )
+  set(AMREX_FIND_COMPONENTS "SUNDIALS")
   if(ENABLE_CUDA)
     list(APPEND AMREX_FIND_COMPONENTS "CUDA")
   endif()
@@ -51,7 +51,7 @@ find_package(AMReX REQUIRED COMPONENTS ${AMREX_FIND_COMPONENTS}
 
 # Check for SUNDIALS
 
-# determine SUNDIALS components needed
+# Determine SUNDIALS components needed
 if(NOT SUNDIALS_FIND_COMPONENTS)
   set(SUNDIALS_FIND_COMPONENTS
     "arkode"
@@ -87,7 +87,7 @@ if("${isSystemDir}" STREQUAL "-1")
   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
 endif()
 
-# Targets
+# Targets to build
 set(targets
   "HandsOn1"
   "HandsOn2"
