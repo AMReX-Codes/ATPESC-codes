@@ -120,11 +120,18 @@ foreach(target ${targets})
     MPI::MPI_CXX
     m)
 
+  # Link to HYPRE using target defined by AMReX
+  if (AMReX_HYPRE)
+    target_link_libraries(${target_name} PRIVATE HYPRE)
+  endif()
+
+  # Link to libraries needed for CUDA support
   if(ENABLE_CUDA)
     target_link_libraries(${target_name} PRIVATE
       SUNDIALS::nveccuda
       CUDA::cusparse
       CUDA::curand
+      CUDA::cublas
       CUDA::nvToolsExt)
   endif()
 

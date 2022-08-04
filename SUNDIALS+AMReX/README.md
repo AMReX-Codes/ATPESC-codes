@@ -28,8 +28,10 @@ cmake .. \
   -DSUNDIALS_ROOT=<path to SUNDIALS installation directory>
 make
 ```
-Additionally, if SUNDIALS and AMReX were installed with CUDA support enabled,
-the option `-DENABLE_CUDA=ON` must be provided to enable GPU offloading.
+If SUNDIALS and AMReX were installed with CUDA support enabled, the option
+`-DENABLE_CUDA=ON` must be provided to enable GPU offloading. If AMReX was built
+with hypre support enabled, the option `HYPRE_ROOT` should be set to the path to
+the hypre installation directory.
 
 ## Problem Options
 
