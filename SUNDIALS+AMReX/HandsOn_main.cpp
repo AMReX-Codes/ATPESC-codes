@@ -475,11 +475,7 @@ int precondition_solve(amrex::Real tn, N_Vector u, N_Vector fu, N_Vector r,
   info.setConsolidation(prob_data->mg_consolidation);
   info.setMaxCoarseningLevel(prob_data->mg_max_coarsening_level);
 
-  const Real tol_rel = 1.e-10;
   const Real tol_abs = 0.0;
-
-  const int nlevels = 1;
-
   const Real ascalar = 1.0;
   const Real bscalar = gamma;
 
