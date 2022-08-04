@@ -1,0 +1,20 @@
+# ------------------------------------------------------------------------------
+# Input parameters for reference solution (HandsOn2.exe or HandsOn3.exe) -- see
+# README.md for parameter descriptions and defaults
+# ------------------------------------------------------------------------------
+plot_int = 1
+arkode_order = 5
+rtol = 1.0e-10
+atol = 1.0e-14
+tfinal = 1.0e4
+dtout = 1.0e4
+max_steps = 1000000
+n_cell = 128
+max_grid_size = 64
+advCoeffx = 5.0e-4
+advCoeffy = 2.5e-4
+diffCoeffx = 1.0e-6
+diffCoeffy = 1.0e-6
+nls_max_iter = 10
+ls_max_iter = 100
+rhs_adv = 0

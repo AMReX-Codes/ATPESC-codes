@@ -143,11 +143,21 @@ endforeach()
 # Install input files and postprocessing scripts
 install(FILES
   diag_tools.py
-  process_ARKStep_diags.py
   inputs
   inputs-1
   inputs-2
   inputs-3
+  inputs-ref
+  DESTINATION bin)
+
+install(FILES
+  process_ARKStep_diags.py
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  DESTINATION bin)
+
+# Install reference solution
+install(DIRECTORY
+  reference_solution
   DESTINATION bin)
 
 # Add target to clean up plots when running in the build directory
@@ -155,7 +165,31 @@ add_custom_target(pltclean
   COMMAND ${CMAKE_COMMAND} -E rm -rf plt*/ *.png *_diagnostics.txt __pycache__)
 
 # Add target with list of plot headers for making a movie in Visit
-if (UNIX)
+if(UNIX)
   add_custom_target(movie
     COMMAND ls -1 plt*/Header | tee movie.visit)
+endif()
+
+# Install source files
+if(INSTALL_SOURCE)
+  install(FILES
+    CMakeLists.txt
+    HandsOn.hpp
+    HandsOn1.cpp
+    HandsOn2.cpp
+    HandsOn3.cpp
+    HandsOn_main.cpp
+    README.md
+    diag_tools.py
+    inputs
+    inputs-1
+    inputs-2
+    inputs-3
+    inputs-ref
+    DESTINATION SUNDIALS+AMReX)
+
+  install(FILES
+    process_ARKStep_diags.py
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    DESTINATION bin)
 endif()
