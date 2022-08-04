@@ -96,17 +96,24 @@ set(targets
 # Add the build and install targets for each example
 foreach(target ${targets})
 
-  add_executable(${target}.exe ${target}.cpp HandsOn_main.cpp)
+  if(ENABLE_CUDA)
+    set(target_name "${target}.CUDA.exe")
+  else()
+    set(target_name "${target}.exe")
+  endif()
+
+  add_executable(${target_name} ${target}.cpp HandsOn_main.cpp)
 
   if(ENABLE_CUDA)
     set_source_files_properties(${target}.cpp HandsOn_main.cpp
       PROPERTIES LANGUAGE CUDA)
     # Add -dc flag
-    set_target_properties(${target}.exe
+    set_target_properties(${target_name}
       PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   endif()
 
-  target_link_libraries(${target}.exe PRIVATE
+  # Link to required libraries
+  target_link_libraries(${target_name} PRIVATE
     AMReX::amrex
     SUNDIALS::arkode
     SUNDIALS::cvode
@@ -114,14 +121,15 @@ foreach(target ${targets})
     m)
 
   if(ENABLE_CUDA)
-    target_link_libraries(${target}.exe PRIVATE
+    target_link_libraries(${target_name} PRIVATE
       SUNDIALS::nveccuda
       CUDA::cusparse
       CUDA::curand
       CUDA::nvToolsExt)
   endif()
 
-  install(TARGETS ${target}.exe RUNTIME DESTINATION bin)
+  # Install execuatable
+  install(TARGETS ${target_name} RUNTIME DESTINATION bin)
 
 endforeach()
 
