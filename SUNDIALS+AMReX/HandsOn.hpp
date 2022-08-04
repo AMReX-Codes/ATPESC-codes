@@ -78,7 +78,7 @@ struct ProblemData
   int mg_use_hypre            = 1;
   int mg_hypre_interface      = 3;
   int mg_use_petsc            = 0;
-  amrex::Real mg_tol_rel      = 1.0e-6;;
+  amrex::Real mg_tol_rel      = 1.0e-6;
 
   // Advection coefficients
   amrex::Real advCoeffx = 5.0e-4;
