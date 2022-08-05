@@ -272,12 +272,14 @@ void PrintHelp()
     << "  mlmg.linop_maxorder=<int> [default=2]" << std::endl
     << "  mlmg.max_iter=<int> [default=1000]" << std::endl
     << "  mlmg.max_fmg_iter=<int> [default=1000]" << std::endl
+    << "  mlmg.fixed_iter=<int> [default=0]" << std::endl
     << "  mlmg.verbose=<int> [default=0]" << std::endl
     << "  mlmg.bottom_verbose=<int> [default=0]" << std::endl
     << "  mlmg.use_hypre=<int> [default=1]" << std::endl
     << "  mlmg.hypre_interface=<int> [default=3]" << std::endl
     << "  mlmg.use_petsc=<int> [default=0]" << std::endl
     << "  mlmg.tol_rel=<float> [default=1e-6]" << std::endl << std::endl
+    << "  mlmg.tol_abs=<float> [default=1e-6]" << std::endl << std::endl
     << "If a file name 'fname' is provided, it will be parsed for each of the above" << std::endl
     << "options.  If an option is specified in both the input file and on the" << std::endl
     << "command line, then the command line option takes precedence." << std::endl << std::endl;
@@ -332,11 +334,13 @@ void PrintSetup(ProblemOpt& prob_opt, ProblemData& prob_data)
       << "  mlmg.linop_maxorder       = " << prob_data.mg_linop_maxorder       << std::endl
       << "  mlmg.max_iter             = " << prob_data.mg_max_iter             << std::endl
       << "  mlmg.max_fmg_iter         = " << prob_data.mg_max_fmg_iter         << std::endl
+      << "  mlmg.fixed_iter           = " << prob_data.mg_fixed_iter           << std::endl
       << "  mlmg.verbose              = " << prob_data.mg_verbose              << std::endl
       << "  mlmg.bottom_verbose       = " << prob_data.mg_bottom_verbose       << std::endl
       << "  mlmg.use_hypre            = " << prob_data.mg_use_hypre            << std::endl
       << "  mlmg.hypre_interface      = " << prob_data.mg_hypre_interface      << std::endl
       << "  mlmg.use_petsc            = " << prob_data.mg_use_petsc            << std::endl
-      << "  mlmg.tol_rel              = " << prob_data.mg_tol_rel              << std::endl;
+      << "  mlmg.tol_rel              = " << prob_data.mg_tol_rel              << std::endl
+      << "  mlmg.tol_abs              = " << prob_data.mg_tol_abs              << std::endl;
   return;
 }

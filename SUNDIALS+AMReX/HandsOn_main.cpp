@@ -147,12 +147,14 @@ int ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
   ppmg.query("linop_maxorder",       prob_data.mg_linop_maxorder);
   ppmg.query("max_iter",             prob_data.mg_max_iter);
   ppmg.query("max_fmg_iter",         prob_data.mg_max_fmg_iter);
+  ppmg.query("fixed_iter",           prob_data.mg_fixed_iter);
   ppmg.query("verbose",              prob_data.mg_verbose);
   ppmg.query("bottom_verbose",       prob_data.mg_bottom_verbose);
   ppmg.query("use_hypre",            prob_data.mg_use_hypre);
   ppmg.query("hypre_interface",      prob_data.mg_hypre_interface);
   ppmg.query("use_petsc",            prob_data.mg_use_petsc);
   ppmg.query("tol_rel",              prob_data.mg_tol_rel);
+  ppmg.query("tol_abs",              prob_data.mg_tol_abs);
 
   return 0;
 }
@@ -465,7 +467,7 @@ int precondition_solve(amrex::Real tn, N_Vector u, N_Vector fu, N_Vector r,
   auto grid = *(prob_data->grid);
   auto dmap = *(prob_data->dmap);
   auto& acoef = *(prob_data->acoef);
-  auto& bcoef = *(prob_data->acoef);
+  auto& bcoef = *(prob_data->bcoef);
 
   MultiFab* solution = amrex::sundials::N_VGetVectorPointer_MultiFab(z);
   MultiFab* rhs = amrex::sundials::N_VGetVectorPointer_MultiFab(r);
@@ -475,7 +477,6 @@ int precondition_solve(amrex::Real tn, N_Vector u, N_Vector fu, N_Vector r,
   info.setConsolidation(prob_data->mg_consolidation);
   info.setMaxCoarseningLevel(prob_data->mg_max_coarsening_level);
 
-  const Real tol_abs = 0.0;
   const Real ascalar = 1.0;
   const Real bscalar = gamma;
 
@@ -518,6 +519,7 @@ int precondition_solve(amrex::Real tn, N_Vector u, N_Vector fu, N_Vector r,
   MLMG mlmg(mlabec);
   mlmg.setMaxIter(prob_data->mg_max_iter);
   mlmg.setMaxFmgIter(prob_data->mg_max_fmg_iter);
+  mlmg.setFixedIter(prob_data->mg_fixed_iter);
   mlmg.setVerbose(prob_data->mg_verbose);
   mlmg.setBottomVerbose(prob_data->mg_bottom_verbose);
 #ifdef AMREX_USE_HYPRE
@@ -539,7 +541,7 @@ int precondition_solve(amrex::Real tn, N_Vector u, N_Vector fu, N_Vector r,
   }
 #endif
 
-  mlmg.solve({solution}, {rhs}, prob_data->mg_tol_rel, tol_abs);
+  mlmg.solve({solution}, {rhs}, prob_data->mg_tol_rel, prob_data->mg_tol_abs);
 
   return 0;
 }

@@ -73,12 +73,14 @@ struct ProblemData
   int mg_linop_maxorder       = 2;
   int mg_max_iter             = 1000;
   int mg_max_fmg_iter         = 1000;
+  int mg_fixed_iter           = 0;
   int mg_verbose              = 0;
   int mg_bottom_verbose       = 0;
   int mg_use_hypre            = 1;
   int mg_hypre_interface      = 3;
   int mg_use_petsc            = 0;
   amrex::Real mg_tol_rel      = 1.0e-6;
+  amrex::Real mg_tol_abs      = 1.0e-6;
 
   // Advection coefficients
   amrex::Real advCoeffx = 5.0e-4;
