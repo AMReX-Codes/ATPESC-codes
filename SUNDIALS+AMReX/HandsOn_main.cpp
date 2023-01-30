@@ -331,7 +331,7 @@ void ComputeAdvectionUpwind(MultiFab& sol_mf, MultiFab& adv_mf, Geometry& geom,
   Real sideCoeffx = advCoeffx * dxInv;
   Real sideCoeffy = advCoeffy * dyInv;
 
-  for (MFIter mfi(sol_mf,TilingIfNotGPU); mfi.isValid(); ++mfi)
+  for (MFIter mfi(sol_mf,TilingIfNotGPU()); mfi.isValid(); ++mfi)
   {
     const Box& bx = mfi.tilebox();
     Array4<Real> const& sol_fab = sol_mf[mfi].array();
