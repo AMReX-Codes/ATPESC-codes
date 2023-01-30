@@ -60,7 +60,7 @@ struct ProblemData
   // AMReX grid data structures
   amrex::Geometry* geom = nullptr;
   amrex::BoxArray* grid = nullptr;
-  amrex::DistributionMapping* dmap;
+  amrex::DistributionMapping* dmap = nullptr;
 
   // AMReX MLMG preconditioner data and parameters
   amrex::MultiFab* acoef = nullptr;
