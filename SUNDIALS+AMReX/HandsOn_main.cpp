@@ -113,48 +113,49 @@ int ParseInputs(ProblemOpt& prob_opt, ProblemData& prob_data)
   }
 
   // Problem options
-  pp.query("plot_int",           prob_opt.plot_int);
-  pp.query("arkode_order",       prob_opt.arkode_order);
-  pp.query("rtol",               prob_opt.rtol);
-  pp.query("atol",               prob_opt.atol);
-  pp.query("fixed_dt",           prob_opt.fixed_dt);
-  pp.query("tfinal",             prob_opt.tfinal);
-  pp.query("dtout",              prob_opt.dtout);
-  pp.query("max_steps",          prob_opt.max_steps);
-  pp.query("write_diag",         prob_opt.write_diag);
-  pp.query("nls_max_iter",       prob_opt.nls_max_iter);
-  pp.query("ls_max_iter",        prob_opt.ls_max_iter);
-  pp.query("rhs_adv",            prob_opt.rhs_adv);
+  pp.query("plot_int", prob_opt.plot_int);
+  pp.query("arkode_order", prob_opt.arkode_order);
+  pp.query("rtol", prob_opt.rtol);
+  pp.query("atol", prob_opt.atol);
+  pp.query("fixed_dt", prob_opt.fixed_dt);
+  pp.query("tfinal", prob_opt.tfinal);
+  prob_opt.dtout = prob_opt.tfinal;
+  pp.query("dtout", prob_opt.dtout);
+  pp.query("max_steps", prob_opt.max_steps);
+  pp.query("write_diag", prob_opt.write_diag);
+  pp.query("nls_max_iter", prob_opt.nls_max_iter);
+  pp.query("ls_max_iter", prob_opt.ls_max_iter);
+  pp.query("rhs_adv", prob_opt.rhs_adv);
   pp.query("use_preconditioner", prob_opt.use_preconditioner);
 
   // Grid options
-  pp.query("n_cell",        prob_data.n_cell);
+  pp.query("n_cell", prob_data.n_cell);
   pp.query("max_grid_size", prob_data.max_grid_size);
 
   // Advection and diffusion coefficient values
-  pp.query("advCoeffx",     prob_data.advCoeffx);
-  pp.query("advCoeffy",     prob_data.advCoeffy);
-  pp.query("diffCoeffx",    prob_data.diffCoeffx);
-  pp.query("diffCoeffy",    prob_data.diffCoeffy);
+  pp.query("advCoeffx", prob_data.advCoeffx);
+  pp.query("advCoeffy", prob_data.advCoeffy);
+  pp.query("diffCoeffx", prob_data.diffCoeffx);
+  pp.query("diffCoeffy", prob_data.diffCoeffy);
 
   // ParmParse options prefixed with mlmg.
   ParmParse ppmg("mlmg");
 
   // MLMG Preconditioner options
-  ppmg.query("agglomeration",        prob_data.mg_agglomeration);
-  ppmg.query("consolidation",        prob_data.mg_consolidation);
+  ppmg.query("agglomeration", prob_data.mg_agglomeration);
+  ppmg.query("consolidation", prob_data.mg_consolidation);
   ppmg.query("max_coarsening_level", prob_data.mg_max_coarsening_level);
-  ppmg.query("linop_maxorder",       prob_data.mg_linop_maxorder);
-  ppmg.query("max_iter",             prob_data.mg_max_iter);
-  ppmg.query("max_fmg_iter",         prob_data.mg_max_fmg_iter);
-  ppmg.query("fixed_iter",           prob_data.mg_fixed_iter);
-  ppmg.query("verbose",              prob_data.mg_verbose);
-  ppmg.query("bottom_verbose",       prob_data.mg_bottom_verbose);
-  ppmg.query("use_hypre",            prob_data.mg_use_hypre);
-  ppmg.query("hypre_interface",      prob_data.mg_hypre_interface);
-  ppmg.query("use_petsc",            prob_data.mg_use_petsc);
-  ppmg.query("tol_rel",              prob_data.mg_tol_rel);
-  ppmg.query("tol_abs",              prob_data.mg_tol_abs);
+  ppmg.query("linop_maxorder", prob_data.mg_linop_maxorder);
+  ppmg.query("max_iter", prob_data.mg_max_iter);
+  ppmg.query("max_fmg_iter", prob_data.mg_max_fmg_iter);
+  ppmg.query("fixed_iter", prob_data.mg_fixed_iter);
+  ppmg.query("verbose", prob_data.mg_verbose);
+  ppmg.query("bottom_verbose", prob_data.mg_bottom_verbose);
+  ppmg.query("use_hypre", prob_data.mg_use_hypre);
+  ppmg.query("hypre_interface", prob_data.mg_hypre_interface);
+  ppmg.query("use_petsc", prob_data.mg_use_petsc);
+  ppmg.query("tol_rel", prob_data.mg_tol_rel);
+  ppmg.query("tol_abs", prob_data.mg_tol_abs);
 
   return 0;
 }
