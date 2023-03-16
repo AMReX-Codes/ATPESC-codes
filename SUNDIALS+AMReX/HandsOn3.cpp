@@ -32,6 +32,8 @@ using namespace amrex;
 void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
                      ProblemData* prob_data)
 {
+  BL_PROFILE("ComputeSolution()");
+
   // Extract problem data and options
   Geometry* geom         = prob_data->geom;
   int       plot_int     = prob_opt->plot_int;
@@ -140,7 +142,9 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   Real tret;                // return time
   for (int iout=0; iout < nout; iout++)
   {
+    BL_PROFILE_VAR("ARKStepEvolve()", pevolve);
     ier = ARKStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
+    BL_PROFILE_VAR_STOP(pevolve);
     if (ier < 0)
     {
       amrex::Print() << "Error in ARKStepEvolve" << std::endl;
