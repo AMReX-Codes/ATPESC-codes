@@ -40,29 +40,28 @@ each hands-on lesson will only utilize an appropriate subset of these options
 for that lesson. Use the input `help=1` to list the options relevant to a
 particular setup.
 
-| Option               | Type   | Description                                       | Default  |
-| ---------------------|--------|---------------------------------------------------|----------|
-| `help`               | `int`  | print input options and exit (1)                  | 0        |
-| `n_cell`             | `int`  | number of cells on each side of the square domain | 128      |
-| `max_grid_size`      | `int`  | max size of boxes in box array                    | 64       |
-| `plot_int`           | `int`  | enable (1) or disable (0) plots                   | 0        |
-| `arkode_order`       | `int`  | ARKStep method order                              | 4        |
-| `nls_max_iter`       | `ìnt`  | maximum number of nonlinear iterations            | 3        |
-| `nls_fp_acc`         | `int`  | number of fixed-point acceleration vectors        | 0        |
-| `ls_max_iter`        | `int`  | maximum number of linear iterations               | 5        |
-| `rhs_adv`            | `int`  | advection: implicit (0) or explicit (1)           | 1        |
-| `rtol`               | `Real` | relative tolerance                                | 1e-4     |
-| `atol`               | `Real` | absolute tolerance                                | 1e-9     |
-| `fixed_dt`           | `Real` | use a fixed time step size (if `fixed_dt` > 0.0)  | -1.0     |
-| `tfinal`             | `Real` | final integration time                            | 1e4      |
-| `dtout`              | `Real` | output frequency                                  | `tfinal` |
-| `max_steps`          | `int`  | maximum number of steps between outputs           | 1000     |
-| `write_diag`         | `int`  | output ARKStep diagnostics to a file              | 1        |
-| `advCoeffx`          | `Real` | advection speed in the x-direction                | 5e-4     |
-| `advCoeffy`          | `Real` | advection speed in the y-direction                | 5e-4     |
-| `diffCoeffx`         | `Real` | diffusion coefficient in the x-direction          | 2e-5     |
-| `diffCoeffy`         | `Real` | diffusion coefficient in the y-direction          | 2e-5     |
-| `use_preconditioner` | `int`  | use preconditioning (1) or not (0)                | 0        |
+| Option               | Type   | Description                                        | Default  |
+|----------------------|--------|----------------------------------------------------|----------|
+| `help`               | `int`  | print input options and exit (1)                   | 0        |
+| `n_cell`             | `int`  | number of cells on each side of the square domain  | 128      |
+| `max_grid_size`      | `int`  | max size of boxes in box array                     | 64       |
+| `plot_int`           | `int`  | enable (1) or disable (0) plots                    | 0        |
+| `arkode_order`       | `int`  | ARKStep method order                               | 4        |
+| `nls_max_iter`       | `int`  | maximum number of nonlinear iterations             | 3        |
+| `ls_max_iter`        | `int`  | maximum number of linear iterations                | 5        |
+| `rhs_adv`            | `int`  | advection: implicit (0) or explicit (1)            | 1        |
+| `rtol`               | `Real` | relative tolerance                                 | 1e-4     |
+| `atol`               | `Real` | absolute tolerance                                 | 1e-9     |
+| `fixed_dt`           | `Real` | use a fixed time step size (if `fixed_dt` > 0.0)   | -1.0     |
+| `tfinal`             | `Real` | final integration time                             | 1e4      |
+| `dtout`              | `Real` | output frequency                                   | `tfinal` |
+| `max_steps`          | `int`  | maximum number of steps between outputs            | 10000    |
+| `write_diag`         | `int`  | output ARKStep diagnostics to a file               | 1        |
+| `advCoeffx`          | `Real` | advection speed in the x-direction                 | 5.0e-4   |
+| `advCoeffy`          | `Real` | advection speed in the y-direction                 | 2.5e-4   |
+| `diffCoeffx`         | `Real` | diffusion coefficient in the x-direction           | 1.0e-6   |
+| `diffCoeffy`         | `Real` | diffusion coefficient in the y-direction           | 1.0e-6   |
+| `use_preconditioner` | `int`  | use preconditioning (1) or not (0)                 | 0        |
 
 If preconditioning is enabled, then additional options may be set (see AMReX
 documentation of the `MLMG` solver for descriptions):
@@ -75,9 +74,11 @@ documentation of the `MLMG` solver for descriptions):
 | `mlmg.linop_maxorder`       | `int`  | 2       |
 | `mlmg.max_iter`             | `int`  | 1000    |
 | `mlmg.max_fmg_iter`         | `int`  | 1000    |
+| `mlmg.mg_fixed_iter`        | `int`  | 0       |
 | `mlmg.verbose`              | `int`  | 0       |
 | `mlmg.bottom_verbose`       | `int`  | 0       |
 | `mlmg.use_hypre`            | `int`  | 1       |
 | `mlmg.hypre_interface`      | `int`  | 3       |
 | `mlmg.use_petsc`            | `int`  | 0       |
 | `mlmg.tol_rel`              | `Real` | 1.0e-6  |
+| `mlmg.tol_abs`              | `Real` | 1.0e-6  |
