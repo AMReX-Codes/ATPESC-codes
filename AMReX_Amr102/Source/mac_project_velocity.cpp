@@ -1,8 +1,9 @@
-#include <AMReX_MacProjector.H>
+#include <hydro_MacProjector.H>
 
 void mac_project_velocity(amrex::Array<amrex::MultiFab,AMREX_SPACEDIM>& vel, const amrex::Geometry& geom, int use_hypre)
 {
-    using namespace amrex; 
+    using namespace amrex;
+    using namespace Hydro;
 
     LPInfo lp_info;
 

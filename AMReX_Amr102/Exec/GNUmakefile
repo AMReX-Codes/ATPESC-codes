@@ -1,4 +1,5 @@
 AMREX_HOME ?= ../../..
+AMREX_HYDRO_HOME ?= ../../../AMReX-Hydro
 
 USE_MPI  = TRUE
 USE_OMP  = FALSE
