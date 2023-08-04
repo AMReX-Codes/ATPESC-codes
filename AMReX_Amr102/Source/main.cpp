@@ -55,24 +55,27 @@ void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf,
                     FluidParticleContainer& pc, int write_ascii)
 {
     // Copy processor id into the component of plotfile_mf immediately following velocities
-    int proc_comp = AMREX_SPACEDIM; 
+    int proc_comp = AMREX_SPACEDIM;
     for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
        plotmf[mfi].setVal<RunOn::Host>(ParallelDescriptor::MyProc(),mfi.validbox(),proc_comp,1);
 
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step;
     std::string plotfile_name = sstream.str();
-    
+
+    static int plotfile_num = 0;
+
 #if (AMREX_SPACEDIM == 2)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
                                    { "xvel", "yvel", "proc", "phi" },
-                                     geom, time, 0);
+                                     geom, plotfile_num, 0);
 #elif (AMREX_SPACEDIM == 3)
        EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
                                    { "xvel", "yvel", "zvel", "proc", "phi" },
-                                     geom, time, 0);
+                                     geom, plotfile_num, 0);
 #endif
 
+    plotfile_num++;
     pc.Checkpoint(plotfile_name, "particles", true); // Write particles to plotfile
 
     std::stringstream pstream;
