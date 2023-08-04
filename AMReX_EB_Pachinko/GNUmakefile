@@ -11,6 +11,7 @@ DEBUG = FALSE
 AMREX_HOME ?= ../../..
 
 USE_EB = TRUE
+USE_PARTICLES=TRUE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
