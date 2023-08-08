@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
+cmake_policy(SET CMP0109 NEW)
 
 # Prevent in-source builds
 if(CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
@@ -121,25 +122,6 @@ find_package(SUNDIALS REQUIRED COMPONENTS ${SUNDIALS_FIND_COMPONENTS}
 # Check for math library
 find_library(MATH_LIBRARY NAMES m)
 
-# Don't skip the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-# When building, don't use the install RPATH already (but later on when
-# installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
-set(CMAKE_INSTALL_NAME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
-
-# Add the automatically determined parts of the RPATH which point to directories
-# outside the build tree to the install RPATH
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# The RPATH to be used when installing, but only if it's not a system directory
-list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_FULL_LIBDIR}" isSystemDir)
-if("${isSystemDir}" STREQUAL "-1")
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
-endif()
-
 # Targets to build
 set(targets
   "HandsOn1"
@@ -169,7 +151,7 @@ foreach(target ${targets})
 
   # Link to required libraries
   target_link_libraries(${target_name} PRIVATE
-    AMReX::amrex
+    AMReX::amrex_2d
     SUNDIALS::arkode
     SUNDIALS::cvode
     MPI::MPI_CXX
@@ -191,7 +173,7 @@ foreach(target ${targets})
   endif()
 
   # Install execuatable
-  install(TARGETS ${target_name} RUNTIME DESTINATION bin)
+  install(TARGETS ${target_name} DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 endforeach()
 
@@ -203,17 +185,28 @@ install(FILES
   inputs-2
   inputs-3
   inputs-ref
-  DESTINATION bin)
+  DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 install(FILES
   process_ARKStep_diags.py
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-  DESTINATION bin)
+  DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 # Install reference solution
 install(DIRECTORY
   reference_solution
-  DESTINATION bin)
+  DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+# find_program(AMREX_FCOMPARE fcompare ${AMREX_ROOT}/bin)
+# if(AMREX_FCOMPARE)
+#   message(STATUS "Found fcompare: ${AMREX_FCOMPARE}")
+#   install(FILES
+#     ${AMREX_FCOMPARE}
+#     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+#     DESTINATION ${CMAKE_INSTALL_PREFIX})
+# else()
+#   message(STATUS "Not found fcompare!")
+# endif()
 
 # Add target to clean up plots when running in the build directory
 add_custom_target(pltclean
@@ -242,9 +235,4 @@ if(INSTALL_SOURCE)
     inputs-3
     inputs-ref
     DESTINATION SUNDIALS+AMReX)
-
-  install(FILES
-    process_ARKStep_diags.py
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION bin)
 endif()
