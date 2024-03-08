@@ -32,7 +32,7 @@ public:
 
     void InitPachinko (std::string initial_particle_file, Real zlen);
 
-    void AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& obstacle_center,
+    void AdvectPachinko (Real dt, amrex::Gpu::DeviceVector<amrex::RealArray>& obstacle_center,
                          Real obstacle_radius, Real particle_radius); 
 };
 

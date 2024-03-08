@@ -1,4 +1,4 @@
-AMREX_HOME ?= ../../..
+AMREX_HOME ?= ../../../amrex
 AMREX_HYDRO_HOME ?= ../../../AMReX-Hydro
 
 USE_MPI  = TRUE

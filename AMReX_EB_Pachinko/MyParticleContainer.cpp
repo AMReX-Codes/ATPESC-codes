@@ -13,13 +13,14 @@ MyParticleContainer::InitPachinko (std::string initial_particle_file, Real zlen)
     int lev = 0;
     auto& pmap = GetParticles(lev);
     for (auto& kv : pmap) {
-       int grid = kv.first.first;
        auto& pbox = kv.second.GetArrayOfStructs();
+       auto pstruct = &pbox[0];
        const int n = pbox.size();
 
-       for (int i = 0; i < n; i++)
+       amrex::ParallelFor( n,
+       [=] AMREX_GPU_DEVICE (int i) noexcept
        {
-            ParticleType& p = pbox[i];
+            ParticleType& p = pstruct[i];
 
             p.rdata(PIdx::vx) =  0.0;
             p.rdata(PIdx::vy) = -1.0;
@@ -29,12 +30,12 @@ MyParticleContainer::InitPachinko (std::string initial_particle_file, Real zlen)
 
             // We over-write the z-locations to make sure they're in the domain
             p.pos(2) = 0.5 * zlen;
-       }
+       });
     }
 }
 
 void 
-MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& obstacle_center,
+MyParticleContainer::AdvectPachinko (Real dt, amrex::Gpu::DeviceVector<amrex::RealArray>& obstacle_center,
                                      Real obstacle_radius, Real particle_radius)
 {
     BL_PROFILE("MyParticleContainer::AdvectPachinko()");
@@ -57,11 +58,12 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
     const auto prob_hi = Geom(0).ProbHiArray();
 
     int num_obstacles = obstacle_center.size();
-
+    auto obstacle_center_data = obstacle_center.data();
+    
     auto& pmap = GetParticles(lev);
     for (auto& kv : pmap) {
-       int grid = kv.first.first;
        auto& pbox = kv.second.GetArrayOfStructs();
+       auto pstruct = &pbox[0];
        const int n = pbox.size();
 
        // std::cout << "Number of particles: " << n << std::endl;
@@ -69,9 +71,11 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
        // NOTE: we assume that all particle motion occurs in a plane!
        // Even if we run in 3-d we assume no motion in the z-direction
 
-       for (int i = 0; i < n; i++)
-       {
-          ParticleType& p = pbox[i];
+      amrex::ParallelFor( n,
+      [=] AMREX_GPU_DEVICE (int i) noexcept
+      {
+ 
+          ParticleType& p = pstruct[i];
 
           // Let particles stop at the bottom
           if (p.pos(1) >= prob_lo[1] + 0.05) 
@@ -90,8 +94,8 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
 
             for (int ind = 0; ind < num_obstacles; ind++)
             {
-               Real x_diff = p.pos(0) - obstacle_center[ind][0];
-               Real y_diff = p.pos(1) - obstacle_center[ind][1];
+               Real x_diff = p.pos(0) - obstacle_center_data[ind][0];
+               Real y_diff = p.pos(1) - obstacle_center_data[ind][1];
                Real diff_sq = x_diff * x_diff + y_diff * y_diff;
 
                if ( diff_sq < rad_squared )
@@ -126,8 +130,8 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
                  p.rdata(PIdx::vy) *= restitution_coeff;
 
                  // Reflect particle position as well
-                 Real ref_pos_x = obstacle_center[ind][0] + (prad+crad)*norm_x;
-                 Real ref_pos_y = obstacle_center[ind][1] + (prad+crad)*norm_y;
+                 Real ref_pos_x = obstacle_center_data[ind][0] + (prad+crad)*norm_x;
+                 Real ref_pos_y = obstacle_center_data[ind][1] + (prad+crad)*norm_y;
 
                  p.pos(0) = ref_pos_x + overshoot * norm_x;
                  p.pos(1) = ref_pos_y + overshoot * norm_y;
@@ -151,8 +155,8 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Vector<amrex::RealArray>& o
                p.rdata(PIdx::vx) *= restitution_coeff;
                p.rdata(PIdx::vy) *= restitution_coeff;
             }
-         }
-       }
+          }
+      });
     }
 }
 }

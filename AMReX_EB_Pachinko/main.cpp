@@ -137,6 +137,11 @@ int main (int argc, char* argv[])
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[12], false),
             EB2::CylinderIF(obstacle_radius, height, direction, obstacle_center[13], false)};
 
+        amrex::Gpu::DeviceVector<amrex::RealArray> obstacle_center_d;
+        obstacle_center_d.resize(0);
+        obstacle_center_d.resize(obstacle_center.size());
+        Gpu::copyAsync(Gpu::hostToDevice, obstacle_center.begin(), obstacle_center.end(), obstacle_center_d.begin());
+        
         auto group_1 = EB2::makeUnion(obstacles[0],obstacles[1],obstacles[2]);
         auto group_2 = EB2::makeUnion(obstacles[3],obstacles[4],obstacles[5]);
         auto group_3 = EB2::makeUnion(obstacles[6],obstacles[7],obstacles[8]);
@@ -177,7 +182,7 @@ int main (int argc, char* argv[])
         // copy processor id into plotfile_mf
         int lev = 0;
         for (MFIter mfi = MyPC.MakeMFIter(lev); mfi.isValid(); ++mfi)
-            plotfile_mf[mfi].setVal(ParallelDescriptor::MyProc());
+            plotfile_mf[mfi].setVal<RunOn::Device>(ParallelDescriptor::MyProc());
 
         // wallclock time
         Real strt_total = amrex::second();
@@ -193,7 +198,7 @@ int main (int argc, char* argv[])
                 time_step = std::min(time_step, max_time - time);
 
                 // Step Particles
-                MyPC.AdvectPachinko(time_step,obstacle_center,obstacle_radius,particle_radius);
+                MyPC.AdvectPachinko(time_step,obstacle_center_d,obstacle_radius,particle_radius);
 
                 MyPC.Redistribute();
 

@@ -57,7 +57,7 @@ void write_plotfile(int step, Real time, const Geometry& geom, MultiFab& plotmf,
     // Copy processor id into the component of plotfile_mf immediately following velocities
     int proc_comp = AMREX_SPACEDIM;
     for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
-       plotmf[mfi].setVal<RunOn::Host>(ParallelDescriptor::MyProc(),mfi.validbox(),proc_comp,1);
+       plotmf[mfi].setVal<RunOn::Device>(ParallelDescriptor::MyProc(),mfi.validbox(),proc_comp,1);
 
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step;
