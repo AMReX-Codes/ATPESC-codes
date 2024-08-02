@@ -220,7 +220,7 @@ def plot_h_vs_t(TimeSteps,fname):
     should include an extension appropriate for the matplotlib
     'savefig' command.
     """
-    import pylab as plt
+    import matplotlib.pyplot as plt
     import numpy as np
     hvals  = []
     tvals  = []
@@ -271,7 +271,7 @@ def plot_h_vs_tstep(TimeSteps,fname):
     should include an extension appropriate for the matplotlib
     'savefig' command.
     """
-    import pylab as plt
+    import matplotlib.pyplot as plt
     import numpy as np
     hvals  = []
     ivals  = []
@@ -321,7 +321,7 @@ def plot_oversolve_vs_t(TimeSteps,fname):
     should include an extension appropriate for the matplotlib
     'savefig' command.
     """
-    import pylab as plt
+    import matplotlib.pyplot as plt
     import numpy as np
     Ovals = []
     tvals = []
