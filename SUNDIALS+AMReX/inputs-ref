@@ -1,6 +1,7 @@
 # ------------------------------------------------------------------------------
 # Input parameters for reference solution (HandsOn2.exe or HandsOn3.exe) -- see
-# README.md for parameter descriptions and defaults
+# README.md for parameter descriptions and defaults e.g., on Polaris we use
+# mpiexec -n 4 ./HandsOn2.CUDA.exe inputs-ref
 # ------------------------------------------------------------------------------
 plot_int = 1
 arkode_order = 5
