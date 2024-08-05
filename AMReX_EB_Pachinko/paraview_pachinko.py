@@ -103,7 +103,7 @@ def generate_movie_3D(AllPlotFiles):
     slice1.HyperTreeGridSlicer.Origin = [0.625, 1.0, 0.25]
 
     # toggle 3D widget visibility (only when running from the GUI)
-    Hide3DWidgets(proxy=slice1.SliceType)
+    #Hide3DWidgets(proxy=slice1.SliceType)
 
     # Properties modified on slice1.SliceType
     slice1.SliceType.Normal = [0.0, 0.0, 1.0]
