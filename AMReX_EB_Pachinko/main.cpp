@@ -20,12 +20,9 @@ void write_plotfile(int step_counter, const Geometry& geom, const MultiFab& plot
     std::stringstream sstream;
     sstream << "plt" << std::setw(5) << std::setfill('0') << step_counter;
     std::string plotfile_name = sstream.str();
-    
-    if (step_counter == 0)
-    {
-      EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
-                                  { "proc" }, geom, 0.0, 0);
-    }
+
+    EB_WriteSingleLevelPlotfile(plotfile_name, plotmf,
+                                { "proc" }, geom, step_counter, 0);
 
     if (ascii_particle_output)
     {
