@@ -81,6 +81,7 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Gpu::DeviceVector<amrex::Re
 	  if (p.pos(1) < prob_lo[1] + particle_radius) 
         {
             // Reflect position
+	    p.pos(0) += dt * p.rdata(PIdx::vx);
             p.pos(1) = 2.0 * (prob_lo[1] + particle_radius) - p.pos(1);
             
             // Reverse y velocity and apply restitution
