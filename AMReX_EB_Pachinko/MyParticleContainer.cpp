@@ -76,9 +76,22 @@ MyParticleContainer::AdvectPachinko (Real dt, amrex::Gpu::DeviceVector<amrex::Re
       {
  
           ParticleType& p = pstruct[i];
+	
+	  // If particle in hitting the lower wall
+	  if (p.pos(1) < prob_lo[1] + particle_radius) 
+        {
+            // Reflect position
+	    p.pos(0) += dt * p.rdata(PIdx::vx);
+            p.pos(1) = 2.0 * (prob_lo[1] + particle_radius) - p.pos(1);
+            
+            // Reverse y velocity and apply restitution
+            p.rdata(PIdx::vy) = -p.rdata(PIdx::vy) * restitution_coeff;
+            
+            // Apply restitution to x velocity as well
+            p.rdata(PIdx::vx) *= restitution_coeff;
+        }
 
-          // Let particles stop at the bottom
-          if (p.pos(1) >= prob_lo[1] + 0.05) 
+	else  
           {
             p.pos(0) += 0.5 * dt * p.rdata(PIdx::vx);
             p.pos(1) += 0.5 * dt * p.rdata(PIdx::vy);
