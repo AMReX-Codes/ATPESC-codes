@@ -177,6 +177,17 @@ foreach(target ${targets})
 
 endforeach()
 
+# Create a symlink in the build directory to each input file in source directory
+file(GLOB FILES_TO_LINK "${CMAKE_CURRENT_SOURCE_DIR}/inputs*")
+foreach(src ${FILES_TO_LINK})
+  get_filename_component(filename ${src} NAME)
+  set(link_location "${CMAKE_CURRENT_BINARY_DIR}/${filename}")
+  if(EXISTS ${link_location})
+    file(REMOVE ${link_location})
+  endif()
+  file(CREATE_LINK "${src}" "${link_location}" SYMBOLIC)
+endforeach()
+
 # Install input files and postprocessing scripts
 install(FILES
   diag_tools.py
