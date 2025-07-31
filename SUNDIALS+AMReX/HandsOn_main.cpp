@@ -22,63 +22,65 @@ using namespace amrex;
 int main(int argc, char* argv[])
 {
   amrex::Initialize(argc,argv);
-  BL_PROFILE_VAR("main()", pmain);
-
-  // Set problem data and options
-  ProblemData prob_data;
-  ProblemOpt  prob_opt;
-  if (ParseInputs(prob_opt, prob_data))
   {
-    amrex::Finalize();
-    return 1;
+    BL_PROFILE_VAR("main()", pmain);
+
+    // Set problem data and options
+    ProblemData prob_data;
+    ProblemOpt  prob_opt;
+    if (ParseInputs(prob_opt, prob_data))
+    {
+      amrex::Finalize();
+      return 1;
+    }
+    PrintSetup(prob_opt, prob_data);
+
+    // Make BoxArray and Geometry
+    BoxArray ba;
+    Geometry geom;
+    SetUpGeometry(ba, geom, prob_data);
+
+    // How Boxes are distrubuted among MPI processes
+    DistributionMapping dm(ba);
+    prob_data.dmap = &dm;
+
+    // Allocate the solution MultiFab
+    int nGhost = 1;  // number of ghost cells for each array
+    int nComp  = 1;  // number of components for each array
+    MultiFab sol(ba, dm, nComp, nGhost);
+
+    // Allocate the linear solver coefficient MultiFabs
+    MultiFab acoef(ba, dm, nComp, nGhost);
+    MultiFab bcoef(ba, dm, nComp, nGhost);
+    acoef = 1.0;
+    bcoef = 1.0;
+    prob_data.acoef = &acoef;
+    prob_data.bcoef = &bcoef;
+
+    // Build the flux MultiFabs
+    Array<MultiFab, AMREX_SPACEDIM> flux;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    {
+      // flux(dir) has one component, zero ghost cells, and is nodal in
+      // direction dir
+      BoxArray edge_ba = ba;
+      edge_ba.surroundingNodes(dir);
+      flux[dir].define(edge_ba, dm, 1, 0);
+    }
+    prob_data.flux = &flux;
+
+    // Create an N_Vector wrapper for the solution MultiFab
+    sunindextype length = nComp * prob_data.n_cell * prob_data.n_cell;
+    N_Vector nv_sol     = amrex::sundials::N_VMake_MultiFab(length, &sol);
+
+    // Set the initial condition
+    FillInitConds2D(sol, geom);
+
+    // Integrate in time
+    ComputeSolution(nv_sol, &prob_opt, &prob_data);
+
+    BL_PROFILE_VAR_STOP(pmain);
   }
-  PrintSetup(prob_opt, prob_data);
-
-  // Make BoxArray and Geometry
-  BoxArray ba;
-  Geometry geom;
-  SetUpGeometry(ba, geom, prob_data);
-
-  // How Boxes are distrubuted among MPI processes
-  DistributionMapping dm(ba);
-  prob_data.dmap = &dm;
-
-  // Allocate the solution MultiFab
-  int nGhost = 1;  // number of ghost cells for each array
-  int nComp  = 1;  // number of components for each array
-  MultiFab sol(ba, dm, nComp, nGhost);
-
-  // Allocate the linear solver coefficient MultiFabs
-  MultiFab acoef(ba, dm, nComp, nGhost);
-  MultiFab bcoef(ba, dm, nComp, nGhost);
-  acoef = 1.0;
-  bcoef = 1.0;
-  prob_data.acoef = &acoef;
-  prob_data.bcoef = &bcoef;
-
-  // Build the flux MultiFabs
-  Array<MultiFab, AMREX_SPACEDIM> flux;
-  for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-  {
-    // flux(dir) has one component, zero ghost cells, and is nodal in
-    // direction dir
-    BoxArray edge_ba = ba;
-    edge_ba.surroundingNodes(dir);
-    flux[dir].define(edge_ba, dm, 1, 0);
-  }
-  prob_data.flux = &flux;
-
-  // Create an N_Vector wrapper for the solution MultiFab
-  sunindextype length = nComp * prob_data.n_cell * prob_data.n_cell;
-  N_Vector nv_sol     = amrex::sundials::N_VMake_MultiFab(length, &sol);
-
-  // Set the initial condition
-  FillInitConds2D(sol, geom);
-
-  // Integrate in time
-  ComputeSolution(nv_sol, &prob_opt, &prob_data);
-
-  BL_PROFILE_VAR_STOP(pmain);
   amrex::Finalize();
 
   return 0;
