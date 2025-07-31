@@ -188,9 +188,8 @@ foreach(src ${FILES_TO_LINK})
   file(CREATE_LINK "${src}" "${link_location}" SYMBOLIC)
 endforeach()
 
-# Install input files and postprocessing scripts
+# Install input files
 install(FILES
-  diag_tools.py
   inputs
   inputs-1
   inputs-2
@@ -198,8 +197,9 @@ install(FILES
   inputs-ref
   DESTINATION ${CMAKE_INSTALL_PREFIX})
 
+# Install postprocessing script
 install(FILES
-  process_ARKStep_diags.py
+  plot_log.py
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   DESTINATION ${CMAKE_INSTALL_PREFIX})
 
