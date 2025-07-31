@@ -55,31 +55,40 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
     WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, time, 0);
   }
 
+  // Create the SUNDIALS context
+  SUNContext sunctx = nullptr;
+  SUNContext_Create(ParallelContext::CommunicatorAll(), &sunctx);
+
   // Create the ARK stepper
   void* arkode_mem = ARKStepCreate(ComputeRhsAdvDiff, nullptr, time, nv_sol,
-                                   *amrex::sundials::The_Sundials_Context());
+                                   sunctx);
 
-  // Attach the user data structure to ARKStep
-  ARKStepSetUserData(arkode_mem, prob_data);
+  // Attach the user data structure
+  ARKodeSetUserData(arkode_mem, prob_data);
 
   // Set the method order
-  ARKStepSetOrder(arkode_mem, arkode_order);
+  ARKodeSetOrder(arkode_mem, arkode_order);
 
   // Set the time step size or integration tolerances
   if (fixed_dt > 0.0)
-    ARKStepSetFixedStep(arkode_mem, fixed_dt);
+    ARKodeSetFixedStep(arkode_mem, fixed_dt);
   else
-    ARKStepSStolerances(arkode_mem, atol, rtol);
+    ARKodeSStolerances(arkode_mem, atol, rtol);
 
   // Set the max number of steps between outputs
-  ARKStepSetMaxNumSteps(arkode_mem, max_steps);
+  ARKodeSetMaxNumSteps(arkode_mem, max_steps);
 
-  // Set file for writing ARKStep diagnostics
-  FILE* diagfp = nullptr;
+  // Set logging file
   if (write_diag)
   {
-    diagfp = fopen("HandsOn1_diagnostics.txt", "w");
-    ARKStepSetDiagnostics(arkode_mem, diagfp);
+    SUNLogger logger;
+    ier = SUNContext_GetLogger(sunctx, &logger);
+    if (ier != SUN_SUCCESS)
+    {
+      amrex::Print() << "Getting the logger failed" << std::endl;
+      return;
+    }
+    SUNLogger_SetInfoFilename(logger, "HandsOn1.log");
   }
 
   // Advance the solution in time
@@ -87,18 +96,19 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   Real tret;                // return time
   for (int iout=0; iout < nout; iout++)
   {
-    BL_PROFILE_VAR("ARKStepEvolve()", pevolve);
-    ier = ARKStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
+    BL_PROFILE_VAR("ARKodeEvolve()", pevolve);
+    ier = ARKodeEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
     BL_PROFILE_VAR_STOP(pevolve);
     if (ier < 0)
     {
-      amrex::Print() << "Error in ARKStepEvolve" << std::endl;
+      amrex::Print() << "Error in ARKodeEvolve" << std::endl;
       return;
     }
 
     // Get integration stats
-    long nfe_evals, nfi_evals;
-    ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
+    long int nfe_evals, nfi_evals;
+    ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe_evals);
+    ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi_evals);
     amrex::Print() << "t = " << std::setw(5) << tret
                    << "  RHS evals = " << std::setw(7) << nfe_evals
                    << std::endl;
@@ -119,17 +129,17 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   // Output final solution statistics
   long int nst, nst_a, nfe, nfi, netf;
   nst = nst_a = nfe = nfi = netf = 0;
-  ARKStepGetNumSteps(arkode_mem, &nst);
-  ARKStepGetNumStepAttempts(arkode_mem, &nst_a);
-  ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
-  ARKStepGetNumErrTestFails(arkode_mem, &netf);
+  ARKodeGetNumSteps(arkode_mem, &nst);
+  ARKodeGetNumStepAttempts(arkode_mem, &nst_a);
+  ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe);
+  ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi);
+  ARKodeGetNumErrTestFails(arkode_mem, &netf);
   amrex::Print() << "\nFinal Solver Statistics:\n"
                  << "   Internal solver steps = " << nst << " (attempted = " << nst_a << ")\n"
                  << "   Total RHS evals = " << nfe << "\n"
                  << "   Total number of error test failures = " << netf << "\n";
 
-  // Close diagnostics file
-  if (write_diag) fclose(diagfp);
+  SUNContext_Free(&sunctx);
 
   return;
 }

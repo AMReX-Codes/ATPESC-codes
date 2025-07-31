@@ -64,54 +64,65 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
     WriteSingleLevelPlotfile(pltfile, *sol, {"u"}, *geom, time, 0);
   }
 
+  // Create the SUNDIALS context
+  SUNContext sunctx = nullptr;
+  SUNContext_Create(ParallelContext::CommunicatorAll(), &sunctx);
+
   // Create the ARK stepper
   void* arkode_mem = nullptr;
   if (rhs_adv)
   {
     // explicit advection and implicit diffusion
     arkode_mem = ARKStepCreate(ComputeRhsAdv, ComputeRhsDiff, time, nv_sol,
-                               *amrex::sundials::The_Sundials_Context());
+                               sunctx);
   }
   else
   {
     // implicit advection and diffusion
     arkode_mem = ARKStepCreate(nullptr, ComputeRhsAdvDiff, time, nv_sol,
-                               *amrex::sundials::The_Sundials_Context());
+                               sunctx);
   }
 
-  // Attach the user data structure to ARKStep
-  ARKStepSetUserData(arkode_mem, prob_data);
+  // Attach the user data structure
+  ARKodeSetUserData(arkode_mem, prob_data);
 
   // Set the method order
-  ARKStepSetOrder(arkode_mem, arkode_order);
+  ARKodeSetOrder(arkode_mem, arkode_order);
 
   // Set the time step size or integration tolerances
   if (fixed_dt > 0.0)
-    ARKStepSetFixedStep(arkode_mem, fixed_dt);
+    ARKodeSetFixedStep(arkode_mem, fixed_dt);
   else
-    ARKStepSStolerances(arkode_mem, atol, rtol);
+    ARKodeSStolerances(arkode_mem, atol, rtol);
 
   // Set the max number of steps between outputs
-  ARKStepSetMaxNumSteps(arkode_mem, max_steps);
+  ARKodeSetMaxNumSteps(arkode_mem, max_steps);
 
-  // Set file for writing ARKStep diagnostics
-  FILE* diagfp = nullptr;
+  // Set logging file
   if (write_diag)
   {
-    diagfp = fopen("HandsOn3_diagnostics.txt", "w");
-    ARKStepSetDiagnostics(arkode_mem, diagfp);
+    SUNLogger logger;
+    ier = SUNContext_GetLogger(sunctx, &logger);
+    if (ier != SUN_SUCCESS)
+    {
+      amrex::Print() << "Getting the logger failed" << std::endl;
+      return;
+    }
+    SUNLogger_SetInfoFilename(logger, "HandsOn3.log");
   }
 
   // Create and attach GMRES linear solver     ***** UPDATED FROM HandsOn2 *****
   SUNLinearSolver LS = nullptr;
   if (use_preconditioner)
-    LS = SUNLinSol_SPGMR(nv_sol, PREC_LEFT, ls_max_iter,
-                         *amrex::sundials::The_Sundials_Context());
+  {
+    LS = SUNLinSol_SPGMR(nv_sol, SUN_PREC_LEFT, ls_max_iter, sunctx);
+  }
   else
-    LS = SUNLinSol_SPGMR(nv_sol, PREC_NONE, ls_max_iter,
-                         *amrex::sundials::The_Sundials_Context());
+  {
+    LS = SUNLinSol_SPGMR(nv_sol, SUN_PREC_NONE, ls_max_iter, sunctx);
+  }
 
-  ier = ARKStepSetLinearSolver(arkode_mem, LS, nullptr);
+  ier = ARKodeSetLinearSolver(arkode_mem, LS, nullptr);
   if (ier != ARKLS_SUCCESS)
   {
     amrex::Print() << "Creating linear solver failed" << std::endl;
@@ -121,7 +132,7 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   if (use_preconditioner)
   {
     // Attach preconditioner functions         ***** UPDATED FROM HandsOn2 *****
-    ier = ARKStepSetPreconditioner(arkode_mem, nullptr, precondition_solve);
+    ier = ARKodeSetPreconditioner(arkode_mem, nullptr, precondition_solve);
     if (ier != ARKLS_SUCCESS)
     {
       amrex::Print() << "Attaching preconditioner failed" << std::endl;
@@ -130,7 +141,7 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   }
 
   // Set max number of nonlinear iterations
-  ier = ARKStepSetMaxNonlinIters(arkode_mem, nls_max_iter);
+  ier = ARKodeSetMaxNonlinIters(arkode_mem, nls_max_iter);
   if (ier != ARK_SUCCESS)
   {
     amrex::Print() << "Error setting max number of nonlinear iterations" << std::endl;
@@ -142,18 +153,19 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   Real tret;                // return time
   for (int iout=0; iout < nout; iout++)
   {
-    BL_PROFILE_VAR("ARKStepEvolve()", pevolve);
-    ier = ARKStepEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
+    BL_PROFILE_VAR("ARKodeEvolve()", pevolve);
+    ier = ARKodeEvolve(arkode_mem, tout, nv_sol, &tret, ARK_NORMAL);
     BL_PROFILE_VAR_STOP(pevolve);
     if (ier < 0)
     {
-      amrex::Print() << "Error in ARKStepEvolve" << std::endl;
+      amrex::Print() << "Error in ARKodeEvolve" << std::endl;
       return;
     }
 
     // Get integration stats
-    long nfe_evals, nfi_evals;
-    ARKStepGetNumRhsEvals(arkode_mem, &nfe_evals, &nfi_evals);
+    long int nfe_evals, nfi_evals;
+    ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe_evals);
+    ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi_evals);
     if (nfe_evals > 0)
       amrex::Print() << "t = " << std::setw(5) << tret
                      << "  explicit evals = " << std::setw(7) << nfe_evals
@@ -180,18 +192,19 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
   // Output final solution statistics          ***** UPDATED FROM HandsOn2 *****
   long int nst, nst_a, nfe, nfi, nsetups, nli, nJv, nlcf, nni, ncfn, netf, npe, nps;
   nst = nst_a = nfe = nfi = nsetups = nli = nJv = nlcf = nni = ncfn = netf = npe = nps = 0;
-  ARKStepGetNumSteps(arkode_mem, &nst);
-  ARKStepGetNumStepAttempts(arkode_mem, &nst_a);
-  ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
-  ARKStepGetNumErrTestFails(arkode_mem, &netf);
-  ARKStepGetNumNonlinSolvIters(arkode_mem, &nni);
-  ARKStepGetNumNonlinSolvConvFails(arkode_mem, &ncfn);
-  ARKStepGetNumLinSolvSetups(arkode_mem, &nsetups);
-  ARKStepGetNumLinIters(arkode_mem, &nli);
-  ARKStepGetNumJtimesEvals(arkode_mem, &nJv);
-  ARKStepGetNumLinConvFails(arkode_mem, &nlcf);
-  ARKStepGetNumPrecEvals(arkode_mem, &npe);
-  ARKStepGetNumPrecSolves(arkode_mem, &nps);
+  ARKodeGetNumSteps(arkode_mem, &nst);
+  ARKodeGetNumStepAttempts(arkode_mem, &nst_a);
+  ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe);
+  ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi);
+  ARKodeGetNumErrTestFails(arkode_mem, &netf);
+  ARKodeGetNumNonlinSolvIters(arkode_mem, &nni);
+  ARKodeGetNumNonlinSolvConvFails(arkode_mem, &ncfn);
+  ARKodeGetNumLinSolvSetups(arkode_mem, &nsetups);
+  ARKodeGetNumLinIters(arkode_mem, &nli);
+  ARKodeGetNumJtimesEvals(arkode_mem, &nJv);
+  ARKodeGetNumLinConvFails(arkode_mem, &nlcf);
+  ARKodeGetNumPrecEvals(arkode_mem, &npe);
+  ARKodeGetNumPrecSolves(arkode_mem, &nps);
 
   amrex::Print() << "\nFinal Solver Statistics:\n"
                  << "   Internal solver steps = " << nst << " (attempted = " << nst_a << ")\n";
@@ -210,8 +223,7 @@ void ComputeSolution(N_Vector nv_sol, ProblemOpt* prob_opt,
     amrex::Print() << "   Total number of Preconditioner setups = " << npe << "\n"
                    << "   Total number of Preconditioner solves = " << nps << "\n";
 
-  // Close diagnostics file
-  if (write_diag) fclose(diagfp);
+  SUNContext_Free(&sunctx);
 
   return;
 }
