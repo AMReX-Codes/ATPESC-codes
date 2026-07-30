@@ -168,8 +168,7 @@ foreach(target ${targets})
       SUNDIALS::nveccuda
       CUDA::cusparse
       CUDA::curand
-      CUDA::cublas
-      CUDA::nvToolsExt)
+      CUDA::cublas)
   endif()
 
   # Install execuatable
